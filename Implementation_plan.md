@@ -27,9 +27,9 @@
 
 ### Bước 4: Xử lý tài liệu đầu vào
 * Tạo module để tiếp nhận tài liệu PDF và Markdown
-* Tích hợp Marker để chuyển PDF sang Markdown
+* Tích hợp Google Gemini API để chuyển PDF sang Markdown
 * Tiến hành chuẩn hóa Markdown (sửa lỗi OCR, chuẩn hóa công thức toán học)
-* Lưu trữ tài liệu gốc vào MinIO/S3 và Markdown vào PostgreSQL
+* Lưu trữ tài liệu gốc vào Cloudflare R2 và Markdown vào PostgreSQL
 
 ---
 
