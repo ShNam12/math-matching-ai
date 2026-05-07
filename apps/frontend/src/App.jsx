@@ -1,17 +1,35 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
-import SemanticSearch from './pages/SemanticSearch.jsx'
+import { useState } from "react"
+import UploadDocument from "./pages/UploadDocument.jsx"
+import SemanticSearch from "./pages/SemanticSearch.jsx"
+import CalculusTaxonomy from "./pages/CalculusTaxonomy.jsx"
+import QARules from "./pages/QARules.jsx"
+import ProblemDetail from "./pages/ProblemDetail.jsx"
+import GenVariants from "./pages/GenVariants.jsx"
+import Analytics from "./pages/Analytics.jsx"
+import SettingsPage from "./pages/Settings.jsx"
+import "./App.css"
+
+const PAGES = {
+  upload: UploadDocument,
+  search: SemanticSearch,
+  taxonomy: CalculusTaxonomy,
+  qa: QARules,
+  detail: ProblemDetail,
+  gen: GenVariants,
+  analytics: Analytics,
+  settings: SettingsPage,
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activePage, setActivePage] = useState("search")
+
+  const ActivePage = PAGES[activePage]
 
   return (
-    <>
-      <SemanticSearch />
-    </>
+    <ActivePage
+      activePage={activePage}
+      onNavigate={setActivePage}
+    />
   )
 }
 
