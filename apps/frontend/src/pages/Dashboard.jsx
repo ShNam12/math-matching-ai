@@ -9,8 +9,9 @@ import {
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
-  { icon: Search, label: "Semantic Search", sub: "Tìm kiếm", id: "search" },
   { icon: Upload, label: "Upload Document", sub: "Ingestion", id: "upload" },
+  { icon: Search, label: "Semantic Search", sub: "Tìm kiếm", id: "search" },
+  { icon: BookOpen, label: "Calculus Taxonomy", sub: "Phân loại", id: "taxonomy" },
   { icon: BookOpen, label: "Taxonomy", sub: "Phân loại", id: "taxonomy" },
   { icon: CheckSquare, label: "QA Rules", sub: "Kiểm định", id: "qa", badge: 3 },
   { icon: Sparkles, label: "Sinh biến thể", sub: "Gen AI", id: "gen" },

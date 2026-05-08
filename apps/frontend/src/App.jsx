@@ -1,4 +1,5 @@
 import { useState } from "react"
+import Dashboard from "./pages/Dashboard.jsx"
 import UploadDocument from "./pages/UploadDocument.jsx"
 import SemanticSearch from "./pages/SemanticSearch.jsx"
 import CalculusTaxonomy from "./pages/CalculusTaxonomy.jsx"
@@ -10,6 +11,7 @@ import SettingsPage from "./pages/Settings.jsx"
 import "./App.css"
 
 const PAGES = {
+  dashboard: Dashboard,
   upload: UploadDocument,
   search: SemanticSearch,
   taxonomy: CalculusTaxonomy,
@@ -21,7 +23,7 @@ const PAGES = {
 }
 
 function App() {
-  const [activePage, setActivePage] = useState("search")
+  const [activePage, setActivePage] = useState("dashboard")
 
   const ActivePage = PAGES[activePage]
 

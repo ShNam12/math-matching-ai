@@ -4,10 +4,11 @@ import {
   Settings, BarChart2, FileText, Sparkles,
   CheckCircle, XCircle, AlertTriangle, RefreshCw,
   ChevronDown, Filter, Play, Download, Clock, Info,
-  Shield, Code2, Copy, Layers, AlertCircle, Eye
+  Shield, Code2, Copy, Layers, AlertCircle, Eye, LayoutDashboard
 } from "lucide-react";
 
 const NAV = [
+  { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
   { icon: Upload, label: "Upload Document", sub: "Ingestion", id: "upload" },
   { icon: Search, label: "Semantic Search", sub: "Tìm kiếm", id: "search" },
   { icon: BookOpen, label: "Calculus Taxonomy", sub: "Phân loại", id: "taxonomy" },

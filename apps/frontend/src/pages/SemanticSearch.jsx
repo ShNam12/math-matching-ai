@@ -3,10 +3,11 @@ import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles, Filter,
   TrendingUp, Eye, GitBranch, Zap, X, ChevronDown,
-  Cpu, SlidersHorizontal, ArrowRight, Star, Copy, Share2
+  Cpu, SlidersHorizontal, ArrowRight, Star, Copy, Share2, LayoutDashboard
 } from "lucide-react";
 
 const NAV = [
+  { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
   { icon: Upload, label: "Upload Document", sub: "Ingestion", id: "upload" },
   { icon: Search, label: "Semantic Search", sub: "Tìm kiếm", id: "search", active: true },
   { icon: BookOpen, label: "Calculus Taxonomy", sub: "Phân loại", id: "taxonomy" },
