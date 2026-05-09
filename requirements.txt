@@ -11,3 +11,5 @@ sqlalchemy
 asyncpg
 alembic
 python-dotenv
+psycopg2-binary
+dotenv
