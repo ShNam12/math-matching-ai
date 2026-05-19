@@ -340,7 +340,7 @@ Dieu nay van chay duoc, vi ham async co the chua code sync ben trong. Voi MVP hi
 
 Sau nay neu can toi uu, co the dua viec convert PDF sang worker rieng hoac background task. Chua can lam o buoc 4.7.
 
-## 10. Test rieng Gemini PDF converter
+## 10. Test rieng Gemini PDF converter (đã tới đây)
 
 Tao thu muc neu chua co:
 
