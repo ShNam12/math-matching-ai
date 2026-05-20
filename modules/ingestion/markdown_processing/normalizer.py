@@ -17,6 +17,23 @@ def remove_control_characters(text: str) -> str: # Loại bỏ các ký tự đi
         if char == "\n" or char == "\t" or ord(char) >= 32
     )
 
+def normalize_headings(text: str) -> str:
+    lines = []
+
+    for line in text.split("\n"):
+        stripped = line.strip()
+
+        if not stripped:
+            lines.append("")
+            continue
+
+        stripped = re.sub(r"^(#{1,6})([^\s#])", r"\1 \2", stripped)
+        stripped = re.sub(r"^(#{1,6})\s+", r"\1 ", stripped)
+
+        lines.append(stripped)
+
+    return "\n".join(lines)
+
 
 def collapse_excess_blank_lines(text: str) -> str: # Giảm nhiều hơn 2 newline liên tiếp xuống còn 2 để tránh khoảng trắng quá lớn.
     return re.sub(r"\n{3,}", "\n\n", text)
@@ -31,6 +48,7 @@ def normalize_markdown(text: str) -> str: # Hàm chính để chuẩn hóa markd
     text = remove_control_characters(text)
     text = fix_common_ocr_errors(text)
     text = normalize_math_delimiters(text)
+    text = normalize_headings(text)
     text = collapse_excess_blank_lines(text)
     text = ensure_trailing_newline(text)
     return text

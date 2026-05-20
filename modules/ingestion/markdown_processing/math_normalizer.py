@@ -1,10 +1,23 @@
-# Mục đích:
+import re
 
-# Chuẩn hóa delimiter công thức toán từ dạng LaTeX phổ biến sang dạng Markdown-friendly hơn.
+
+def _normalize_formula_spaces(formula: str) -> str:
+    return re.sub(r"\s+", " ", formula).strip()
+
 
 def normalize_math_delimiters(text: str) -> str:
-    text = text.replace("\\(", "$")
-    text = text.replace("\\)", "$")
-    text = text.replace("\\[", "$$")
-    text = text.replace("\\]", "$$")
+    text = re.sub(
+        r"\\\((.*?)\\\)",
+        lambda match: f"${_normalize_formula_spaces(match.group(1))}$",
+        text,
+        flags=re.DOTALL,
+    )
+
+    text = re.sub(
+        r"\\\[(.*?)\\\]",
+        lambda match: f"$$\n{_normalize_formula_spaces(match.group(1))}\n$$",
+        text,
+        flags=re.DOTALL,
+    )
+
     return text
