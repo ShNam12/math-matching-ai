@@ -30,3 +30,7 @@ class DocumentStatusResponse(BaseModel):
     status: DocumentStatus
     message: str
 
+class DocumentMarkdownResponse(BaseModel):
+    id: str
+    markdown_content: str
+    markdown_checksum: str | None = None
