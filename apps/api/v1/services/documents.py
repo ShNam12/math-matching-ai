@@ -50,6 +50,10 @@ class DocumentService:
 
         return self._to_response(document)
     
+    async def list(self) -> list[DocumentResponse]:
+        documents = await self.document_repository.list_documents()
+        return [self._to_response(document) for document in documents]
+    
     async def get_markdown(self, document_id: str) -> Document | None:
         return await self.document_repository.get_document(document_id)
 
@@ -66,14 +70,21 @@ class DocumentService:
 
     def _to_response(self, document: Document) -> DocumentResponse:
         return DocumentResponse(
-            id=document.id,
-            filename=document.filename,
-            content_type=document.content_type,
-            size_bytes=document.size_bytes,
-            status=DocumentStatus(document.status),
-            message=self._build_message(document.status),
-            created_at=document.created_at,
-        )
+        id=document.id,
+        filename=document.filename,
+        content_type=document.content_type,
+        size_bytes=document.size_bytes,
+        source_type=document.source_type,
+        status=DocumentStatus(document.status),
+        message=self._build_message(document.status),
+        r2_original_key=document.r2_original_key,
+        r2_original_url=document.r2_original_url,
+        markdown_available=document.markdown_content is not None,
+        error_message=document.error_message,
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+        processed_at=document.processed_at,
+    )
 
     def _build_message(self, status: str) -> str:
         if status == "uploaded":

@@ -16,9 +16,16 @@ class DocumentResponse(BaseModel):
     filename: str
     content_type: str | None = None
     size_bytes: int = Field(ge=0)
+    source_type: str
     status: DocumentStatus
     message: str
+    r2_original_key: str | None = None
+    r2_original_url: str | None = None
+    markdown_available: bool
+    error_message: str | None = None
     created_at: datetime
+    updated_at: datetime
+    processed_at: datetime | None = None
 
 
 class DocumentUploadResponse(DocumentResponse):
@@ -29,6 +36,8 @@ class DocumentStatusResponse(BaseModel):
     id: str
     status: DocumentStatus
     message: str
+    markdown_available: bool
+    error_message: str | None = None
 
 class DocumentMarkdownResponse(BaseModel):
     id: str

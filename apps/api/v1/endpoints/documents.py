@@ -70,7 +70,14 @@ async def upload_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
-
+    
+@router.get("", response_model=list[DocumentResponse])
+async def list_documents(
+    session: AsyncSession = Depends(get_db_session),
+) -> list[DocumentResponse]:
+    repo = DocumentRepository(session)
+    service = DocumentService(repo)
+    return await service.list()
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
@@ -109,6 +116,8 @@ async def get_document_status(
         id=document.id,
         status=document.status,
         message=document.message,
+        markdown_available=document.markdown_available,
+        error_message=document.error_message,
     )
 
 @router.get("/{document_id}/markdown", response_model=DocumentMarkdownResponse)

@@ -38,6 +38,12 @@ class DocumentRepository:
             select(Document).where(Document.id == document_id)
         )
         return result.scalar_one_or_none()
+    
+    async def list_documents(self) -> list[Document]:
+        result = await self.session.execute(
+            select(Document).order_by(Document.created_at.desc())
+        )
+        return list(result.scalars().all())
 
     async def update_status(
         self,
