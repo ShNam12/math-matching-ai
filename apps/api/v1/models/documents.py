@@ -38,6 +38,7 @@ class DocumentStatusResponse(BaseModel):
     message: str
     markdown_available: bool
     error_message: str | None = None
+    updated_at: datetime
 
 class DocumentMarkdownResponse(BaseModel):
     id: str

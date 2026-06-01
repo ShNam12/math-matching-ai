@@ -1,12 +1,16 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from apps.api.main import app
 
 
-client = TestClient(app)
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_upload_and_fetch_document() -> None:
+def test_upload_and_fetch_document(client: TestClient) -> None:
     upload_response = client.post(
         "/documents/upload",
         files={"file": ("sample.md", b"# Sample\n\nContent", "text/markdown")},
@@ -26,14 +30,18 @@ def test_upload_and_fetch_document() -> None:
 
     status_response = client.get(f"/documents/{document_id}/status")
     assert status_response.status_code == 200
-    assert status_response.json() == {
-        "id": document_id,
-        "status": "uploaded",
-        "message": "Document uploaded and waiting for processing",
-    }
+
+    status_data = status_response.json()
+
+    assert status_data["id"] == document_id
+    assert status_data["status"] == "completed"
+    assert status_data["message"] == "Document processed successfully"
+    assert status_data["markdown_available"] is True
+    assert status_data["error_message"] is None
+    assert status_data["updated_at"]
 
 
-def test_upload_rejects_unsupported_file_type() -> None:
+def test_upload_rejects_unsupported_file_type(client: TestClient) -> None:
     response = client.post(
         "/documents/upload",
         files={"file": ("sample.txt", b"plain text", "text/plain")},
@@ -43,7 +51,7 @@ def test_upload_rejects_unsupported_file_type() -> None:
     assert response.json()["detail"] == "Only PDF and Markdown files are supported"
 
 
-def test_get_unknown_document_returns_404() -> None:
+def test_get_unknown_document_returns_404(client: TestClient) -> None:
     response = client.get("/documents/missing")
 
     assert response.status_code == 404

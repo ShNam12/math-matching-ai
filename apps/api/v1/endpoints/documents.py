@@ -118,6 +118,7 @@ async def get_document_status(
         message=document.message,
         markdown_available=document.markdown_available,
         error_message=document.error_message,
+        updated_at=document.updated_at,
     )
 
 @router.get("/{document_id}/markdown", response_model=DocumentMarkdownResponse)

@@ -70,20 +70,20 @@ class DocumentService:
 
     def _to_response(self, document: Document) -> DocumentResponse:
         return DocumentResponse(
-        id=document.id,
-        filename=document.filename,
-        content_type=document.content_type,
-        size_bytes=document.size_bytes,
-        source_type=document.source_type,
-        status=DocumentStatus(document.status),
-        message=self._build_message(document.status),
-        r2_original_key=document.r2_original_key,
-        r2_original_url=document.r2_original_url,
-        markdown_available=document.markdown_content is not None,
-        error_message=document.error_message,
-        created_at=document.created_at,
-        updated_at=document.updated_at,
-        processed_at=document.processed_at,
+            id=document.id,
+            filename=document.filename,
+            content_type=document.content_type,
+            size_bytes=document.size_bytes,
+            source_type=document.source_type,
+            status=DocumentStatus(document.status),
+            message=self._build_message(document.status),
+            r2_original_key=document.r2_original_key,
+            r2_original_url=document.r2_original_url,
+            markdown_available=document.markdown_content is not None,
+            error_message=document.error_message,
+            created_at=document.created_at,
+            updated_at=document.updated_at,
+            processed_at=document.processed_at,
     )
 
     def _build_message(self, status: str) -> str:
