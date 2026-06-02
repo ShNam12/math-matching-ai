@@ -1,7 +1,7 @@
 import asyncio
 
 from infra.db.base import Base
-from infra.db.models import Document
+from infra.db.models import Document, Question
 from infra.db.session import engine
 
 
