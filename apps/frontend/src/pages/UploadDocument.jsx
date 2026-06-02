@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Hash, Upload, Search, BookOpen, CheckSquare, Bell, ChevronDown,
-  User, Settings, BarChart2, FileText, Database, Activity,
-  CloudUpload, FileType, X, CheckCircle, Loader, AlertCircle,
-  Eye, Trash2, RefreshCw, FolderOpen, Sparkles, LayoutDashboard
+  Hash, Upload, Search, BookOpen, CheckSquare, Bell,
+  Settings, BarChart2, FileText, Database,
+  CloudUpload, CheckCircle, Loader, AlertCircle,
+  Eye, Trash2, RefreshCw, FolderOpen, Sparkles, LayoutDashboard,
 } from "lucide-react";
+import {
+  listDocuments,
+  uploadDocument,
+} from "../services/ingestionApi";
   
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -18,105 +22,57 @@ const NAV = [
   { icon: Settings, label: "Cài đặt", sub: "System", id: "settings" },
 ];
 
-const DOCS = [
-  {
-    name: "Giải_tích_1_BK_2023.pdf",
-    size: "12.4 MB",
-    pages: 342,
-    date: "05/05/2026",
-    status: "done",
-    problems: 1247,
-    type: "pdf",
-    color: "#A32D2D",
-    bg: "#FCEBEB",
-  },
-  {
-    name: "De_thi_NEU_HK2_2024.docx",
-    size: "3.2 MB",
-    pages: 48,
-    date: "04/05/2026",
-    status: "done",
-    problems: 156,
-    type: "docx",
-    color: "#185FA5",
-    bg: "#E6F1FB",
-  },
-  {
-    name: "Calculus_VNU_Textbook.tex",
-    size: "890 KB",
-    pages: null,
-    date: "07/05/2026",
-    status: "processing",
-    progress: 67,
-    type: "tex",
-    color: "#534AB7",
-    bg: "#EEEDFE",
-  },
-  {
-    name: "HUST_Giai_tich_2_2023.pdf",
-    size: "18.7 MB",
-    pages: 521,
-    date: "06/05/2026",
-    status: "done",
-    problems: 2103,
-    type: "pdf",
-    color: "#A32D2D",
-    bg: "#FCEBEB",
-  },
-  {
-    name: "Chuoi_so_ham_so_UD.pdf",
-    size: "5.1 MB",
-    pages: 98,
-    date: "07/05/2026",
-    status: "processing",
-    progress: 23,
-    type: "pdf",
-    color: "#A32D2D",
-    bg: "#FCEBEB",
-  },
-  {
-    name: "Stewart_Calculus_8e_EN.pdf",
-    size: "47.3 MB",
-    pages: 1368,
-    date: "03/05/2026",
-    status: "error",
-    errorMsg: "File quá lớn — giới hạn 40 MB",
-    type: "pdf",
-    color: "#A32D2D",
-    bg: "#FCEBEB",
-  },
-];
+function formatFileSize(sizeBytes) {
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
-function FileTypeIcon({ type, color, bg }) {
-  const labels = { pdf: "PDF", docx: "DOC", tex: "TEX", txt: "TXT" };
+function formatDate(value) {
+  return new Date(value).toLocaleString("vi-VN");
+}
+
+function getFileTypeStyle(sourceType) {
+  if (sourceType === "pdf") {
+    return { label: "PDF", color: "#A32D2D", bg: "#FCEBEB" };
+  }
+
+  return { label: "MD", color: "#185FA5", bg: "#E6F1FB" };
+}
+
+function FileTypeIcon({ sourceType }) {
+  const { label, color, bg } = getFileTypeStyle(sourceType);
+
   return (
-    <div style={{ background: bg, border: `1px solid ${color}30` }}
-      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0">
+    <div
+      style={{ background: bg, border: `1px solid ${color}30` }}
+      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+    >
       <span style={{ color, fontSize: 9, fontWeight: 700, letterSpacing: 0.5 }}>
-        {labels[type] || "FILE"}
+        {label}
       </span>
     </div>
   );
 }
 
-function StatusBadge({ status, progress, errorMsg }) {
-  if (status === "done")
+function StatusBadge({ status }) {
+  if (status === "completed") {
     return (
       <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
         <CheckCircle size={10} /> Hoàn thành
       </span>
     );
-  if (status === "processing")
+  }
+
+  if (status === "uploaded" || status === "processing") {
     return (
-      <div className="flex flex-col items-end gap-1">
-        <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-          <Loader size={10} className="animate-spin" /> Đang xử lý {progress}%
-        </span>
-        <div className="w-24 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
+      <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+        <Loader size={10} className="animate-spin" />
+        {status === "uploaded" ? "Đang chờ xử lý" : "Đang xử lý"}
+      </span>
     );
+  }
+
   return (
     <span className="flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full">
       <AlertCircle size={10} /> Lỗi
@@ -128,10 +84,90 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
   const [dragging, setDragging] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const filtered = DOCS.filter((d) =>
-    filterStatus === "all" ? true : d.status === filterStatus
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const loadDocuments = useCallback(async () => {
+    try {
+      const data = await listDocuments();
+      setDocuments(data);
+      setError(null);
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }, []);
+
+    useEffect(() => {
+      const timeoutId = window.setTimeout(loadDocuments, 0);
+      return () => window.clearTimeout(timeoutId);
+    }, [loadDocuments]);
+
+  useEffect(() => {
+    const hasPendingDocument = documents.some(
+      (document) =>
+        document.status === "uploaded" || document.status === "processing",
+    );
+
+    if (!hasPendingDocument) return undefined;
+
+    const intervalId = window.setInterval(loadDocuments, 2500);
+    return () => window.clearInterval(intervalId);
+  }, [documents, loadDocuments]);
+
+  async function handleUpload(file) {
+    if (!file || uploading) return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      await uploadDocument(file);
+      await loadDocuments();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setUploading(false);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    setDragging(false);
+    handleUpload(event.dataTransfer.files[0]);
+  }
+
+    const filtered = documents.filter((document) => {
+    if (filterStatus === "all") return true;
+
+    if (filterStatus === "processing") {
+      return (
+        document.status === "uploaded" ||
+        document.status === "processing"
+      );
+    }
+
+    return document.status === filterStatus;
+  });
+
+  const totalSizeBytes = documents.reduce(
+    (total, document) => total + document.size_bytes,
+    0,
   );
-  const totalProblems = DOCS.filter((d) => d.status === "done").reduce((a, b) => a + (b.problems || 0), 0);
+
+  const processingCount = documents.filter(
+    (document) =>
+      document.status === "uploaded" || document.status === "processing",
+  ).length;
+
+  const failedCount = documents.filter(
+    (document) => document.status === "failed",
+  ).length;
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -194,8 +230,10 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
           </div>
           <div className="flex items-center gap-2">
             <div className="text-right mr-2">
-              <p className="text-[10px] text-slate-400">Tổng bài tập đã ingested</p>
-              <p className="text-sm font-bold text-blue-700">{totalProblems.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-400">Tổng tài liệu đã upload</p>
+              <p className="text-sm font-bold text-blue-700">
+                {documents.length.toLocaleString()}
+              </p>
             </div>
             <button className="relative p-2 rounded-lg hover:bg-slate-50 text-slate-400">
               <Bell size={15} />
@@ -210,46 +248,81 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
-            onDrop={() => setDragging(false)}
+            onDrop={handleDrop}
             className={`border-2 border-dashed rounded-xl p-8 text-center mb-5 cursor-pointer transition-all ${
               dragging
                 ? "border-blue-400 bg-blue-50"
                 : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
             }`}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.md,.markdown"
+              className="hidden"
+              onChange={(event) => handleUpload(event.target.files[0])}
+            />
             <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto mb-3">
               <CloudUpload size={28} className="text-blue-500" strokeWidth={1.5} />
             </div>
             <p className="text-sm font-semibold text-slate-700 mb-1">Kéo &amp; thả tài liệu vào đây</p>
             <p className="text-[12px] text-slate-400 mb-3">hoặc nhấn để chọn file từ máy tính của bạn</p>
             <div className="flex items-center justify-center gap-2 mb-4">
-              {["PDF", "DOCX", "TEX", "TXT", "EPUB"].map((f) => (
-                <span key={f} className="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-500">{f}</span>
+              {["PDF", "Markdown"].map((fileType) => (
+                <span
+                  key={fileType}
+                  className="text-[10px] font-semibold px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-500"
+                >
+                  {fileType}
+                </span>
               ))}
             </div>
-            <button className="flex items-center gap-2 mx-auto px-5 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-              <FolderOpen size={14} /> Chọn file
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 mx-auto px-5 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
+            >
+              <FolderOpen size={14} />
+              {uploading ? "Đang upload..." : "Chọn file"}
             </button>
             <p className="text-[10px] text-slate-400 mt-2.5">Giới hạn 40 MB/file · Hỗ trợ LaTeX, Unicode, MathML</p>
           </div>
+
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+              {error}
+            </div>
+          )}
 
           {/* File list header */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <span className="text-[12px] font-bold text-slate-700">Tài liệu đã upload</span>
-              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{DOCS.length} files</span>
+              <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{documents.length} files</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg overflow-hidden border border-slate-200">
-                {[["all", "Tất cả"], ["done", "Hoàn thành"], ["processing", "Đang xử lý"], ["error", "Lỗi"]].map(([v, l]) => (
-                  <button key={v} onClick={() => setFilterStatus(v)}
+                {[
+                  ["all", "Tất cả"],
+                  ["completed", "Hoàn thành"],
+                  ["processing", "Đang xử lý"],
+                  ["failed", "Lỗi"],
+                ].map(([value, label]) => (
+                  <button 
+                    key={value}
+                    onClick={() => setFilterStatus(value)}
                     className={`text-[11px] px-2.5 py-1.5 transition-all ${
-                      filterStatus === v ? "bg-blue-600 text-white font-semibold" : "bg-white text-slate-500 hover:bg-slate-50"
+                      filterStatus === value ? "bg-blue-600 text-white font-semibold" : "bg-white text-slate-500 hover:bg-slate-50"
                     }`}>
-                    {l}
+                    {label}
                   </button>
                 ))}
               </div>
-              <button className="flex items-center gap-1.5 text-[11px] text-slate-500 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50">
+              <button
+                type="button"
+                onClick={loadDocuments}
+                className="flex items-center gap-1.5 text-[11px] text-slate-500 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50"
+              >
                 <RefreshCw size={11} /> Làm mới
               </button>
             </div>
@@ -257,28 +330,42 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
 
           {/* File rows */}
           <div className="space-y-2">
-            {filtered.map((doc, i) => (
-              <div key={i} className="bg-white border border-slate-100 rounded-xl p-3.5 flex items-center gap-3 hover:border-blue-100 hover:shadow-sm transition-all">
-                <FileTypeIcon type={doc.type} color={doc.color} bg={doc.bg} />
+            {filtered.map((doc) => (
+              <div
+                key={doc.id}
+                className="bg-white border border-slate-100 rounded-xl p-3.5 flex items-center gap-3 hover:border-blue-100 hover:shadow-sm transition-all"
+              >
+                <FileTypeIcon sourceType={doc.source_type} />
+
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-slate-700 truncate">{doc.name}</p>
+                  <p className="text-[12px] font-semibold text-slate-700 truncate">
+                    {doc.filename}
+                  </p>
+
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-slate-400">{doc.size}</span>
-                    {doc.pages && <><span className="text-slate-200">·</span><span className="text-[10px] text-slate-400">{doc.pages} trang</span></>}
+                    <span className="text-[10px] text-slate-400">
+                      {formatFileSize(doc.size_bytes)}
+                    </span>
+
                     <span className="text-slate-200">·</span>
-                    <span className="text-[10px] text-slate-400">{doc.date}</span>
-                    {doc.status === "error" && (
-                      <><span className="text-slate-200">·</span><span className="text-[10px] text-red-500">{doc.errorMsg}</span></>
+
+                    <span className="text-[10px] text-slate-400">
+                      {formatDate(doc.created_at)}
+                    </span>
+
+                    {doc.status === "failed" && doc.error_message && (
+                      <>
+                        <span className="text-slate-200">·</span>
+                        <span className="text-[10px] text-red-500">
+                          {doc.error_message}
+                        </span>
+                      </>
                     )}
                   </div>
                 </div>
-                {doc.problems && (
-                  <div className="text-right mr-2">
-                    <p className="text-[13px] font-bold text-blue-700">{doc.problems.toLocaleString()}</p>
-                    <p className="text-[10px] text-slate-400">bài tập</p>
-                  </div>
-                )}
-                <StatusBadge status={doc.status} progress={doc.progress} errorMsg={doc.errorMsg} />
+
+                <StatusBadge status={doc.status} />
+
                 <div className="flex items-center gap-1 ml-1">
                   <button className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
                     <Eye size={13} />
@@ -294,10 +381,10 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
           {/* Summary bar */}
           <div className="mt-4 bg-white border border-slate-100 rounded-xl p-3.5 flex items-center gap-6">
             {[
-              { label: "Tổng dung lượng", value: "87.7 MB", icon: Database },
-              { label: "Bài tập đã index", value: totalProblems.toLocaleString(), icon: FileText },
-              { label: "Đang xử lý", value: "2 files", icon: Loader },
-              { label: "Lỗi cần xử lý", value: "1 file", icon: AlertCircle },
+              { label: "Tổng dung lượng", value: formatFileSize(totalSizeBytes), icon: Database },
+              { label: "Tài liệu đã upload", value: `${documents.length} files`, icon: FileText },
+              { label: "Đang xử lý", value: `${processingCount} files`, icon: Loader },
+              { label: "Lỗi cần xử lý", value: `${failedCount} files`, icon: AlertCircle },
             ].map((s, i) => (
               <div key={i} className="flex items-center gap-2">
                 <s.icon size={14} className="text-slate-400" />

@@ -1,14 +1,4 @@
-import pytest
 from fastapi.testclient import TestClient
-
-from apps.api.main import app
-
-
-@pytest.fixture(scope="module")
-def client():
-    with TestClient(app) as test_client:
-        yield test_client
-
 
 def test_upload_and_fetch_document(client: TestClient) -> None:
     upload_response = client.post(
