@@ -26,7 +26,14 @@ async def main() -> None:
         if not completed_documents:
             raise RuntimeError("No completed document with Markdown was found")
 
-        document = completed_documents[0]
+        document = next(
+            (
+                document
+                for document in completed_documents
+                if document.filename == "bttx.md"
+            ),
+            completed_documents[0],
+        )
         questions = await service.segment_document(document.id)
 
         print("Document:", document.id)

@@ -1,0 +1,178 @@
+import asyncio
+from types import SimpleNamespace
+
+import pytest
+
+from modules.embeddings.service import QuestionEmbeddingService
+
+
+class FakeQuestionRepository:
+    def __init__(self, questions) -> None:
+        self.questions = questions
+        self.pending_document_id = None
+        self.completed_document_id = None
+        self.failed_document_id = None
+        self.embedding_model = None
+        self.embedding_dimension = None
+        self.error_message = None
+
+    async def list_by_document(self, document_id: str):
+        return [
+            question
+            for question in self.questions
+            if question.document_id == document_id
+        ]
+
+    async def mark_embedding_pending_for_document(
+        self,
+        document_id: str,
+    ) -> None:
+        self.pending_document_id = document_id
+
+    async def mark_embedding_completed_for_document(
+        self,
+        *,
+        document_id: str,
+        embedding_model: str,
+        embedding_dimension: int,
+    ) -> None:
+        self.completed_document_id = document_id
+        self.embedding_model = embedding_model
+        self.embedding_dimension = embedding_dimension
+
+    async def mark_embedding_failed_for_document(
+        self,
+        *,
+        document_id: str,
+        error_message: str,
+    ) -> None:
+        self.failed_document_id = document_id
+        self.error_message = error_message
+
+class FakeVectorRepository:
+    def __init__(self) -> None:
+        self.document_id = None
+        self.questions = []
+        self.formulas = []
+
+    async def replace_for_document(
+        self,
+        *,
+        document_id: str,
+        questions,
+        formulas,
+    ) -> None:
+        self.document_id = document_id
+        self.questions = questions
+        self.formulas = formulas
+
+
+class FakeEmbedder:
+    model = "fake-embedding-model"
+    dimension = 3
+
+    def __init__(self) -> None:
+        self.texts = []
+
+    def embed_text(self, text: str) -> list[float]:
+        self.texts.append(text)
+        return [0.1, 0.2, 0.3]
+
+
+def test_embed_document() -> None:
+    question = SimpleNamespace(
+        id="question-id",
+        document_id="document-id",
+        sequence_number=1,
+        marker="Bai",
+        marker_number="27",
+        statement="Tinh $x^2 + 1$.",
+        solution=None,
+        answer=None,
+        formulas=[
+            {
+                "latex": "x^2 + 1",
+                "normalized_latex": "x^2 + 1",
+                "source": "statement",
+            }
+        ],
+        subject=None,
+        chapter=None,
+        difficulty=None,
+        skills=[],
+    )
+
+    question_repository = FakeQuestionRepository([question])
+    vector_repository = FakeVectorRepository()
+    embedder = FakeEmbedder()
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=vector_repository,
+        embedder=embedder,
+    )
+
+    result = asyncio.run(service.embed_document("document-id"))
+
+    assert result.document_id == "document-id"
+    assert result.question_count == 1
+    assert result.formula_count == 1
+    assert vector_repository.document_id == "document-id"
+    assert len(vector_repository.questions) == 1
+    assert len(vector_repository.formulas) == 1
+    assert len(embedder.texts) == 2
+
+    assert question_repository.pending_document_id == "document-id"
+    assert question_repository.completed_document_id == "document-id"
+    assert question_repository.embedding_model == "fake-embedding-model"
+    assert question_repository.embedding_dimension == 3
+    assert question_repository.failed_document_id is None
+
+
+def test_reject_document_without_segmented_questions() -> None:
+    service = QuestionEmbeddingService(
+        question_repository=FakeQuestionRepository([]),
+        vector_repository=FakeVectorRepository(),
+        embedder=FakeEmbedder(),
+    )
+
+    with pytest.raises(ValueError, match="No segmented questions"):
+        asyncio.run(service.embed_document("missing-document"))
+
+class FailingEmbedder:
+    model = "failing-model"
+    dimension = 3
+
+    def embed_text(self, text: str) -> list[float]:
+        raise RuntimeError("embedding failed")
+
+
+def test_mark_failed_when_embedding_fails() -> None:
+    question = SimpleNamespace(
+        id="question-id",
+        document_id="document-id",
+        sequence_number=1,
+        marker="Bai",
+        marker_number="27",
+        statement="Tinh $x^2 + 1$.",
+        solution=None,
+        answer=None,
+        formulas=[],
+        subject=None,
+        chapter=None,
+        difficulty=None,
+        skills=[],
+    )
+
+    question_repository = FakeQuestionRepository([question])
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=FakeVectorRepository(),
+        embedder=FailingEmbedder(),
+    )
+
+    with pytest.raises(RuntimeError, match="embedding failed"):
+        asyncio.run(service.embed_document("document-id"))
+
+    assert question_repository.pending_document_id == "document-id"
+    assert question_repository.failed_document_id == "document-id"
+    assert question_repository.error_message == "embedding failed"

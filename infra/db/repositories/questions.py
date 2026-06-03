@@ -1,4 +1,6 @@
-from sqlalchemy import delete, select
+from datetime import UTC, datetime
+
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infra.db.models import Question
@@ -36,6 +38,11 @@ class QuestionRepository:
                 chapter=None,
                 difficulty=None,
                 skills=[],
+                embedding_status="pending",
+                embedding_model=None,
+                embedding_dimension=None,
+                embedding_error=None,
+                embedded_at=None,
             )
             for question in segmented_questions
         ]
@@ -63,3 +70,68 @@ class QuestionRepository:
         )
 
         return result.scalar_one_or_none()
+    
+    async def mark_embedding_pending_for_document(
+        self,
+        document_id: str,
+    ) -> None:
+        await self.session.execute(
+            update(Question)
+            .where(Question.document_id == document_id)
+            .values(
+                embedding_status="pending",
+                embedding_error=None,
+                embedded_at=None,
+            )
+        )
+        await self.session.commit()
+
+    async def mark_embedding_completed_for_document(
+        self,
+        *,
+        document_id: str,
+        embedding_model: str,
+        embedding_dimension: int,
+    ) -> None:
+        await self.session.execute(
+            update(Question)
+            .where(Question.document_id == document_id)
+            .values(
+                embedding_status="completed",
+                embedding_model=embedding_model,
+                embedding_dimension=embedding_dimension,
+                embedding_error=None,
+                embedded_at=datetime.now(UTC),
+            )
+        )
+        await self.session.commit()
+
+    async def mark_embedding_failed_for_document(
+        self,
+        *,
+        document_id: str,
+        error_message: str,
+    ) -> None:
+        await self.session.execute(
+            update(Question)
+            .where(Question.document_id == document_id)
+            .values(
+                embedding_status="failed",
+                embedding_error=error_message[:4000],
+            )
+        )
+        await self.session.commit()
+
+    async def count_by_embedding_status(
+        self,
+        document_id: str,
+    ) -> dict[str, int]:
+        questions = await self.list_by_document(document_id)
+        counts: dict[str, int] = {}
+
+        for question in questions:
+            counts[question.embedding_status] = (
+                counts.get(question.embedding_status, 0) + 1
+            )
+
+        return counts

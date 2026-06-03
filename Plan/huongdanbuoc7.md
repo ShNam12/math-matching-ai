@@ -975,7 +975,6 @@ import asyncio
 from typing import Protocol
 
 from infra.db.repositories.questions import QuestionRepository
-from infra.vector_db.repositories.embeddings import EmbeddingVectorRepository
 from modules.embeddings.schemas import (
     EmbeddingResult,
     FormulaVector,
@@ -992,12 +991,23 @@ class TextEmbedder(Protocol):
         ...
 
 
+class VectorRepository(Protocol):
+    async def replace_for_document(
+        self,
+        *,
+        document_id: str,
+        questions: list[QuestionVector],
+        formulas: list[FormulaVector],
+    ) -> None:
+        ...
+
+
 class QuestionEmbeddingService:
     def __init__(
         self,
         *,
         question_repository: QuestionRepository,
-        vector_repository: EmbeddingVectorRepository,
+        vector_repository: VectorRepository,
         embedder: TextEmbedder,
     ) -> None:
         self.question_repository = question_repository

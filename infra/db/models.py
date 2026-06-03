@@ -99,6 +99,22 @@ class Question(Base):
         default=list,
     )
 
+    embedding_status: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="pending",
+    )
+    embedding_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    embedding_dimension: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    embedding_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    embedded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
