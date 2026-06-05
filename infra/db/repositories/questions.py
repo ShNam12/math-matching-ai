@@ -70,6 +70,25 @@ class QuestionRepository:
         )
 
         return result.scalar_one_or_none()
+    async def list_by_ids(self, question_ids: list[str]) -> list[Question]:
+        if not question_ids:
+            return []
+
+        result = await self.session.execute(
+            select(Question).where(Question.id.in_(question_ids))
+        )
+
+        questions = list(result.scalars().all())
+        questions_by_id = {
+            question.id: question
+            for question in questions
+        }
+
+        return [
+            questions_by_id[question_id]
+            for question_id in question_ids
+            if question_id in questions_by_id
+        ]
     
     async def mark_embedding_pending_for_document(
         self,

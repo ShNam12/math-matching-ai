@@ -4,6 +4,10 @@ from qdrant_client import AsyncQdrantClient, models
 
 from modules.embeddings.schemas import FormulaVector, QuestionVector
 
+from modules.semantic_search.schemas import (
+    QuestionSearchFilters,
+    QuestionSearchVectorHit,
+)
 
 class EmbeddingVectorRepository:
     def __init__(
@@ -154,3 +158,71 @@ class EmbeddingVectorRepository:
         )
 
         return result.count
+    
+    async def search_questions(
+        self,
+        *,
+        vector: list[float],
+        limit: int,
+        filters: QuestionSearchFilters,
+    ) -> list[QuestionSearchVectorHit]:
+        await self.ensure_collections()
+
+        must_conditions: list[models.FieldCondition] = []
+
+        if filters.subject:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="subject",
+                    match=models.MatchValue(value=filters.subject),
+                )
+            )
+
+        if filters.chapter:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="chapter",
+                    match=models.MatchValue(value=filters.chapter),
+                )
+            )
+
+        if filters.difficulty:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="difficulty",
+                    match=models.MatchValue(value=filters.difficulty),
+                )
+            )
+
+        query_filter = None
+        if must_conditions:
+            query_filter = models.Filter(must=must_conditions)
+
+        result = await self.client.query_points(
+            collection_name=self.question_collection,
+            query=vector,
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        hits: list[QuestionSearchVectorHit] = []
+
+        for point in result.points:
+            payload = point.payload or {}
+            question_id = payload.get("question_id")
+            document_id = payload.get("document_id")
+
+            if not question_id or not document_id:
+                continue
+
+            hits.append(
+                QuestionSearchVectorHit(
+                    question_id=str(question_id),
+                    document_id=str(document_id),
+                    score=float(point.score),
+                )
+            )
+
+        return hits
