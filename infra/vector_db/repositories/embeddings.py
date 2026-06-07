@@ -5,6 +5,8 @@ from qdrant_client import AsyncQdrantClient, models
 from modules.embeddings.schemas import FormulaVector, QuestionVector
 
 from modules.semantic_search.schemas import (
+    FormulaSearchFilters,
+    FormulaSearchVectorHit,
     QuestionSearchFilters,
     QuestionSearchVectorHit,
 )
@@ -221,6 +223,73 @@ class EmbeddingVectorRepository:
                 QuestionSearchVectorHit(
                     question_id=str(question_id),
                     document_id=str(document_id),
+                    score=float(point.score),
+                )
+            )
+
+        return hits
+    
+    async def search_formulas(
+        self,
+        *,
+        vector: list[float],
+        limit: int,
+        filters: FormulaSearchFilters,
+    ) -> list[FormulaSearchVectorHit]:
+        await self.ensure_collections()
+
+        must_conditions: list[models.FieldCondition] = []
+
+        if filters.source:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="source",
+                    match=models.MatchValue(value=filters.source),
+                )
+            )
+
+        query_filter = None
+        if must_conditions:
+            query_filter = models.Filter(must=must_conditions)
+
+        result = await self.client.query_points(
+            collection_name=self.formula_collection,
+            query=vector,
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        hits: list[FormulaSearchVectorHit] = []
+
+        for point in result.points:
+            payload = point.payload or {}
+            question_id = payload.get("question_id")
+            document_id = payload.get("document_id")
+            formula_index = payload.get("formula_index")
+            latex = payload.get("latex")
+            normalized_latex = payload.get("normalized_latex")
+            source = payload.get("source")
+
+            if (
+                question_id is None
+                or document_id is None
+                or formula_index is None
+                or latex is None
+                or normalized_latex is None
+                or source is None
+            ):
+                continue
+
+            hits.append(
+                FormulaSearchVectorHit(
+                    question_id=str(question_id),
+                    document_id=str(document_id),
+                    formula_index=int(formula_index),
+                    latex=str(latex),
+                    normalized_latex=str(normalized_latex),
+                    source=str(source),
                     score=float(point.score),
                 )
             )

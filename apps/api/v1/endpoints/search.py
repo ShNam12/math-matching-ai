@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.v1.models.search import (
+    FormulaSearchItem,
+    FormulaSearchRequest,
+    FormulaSearchResponse,
     QuestionSearchItem,
     QuestionSearchRequest,
     QuestionSearchResponse,
@@ -12,11 +15,12 @@ from infra.db.session import get_db_session
 from infra.vector_db.qdrant_client import create_qdrant_client
 from infra.vector_db.repositories.embeddings import EmbeddingVectorRepository
 from modules.embeddings import GeminiEmbedder
+
 from modules.semantic_search import (
+    FormulaSearchFilters,
     QuestionSearchFilters,
     SemanticSearchService,
 )
-
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -56,6 +60,65 @@ async def search_questions(
                 QuestionSearchItem(
                     question_id=result.question_id,
                     document_id=result.document_id,
+                    score=result.score,
+                    marker=result.marker,
+                    marker_number=result.marker_number,
+                    statement=result.statement,
+                    solution=result.solution,
+                    answer=result.answer,
+                    subject=result.subject,
+                    chapter=result.chapter,
+                    difficulty=result.difficulty,
+                    skills=result.skills,
+                )
+                for result in results
+            ],
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    finally:
+        await client.close()
+
+@router.post("/formulas", response_model=FormulaSearchResponse)
+async def search_formulas(
+    request: FormulaSearchRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> FormulaSearchResponse:
+    client = create_qdrant_client()
+
+    try:
+        service = SemanticSearchService(
+            question_repository=QuestionRepository(session),
+            vector_repository=EmbeddingVectorRepository(
+                client=client,
+                dimension=settings.embedding_dimension,
+                question_collection=settings.qdrant_question_collection,
+                formula_collection=settings.qdrant_formula_collection,
+            ),
+            embedder=GeminiEmbedder(),
+        )
+
+        results = await service.search_formulas(
+            latex=request.latex,
+            limit=request.limit,
+            filters=FormulaSearchFilters(
+                source=request.source,
+            ),
+        )
+
+        return FormulaSearchResponse(
+            latex=request.latex,
+            results=[
+                FormulaSearchItem(
+                    question_id=result.question_id,
+                    document_id=result.document_id,
+                    formula_index=result.formula_index,
+                    latex=result.latex,
+                    normalized_latex=result.normalized_latex,
+                    source=result.source,
                     score=result.score,
                     marker=result.marker,
                     marker_number=result.marker_number,
