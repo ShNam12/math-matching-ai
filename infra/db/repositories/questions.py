@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infra.db.models import Question
@@ -70,6 +70,54 @@ class QuestionRepository:
         )
 
         return result.scalar_one_or_none()
+    
+    async def create_generated_question(
+        self,
+        *,
+        source_question: Question,
+        statement: str,
+        solution: str | None,
+        answer: str | None,
+        formulas: list[dict[str, str]],
+        subject: str | None,
+        chapter: str | None,
+        difficulty: str | None,
+        skills: list[str],
+    ) -> Question:
+        result = await self.session.execute(
+            select(func.max(Question.sequence_number)).where(
+                Question.document_id == source_question.document_id
+            )
+        )
+        max_sequence_number = result.scalar_one() or 0
+        sequence_number = int(max_sequence_number) + 1
+
+        question = Question(
+            document_id=source_question.document_id,
+            sequence_number=sequence_number,
+            marker="Generated",
+            marker_number=str(sequence_number),
+            statement=statement,
+            solution=solution,
+            answer=answer,
+            formulas=formulas,
+            subject=subject,
+            chapter=chapter,
+            difficulty=difficulty,
+            skills=skills,
+            embedding_status="pending",
+            embedding_model=None,
+            embedding_dimension=None,
+            embedding_error=None,
+            embedded_at=None,
+        )
+
+        self.session.add(question)
+        await self.session.commit()
+        await self.session.refresh(question)
+
+        return question
+    
     async def list_by_ids(self, question_ids: list[str]) -> list[Question]:
         if not question_ids:
             return []
