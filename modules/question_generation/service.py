@@ -14,6 +14,7 @@ from modules.question_generation.schemas import (
     QuestionGenerationPreview,
 )
 from modules.question_segmenter.formula_extractor import extract_formulas
+from modules.question_quality.service import QuestionQualityService
 
 
 class TextQuestionGenerator(Protocol):
@@ -41,9 +42,11 @@ class QuestionGenerationService:
         *,
         question_repository: QuestionRepository,
         generator: TextQuestionGenerator,
+        quality_service: QuestionQualityService | None = None,
     ) -> None:
         self.question_repository = question_repository
         self.generator = generator
+        self.quality_service = quality_service or QuestionQualityService()
 
     async def preview_questions(
         self,
@@ -84,10 +87,6 @@ class QuestionGenerationService:
         existing_questions = await self.question_repository.list_by_document(
             source_question.document_id
         )
-        existing_statements = {
-            _normalize_for_duplicate_check(question.statement)
-            for question in existing_questions
-        }
 
         candidates: list[GeneratedQuestionCandidate] = []
 
@@ -95,11 +94,29 @@ class QuestionGenerationService:
             candidate = self._parse_candidate(
                 item=item,
                 source_question=source_question,
-                existing_statements=existing_statements,
                 constraints=constraints,
             )
 
-            candidates.append(candidate)
+            quality_report = await self.quality_service.assess_candidate(
+                candidate=candidate,
+                source_question=source_question,
+                existing_questions=existing_questions,
+                requested_difficulty=constraints.difficulty,
+            )
+
+            candidates.append(
+                GeneratedQuestionCandidate(
+                    statement=candidate.statement,
+                    solution=candidate.solution,
+                    answer=candidate.answer,
+                    subject=candidate.subject,
+                    chapter=candidate.chapter,
+                    difficulty=candidate.difficulty,
+                    skills=candidate.skills,
+                    formulas=candidate.formulas,
+                    quality_warnings=quality_report.quality_warnings,
+                )
+            )
 
         return QuestionGenerationPreview(
             source_question_id=source_question.id,
@@ -122,13 +139,19 @@ class QuestionGenerationService:
         existing_questions = await self.question_repository.list_by_document(
             source_question.document_id
         )
-        existing_statements = {
-            _normalize_for_duplicate_check(question.statement)
-            for question in existing_questions
-        }
 
-        if _normalize_for_duplicate_check(candidate.statement) in existing_statements:
-            raise ValueError("Generated question duplicates an existing question")
+        quality_report = await self.quality_service.assess_candidate(
+            candidate=candidate,
+            source_question=source_question,
+            existing_questions=existing_questions,
+            requested_difficulty=None,
+        )
+
+        if not quality_report.can_save:
+            blocking_codes = ", ".join(quality_report.quality_warnings)
+            raise ValueError(
+                f"Generated question failed quality checks: {blocking_codes}"
+            )
 
         return await self.question_repository.create_generated_question(
             source_question=source_question,
@@ -147,7 +170,6 @@ class QuestionGenerationService:
         *,
         item: object,
         source_question: Question,
-        existing_statements: set[str],
         constraints: GenerationConstraints,
     ) -> GeneratedQuestionCandidate:
         if not isinstance(item, dict):
@@ -196,15 +218,6 @@ class QuestionGenerationService:
             formulas.append(extracted.model_dump())
 
         quality_warnings: list[str] = []
-
-        if _normalize_for_duplicate_check(statement) in existing_statements:
-            quality_warnings.append("duplicate_statement")
-
-        if constraints.avoid_duplicate and quality_warnings:
-            quality_warnings.append("review_required")
-
-        if not formulas:
-            quality_warnings.append("no_formula_detected")
 
         return GeneratedQuestionCandidate(
             statement=statement,

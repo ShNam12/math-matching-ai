@@ -59,3 +59,30 @@ class QuestionGenerationSaveResponse(BaseModel):
     skills: list[str]
     formulas: list[GeneratedFormulaItem]
     embedding_status: str
+
+class QuestionGenerationQualityRequest(BaseModel):
+    source_question_id: str = Field(min_length=1)
+    requested_difficulty: str | None = None
+    candidate: GeneratedQuestionCandidateItem
+
+
+class QualityIssueItem(BaseModel):
+    code: str
+    message: str
+    severity: str
+    field: str | None = None
+
+
+class SemanticDuplicateItem(BaseModel):
+    question_id: str
+    document_id: str
+    score: float
+    statement: str
+
+
+class QuestionGenerationQualityResponse(BaseModel):
+    can_save: bool
+    quality_warnings: list[str]
+    warnings: list[QualityIssueItem]
+    blocking_issues: list[QualityIssueItem]
+    semantic_duplicates: list[SemanticDuplicateItem]

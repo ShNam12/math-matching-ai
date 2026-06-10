@@ -5,11 +5,16 @@ from apps.api.v1.models.generation import (
     GeneratedFormulaItem,
     GeneratedQuestionCandidateItem,
     GenerationConstraintsRequest,
+    QualityIssueItem,
     QuestionGenerationPreviewRequest,
     QuestionGenerationPreviewResponse,
+    QuestionGenerationQualityRequest,
+    QuestionGenerationQualityResponse,
     QuestionGenerationSaveRequest,
     QuestionGenerationSaveResponse,
+    SemanticDuplicateItem,
 )
+
 from core.config.settings import settings
 from infra.db.repositories.questions import QuestionRepository
 from infra.db.session import get_db_session
@@ -22,6 +27,9 @@ from modules.question_generation import (
     GenerationConstraints,
     QuestionGenerationService,
 )
+
+from modules.question_quality import QuestionQualityService
+from modules.semantic_search import SemanticSearchService
 
 router = APIRouter(prefix="/generation", tags=["generation"])
 
@@ -40,6 +48,22 @@ def create_question_embedding_service(
     client,
 ) -> QuestionEmbeddingService:
     return QuestionEmbeddingService(
+        question_repository=QuestionRepository(session),
+        vector_repository=EmbeddingVectorRepository(
+            client=client,
+            dimension=settings.embedding_dimension,
+            question_collection=settings.qdrant_question_collection,
+            formula_collection=settings.qdrant_formula_collection,
+        ),
+        embedder=GeminiEmbedder(),
+    )
+
+def create_semantic_search_service(
+    *,
+    session: AsyncSession,
+    client,
+) -> SemanticSearchService:
+    return SemanticSearchService(
         question_repository=QuestionRepository(session),
         vector_repository=EmbeddingVectorRepository(
             client=client,
@@ -138,7 +162,80 @@ async def preview_generated_questions(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
+    
+def _to_quality_issue_item(issue) -> QualityIssueItem:
+    return QualityIssueItem(
+        code=issue.code,
+        message=issue.message,
+        severity=issue.severity,
+        field=issue.field,
+    )
 
+@router.post(
+    "/questions/quality",
+    response_model=QuestionGenerationQualityResponse,
+)
+async def assess_generated_question_quality(
+    request: QuestionGenerationQualityRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> QuestionGenerationQualityResponse:
+    client = create_qdrant_client()
+
+    try:
+        question_repository = QuestionRepository(session)
+        source_question = await question_repository.get_question(
+            request.source_question_id
+        )
+
+        if source_question is None:
+            raise ValueError("Source question not found")
+
+        existing_questions = await question_repository.list_by_document(
+            source_question.document_id
+        )
+
+        quality_service = QuestionQualityService(
+            semantic_search_service=create_semantic_search_service(
+                session=session,
+                client=client,
+            )
+        )
+
+        report = await quality_service.assess_candidate(
+            candidate=_to_generated_candidate(request.candidate),
+            source_question=source_question,
+            existing_questions=existing_questions,
+            requested_difficulty=request.requested_difficulty,
+        )
+
+        return QuestionGenerationQualityResponse(
+            can_save=report.can_save,
+            quality_warnings=report.quality_warnings,
+            warnings=[
+                _to_quality_issue_item(issue)
+                for issue in report.warnings
+            ],
+            blocking_issues=[
+                _to_quality_issue_item(issue)
+                for issue in report.blocking_issues
+            ],
+            semantic_duplicates=[
+                SemanticDuplicateItem(
+                    question_id=duplicate.question_id,
+                    document_id=duplicate.document_id,
+                    score=duplicate.score,
+                    statement=duplicate.statement,
+                )
+                for duplicate in report.semantic_duplicates
+            ],
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    finally:
+        await client.close()
 
 @router.post(
     "/questions/save",

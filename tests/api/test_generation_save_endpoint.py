@@ -136,7 +136,9 @@ def test_generation_save_endpoint_returns_400_for_service_error(
 
     class ErrorGenerationService:
         async def save_generated_question(self, **kwargs):
-            raise ValueError("Generated question duplicates an existing question")
+            raise ValueError(
+                "Generated question failed quality checks: exact_duplicate_statement"
+            )
 
     monkeypatch.setattr(
         generation_endpoint,
@@ -177,6 +179,6 @@ def test_generation_save_endpoint_returns_400_for_service_error(
 
     assert response.status_code == 400
     assert response.json()["detail"] == (
-        "Generated question duplicates an existing question"
+        "Generated question failed quality checks: exact_duplicate_statement"
     )
     assert fake_client.closed is True

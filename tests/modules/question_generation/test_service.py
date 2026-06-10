@@ -236,10 +236,9 @@ def test_preview_questions_marks_duplicate_statement() -> None:
         )
     )
 
-    assert preview.candidates[0].quality_warnings == [
-        "duplicate_statement",
-        "review_required",
-    ]
+    assert "exact_duplicate_statement" in preview.candidates[0].quality_warnings
+    assert "missing_solution" in preview.candidates[0].quality_warnings
+    assert "missing_answer" in preview.candidates[0].quality_warnings
 
 
 def test_preview_questions_marks_no_formula_detected() -> None:
@@ -268,7 +267,9 @@ def test_preview_questions_marks_no_formula_detected() -> None:
         )
     )
 
-    assert preview.candidates[0].quality_warnings == ["no_formula_detected"]
+    assert "no_formula_detected" in preview.candidates[0].quality_warnings
+    assert "missing_solution" in preview.candidates[0].quality_warnings
+    assert "missing_answer" in preview.candidates[0].quality_warnings
 
 
 def test_preview_questions_limits_items_to_generation_count() -> None:
@@ -375,10 +376,47 @@ def test_save_generated_question_rejects_duplicate_statement() -> None:
         generator=FakeGenerator({"items": []}),
     )
 
-    with pytest.raises(ValueError, match="duplicates"):
+    with pytest.raises(ValueError, match="failed quality checks") as exc_info:
         asyncio.run(
             service.save_generated_question(
                 source_question_id="source-id",
                 candidate=make_candidate(statement=question.statement),
             )
         )
+
+    assert "exact_duplicate_statement" in str(exc_info.value)
+def test_save_generated_question_rejects_invalid_formula_payload() -> None:
+    question = make_question()
+    service = QuestionGenerationService(
+        question_repository=FakeQuestionRepository([question]),
+        generator=FakeGenerator({"items": []}),
+    )
+
+    candidate = make_candidate()
+    invalid_candidate = GeneratedQuestionCandidate(
+        statement=candidate.statement,
+        solution=candidate.solution,
+        answer=candidate.answer,
+        subject=candidate.subject,
+        chapter=candidate.chapter,
+        difficulty=candidate.difficulty,
+        skills=candidate.skills,
+        formulas=[
+            {
+                "latex": "",
+                "normalized_latex": "x+1",
+                "source": "statement",
+            }
+        ],
+        quality_warnings=[],
+    )
+
+    with pytest.raises(ValueError, match="failed quality checks") as exc_info:
+        asyncio.run(
+            service.save_generated_question(
+                source_question_id="source-id",
+                candidate=invalid_candidate,
+            )
+        )
+
+    assert "invalid_formula_payload" in str(exc_info.value)
