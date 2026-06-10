@@ -5,7 +5,11 @@ import {
   CloudUpload, CheckCircle, Loader, AlertCircle,
   Eye, Trash2, RefreshCw, FolderOpen, Sparkles, LayoutDashboard,
 } from "lucide-react";
+
 import {
+  getDocument,
+  getDocumentMarkdown,
+  getDocumentStatus,
   listDocuments,
   uploadDocument,
 } from "../services/ingestionApi";
@@ -87,6 +91,23 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
   const [documents, setDocuments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshingDocumentId, setRefreshingDocumentId] = useState(null);
+  const [markdownViewer, setMarkdownViewer] = useState({
+    open: false,
+    loading: false,
+    document: null,
+    content: "",
+    checksum: null,
+    error: null,
+  });
+
+  const [documentDetailViewer, setDocumentDetailViewer] = useState({
+    open: false,
+    loading: false,
+    document: null,
+    error: null,
+  });
+
   const fileInputRef = useRef(null);
 
   const loadDocuments = useCallback(async () => {
@@ -140,6 +161,118 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
     event.preventDefault();
     setDragging(false);
     handleUpload(event.dataTransfer.files[0]);
+  }
+
+  async function handleViewMarkdown(document) {
+    if (!document.markdown_available) return;
+
+    setMarkdownViewer({
+      open: true,
+      loading: true,
+      document,
+      content: "",
+      checksum: null,
+      error: null,
+    });
+
+    try {
+      const data = await getDocumentMarkdown(document.id);
+
+      setMarkdownViewer({
+        open: true,
+        loading: false,
+        document,
+        content: data.markdown_content,
+        checksum: data.markdown_checksum,
+        error: null,
+      });
+    } catch (requestError) {
+      setMarkdownViewer({
+        open: true,
+        loading: false,
+        document,
+        content: "",
+        checksum: null,
+        error: requestError.message,
+      });
+    }
+  }
+
+  function closeMarkdownViewer() {
+    setMarkdownViewer({
+      open: false,
+      loading: false,
+      document: null,
+      content: "",
+      checksum: null,
+      error: null,
+    });
+  }
+
+  async function handleRefreshDocumentStatus(documentId) {
+    if (refreshingDocumentId) return;
+
+    setRefreshingDocumentId(documentId);
+    setError(null);
+
+    try {
+      const statusData = await getDocumentStatus(documentId);
+
+      setDocuments((currentDocuments) =>
+        currentDocuments.map((document) =>
+          document.id === documentId
+            ? {
+                ...document,
+                status: statusData.status,
+                message: statusData.message,
+                markdown_available: statusData.markdown_available,
+                error_message: statusData.error_message,
+                updated_at: statusData.updated_at,
+              }
+            : document,
+        ),
+      );
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setRefreshingDocumentId(null);
+    }
+  }
+
+  async function handleViewDocumentDetail(documentId) {
+    setDocumentDetailViewer({
+      open: true,
+      loading: true,
+      document: null,
+      error: null,
+    });
+
+    try {
+      const data = await getDocument(documentId);
+
+      setDocumentDetailViewer({
+        open: true,
+        loading: false,
+        document: data,
+        error: null,
+      });
+    } catch (requestError) {
+      setDocumentDetailViewer({
+        open: true,
+        loading: false,
+        document: null,
+        error: requestError.message,
+      });
+    }
+  }
+
+  function closeDocumentDetailViewer() {
+    setDocumentDetailViewer({
+      open: false,
+      loading: false,
+      document: null,
+      error: null,
+    });
   }
 
     const filtered = documents.filter((document) => {
@@ -353,6 +486,21 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
                       {formatDate(doc.created_at)}
                     </span>
 
+                    {doc.r2_original_url && (
+                      <>
+                        <span className="text-slate-200">·</span>
+                        <a
+                          href={doc.r2_original_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          Mở file gốc
+                        </a>
+                      </>
+                    )}
+
                     {doc.status === "failed" && doc.error_message && (
                       <>
                         <span className="text-slate-200">·</span>
@@ -367,7 +515,36 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
                 <StatusBadge status={doc.status} />
 
                 <div className="flex items-center gap-1 ml-1">
-                  <button className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                  
+                  <button
+                    type="button"
+                    disabled={refreshingDocumentId === doc.id}
+                    title="Làm mới trạng thái"
+                    onClick={() => handleRefreshDocumentStatus(doc.id)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all disabled:opacity-40"
+                  >
+                    <RefreshCw
+                      size={13}
+                      className={refreshingDocumentId === doc.id ? "animate-spin" : ""}
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    title="Xem chi tiết document"
+                    onClick={() => handleViewDocumentDetail(doc.id)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                  >
+                    <FileText size={13} />
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!doc.markdown_available}
+                    title={doc.markdown_available ? "Xem markdown" : "Chưa có markdown"}
+                    onClick={() => handleViewMarkdown(doc)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                  >
                     <Eye size={13} />
                   </button>
                   <button className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
@@ -398,6 +575,130 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
           </div>
         </div>
       </div>
+      {markdownViewer.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+          <div className="w-full max-w-4xl max-h-[85vh] bg-white rounded-xl border border-slate-200 shadow-xl flex flex-col overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold text-slate-800 truncate">
+                  {markdownViewer.document?.filename}
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  Markdown đã xử lý
+                  {markdownViewer.checksum ? ` · ${markdownViewer.checksum}` : ""}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeMarkdownViewer}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 bg-slate-50">
+              {markdownViewer.loading && (
+                <div className="flex items-center gap-2 text-[12px] text-slate-500">
+                  <Loader size={14} className="animate-spin" />
+                  Đang tải markdown...
+                </div>
+              )}
+
+              {!markdownViewer.loading && markdownViewer.error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+                  {markdownViewer.error}
+                </div>
+              )}
+
+              {!markdownViewer.loading && !markdownViewer.error && (
+                <pre className="whitespace-pre-wrap break-words text-[12px] leading-6 text-slate-700 font-mono">
+                  {markdownViewer.content || "Tài liệu chưa có nội dung markdown."}
+                </pre>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {documentDetailViewer.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+          <div className="w-full max-w-3xl max-h-[85vh] bg-white rounded-xl border border-slate-200 shadow-xl flex flex-col overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold text-slate-800 truncate">
+                  Chi tiết document
+                </p>
+                <p className="text-[10px] text-slate-400 truncate">
+                  {documentDetailViewer.document?.filename || "Đang tải dữ liệu"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeDocumentDetailViewer}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 bg-slate-50">
+              {documentDetailViewer.loading && (
+                <div className="flex items-center gap-2 text-[12px] text-slate-500">
+                  <Loader size={14} className="animate-spin" />
+                  Đang tải chi tiết document...
+                </div>
+              )}
+
+              {!documentDetailViewer.loading && documentDetailViewer.error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+                  {documentDetailViewer.error}
+                </div>
+              )}
+
+              {!documentDetailViewer.loading && documentDetailViewer.document && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px]">
+                  {[
+                    ["ID", documentDetailViewer.document.id],
+                    ["Tên file", documentDetailViewer.document.filename],
+                    ["Loại nguồn", documentDetailViewer.document.source_type],
+                    ["Content type", documentDetailViewer.document.content_type || "Không có"],
+                    ["Kích thước", formatFileSize(documentDetailViewer.document.size_bytes)],
+                    ["Trạng thái", documentDetailViewer.document.status],
+                    ["Message", documentDetailViewer.document.message || "Không có"],
+                    ["Có markdown", documentDetailViewer.document.markdown_available ? "Có" : "Không"],
+                    ["R2 key", documentDetailViewer.document.r2_original_key || "Không có"],
+                    ["R2 URL", documentDetailViewer.document.r2_original_url || "Không có"],
+                    ["Lỗi", documentDetailViewer.document.error_message || "Không có"],
+                    ["Ngày tạo", formatDate(documentDetailViewer.document.created_at)],
+                    ["Cập nhật", formatDate(documentDetailViewer.document.updated_at)],
+                    [
+                      "Xử lý xong",
+                      documentDetailViewer.document.processed_at
+                        ? formatDate(documentDetailViewer.document.processed_at)
+                        : "Chưa có",
+                    ],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 min-w-0"
+                    >
+                      <p className="text-[10px] font-semibold uppercase text-slate-400">
+                        {label}
+                      </p>
+                      <p className="mt-1 break-words text-slate-700">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
