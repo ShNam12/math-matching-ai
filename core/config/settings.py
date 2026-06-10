@@ -2,6 +2,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    app_env: str = "local"
+    cors_allow_origins: str = "http://localhost:5173"
+
     database_url: str
     gemini_api_key: str
     gemini_model: str = "gemini-2.5-flash"
@@ -21,6 +24,14 @@ class Settings(BaseSettings):
     r2_public_base_url: str | None = None
 
     max_upload_size_mb: int = 40
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.cors_allow_origins.split(",")
+            if origin.strip()
+        ]
 
     model_config = SettingsConfigDict(
         env_file=".env",

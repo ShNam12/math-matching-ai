@@ -1,5 +1,11 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from core.config.settings import settings
+from infra.db.session import get_db_session
+from infra.vector_db.qdrant_client import create_qdrant_client
 
 from apps.api.v1.endpoints.documents import router as documents_router
 from apps.api.v1.endpoints.generation import router as generation_router
@@ -14,7 +20,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,6 +35,29 @@ async def root() -> dict[str, str]:
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
+@app.get("/ready", tags=["health"])
+async def readiness_check(
+    session: AsyncSession = Depends(get_db_session),
+) -> dict[str, object]:
+    checks: dict[str, bool] = {
+        "database": False,
+        "qdrant": False,
+    }
+
+    await session.execute(text("SELECT 1"))
+    checks["database"] = True
+
+    client = create_qdrant_client()
+    try:
+        await client.get_collections()
+        checks["qdrant"] = True
+    finally:
+        await client.close()
+
+    return {
+        "status": "ready",
+        "checks": checks,
+    }
 
 app.include_router(documents_router)
 app.include_router(search_router)
