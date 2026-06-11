@@ -81,6 +81,7 @@ export default function SemanticSearch({
   activePage = "search",
   onNavigate = () => {},
   onOpenQuestionDetail = () => {},
+  onOpenGeneration = () => {},
 }) {
   const [query, setQuery] = useState("");
   const [searchMode, setSearchMode] = useState("question");
@@ -423,7 +424,11 @@ export default function SemanticSearch({
                       <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all">
                         <GitBranch size={11} /> Bài tương tự
                       </button>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-all ml-auto">
+                      <button
+                        type="button"
+                        onClick={() => onOpenGeneration(p.questionId)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-all ml-auto"
+                      >
                         <Zap size={11} /> Sinh biến thể
                       </button>
                       <button className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-all">

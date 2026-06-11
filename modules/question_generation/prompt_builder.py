@@ -27,6 +27,8 @@ Requirements:
 - Use clear LaTeX for formulas.
 - Return valid JSON only.
 - Do not wrap JSON in markdown fences.
+- Escape every LaTeX backslash for JSON strings. For example, write "\\\\frac{{x}}{{2}}" instead of "\\frac{{x}}{{2}}".
+- Do not use raw single backslashes in JSON string values.
 - The JSON must have exactly this shape:
 {{
   "items": [

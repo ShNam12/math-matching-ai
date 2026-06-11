@@ -25,6 +25,7 @@ const PAGES = {
 function App() {
   const [activePage, setActivePage] = useState("dashboard")
   const [selectedQuestionId, setSelectedQuestionId] = useState(null)
+  const [sourceQuestionId, setSourceQuestionId] = useState(null)
 
   const ActivePage = PAGES[activePage]
 
@@ -33,12 +34,19 @@ function App() {
     setActivePage("detail")
   }
 
+  function handleOpenGeneration(questionId) {
+    setSourceQuestionId(questionId)
+    setActivePage("gen")
+  }
+
   return (
     <ActivePage
       activePage={activePage}
       onNavigate={setActivePage}
       selectedQuestionId={selectedQuestionId}
+      sourceQuestionId={sourceQuestionId}
       onOpenQuestionDetail={handleOpenQuestionDetail}
+      onOpenGeneration={handleOpenGeneration}
     />
   )
 }

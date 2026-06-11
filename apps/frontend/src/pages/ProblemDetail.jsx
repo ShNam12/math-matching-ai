@@ -77,6 +77,7 @@ export default function ProblemDetail({
   onNavigate = () => {},
   selectedQuestionId = null,
   onOpenQuestionDetail = () => {},
+  onOpenGeneration = () => {},
 }) {
   const [starred, setStarred] = useState(true);
   const [copiedLatex, setCopiedLatex] = useState(false);
@@ -371,7 +372,12 @@ export default function ProblemDetail({
 
             {/* Actions */}
             <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-xl hover:bg-blue-700 transition-all">
+              <button
+                type="button"
+                disabled={!displayProblem.id}
+                onClick={() => onOpenGeneration(displayProblem.id)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60"
+              >
                 <Zap size={13} /> Sinh biến thể từ bài này
               </button>
               <button

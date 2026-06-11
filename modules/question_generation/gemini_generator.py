@@ -1,6 +1,7 @@
 from typing import Protocol
 
 from google import genai
+from google.genai import types
 
 from core.config.settings import settings
 
@@ -22,6 +23,9 @@ class GeminiQuestionGenerator:
         response = self.client.models.generate_content(
             model=self.model,
             contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
         )
 
         text = getattr(response, "text", None)

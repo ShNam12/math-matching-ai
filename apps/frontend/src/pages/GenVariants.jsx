@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
@@ -6,6 +6,12 @@ import {
   RefreshCw, Copy, CheckCircle, Sliders, ArrowUpRight,
   ArrowDownRight, Minus, Eye, Plus, LayoutDashboard
 } from "lucide-react";
+import { getQuestion } from "../services/questionApi";
+import {
+  previewGeneratedQuestions,
+  assessGeneratedQuestionQuality,
+  saveGeneratedQuestion,
+} from "../services/generationApi";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -84,27 +90,272 @@ const VARIANTS_DATA = [
   },
 ];
 
-export default function GenVariants({ activePage = "gen", onNavigate = () => {} }) {
-  const [variants, setVariants] = useState(VARIANTS_DATA);
+export default function GenVariants({
+  activePage = "gen",
+  onNavigate = () => {},
+  sourceQuestionId = null,
+}) {
+  const [variants, setVariants] = useState([]);
   const [strategy, setStrategy] = useState("Đổi tham số");
-  const [count, setCount] = useState("5");
+  const [count, setCount] = useState("1");
   const [targetDiff, setTargetDiff] = useState("Tương đương");
   const [note, setNote] = useState("Giữ cấu trúc tích phân từng phần nhưng thay đổi hàm và bậc");
   const [generating, setGenerating] = useState(false);
+  const [checkingQuality, setCheckingQuality] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [generationError, setGenerationError] = useState(null);
+  const [saveMessage, setSaveMessage] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+
+  const [sourceQuestion, setSourceQuestion] = useState(null);
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [sourceError, setSourceError] = useState(null);
 
   const toggleSelect = (id) =>
     setVariants((vs) => vs.map((v) => v.id === id ? { ...v, selected: !v.selected } : v));
 
-  const handleGen = () => {
+  const getDifficultyMeta = (difficulty) => {
+    if (difficulty === "Khó hơn" || difficulty === "hard") {
+      return {
+        label: "Khó hơn",
+        diffIcon: ArrowUpRight,
+        diffColor: "text-red-600 bg-red-50 border-red-200",
+      };
+    }
+
+    if (difficulty === "Dễ hơn" || difficulty === "easy") {
+      return {
+        label: "Dễ hơn",
+        diffIcon: ArrowDownRight,
+        diffColor: "text-emerald-600 bg-emerald-50 border-emerald-200",
+      };
+    }
+
+    return {
+      label: difficulty || "Tương đương",
+      diffIcon: Minus,
+      diffColor: "text-amber-600 bg-amber-50 border-amber-200",
+    };
+  };
+
+  const getRequestedDifficulty = () => {
+    if (targetDiff === "Dễ hơn") {
+      return "easy";
+    }
+
+    if (targetDiff === "Khó hơn") {
+      return "hard";
+    }
+
+    return sourceQuestion?.difficulty || null;
+  };
+
+  const getQualityScore = (qualityResult) => {
+    if (!qualityResult) {
+      return 0;
+    }
+
+    if (qualityResult.blocking_issues?.length) {
+      return 60;
+    }
+
+    if (qualityResult.warnings?.length) {
+      return 85;
+    }
+
+    return 100;
+  };
+
+  const mapCandidateToVariant = (candidate, index) => {
+    const difficultyMeta = getDifficultyMeta(candidate.difficulty || targetDiff);
+    const firstFormula = candidate.formulas?.[0];
+
+    return {
+      id: `GEN-${String(index + 1).padStart(3, "0")}`,
+      latex: firstFormula?.latex || candidate.answer || "Generated question",
+      statement: candidate.statement,
+      solution: candidate.solution,
+      answer: candidate.answer,
+      formulas: candidate.formulas || [],
+      difficulty: difficultyMeta.label,
+      diffIcon: difficultyMeta.diffIcon,
+      diffColor: difficultyMeta.diffColor,
+      strategy: candidate.quality_warnings?.length
+        ? candidate.quality_warnings.join(", ")
+        : "Sinh từ backend",
+      qaScore: candidate.quality_warnings?.length ? 85 : 100,
+      selected: false,
+      candidate,
+    };
+  };
+
+  const checkVariantQuality = async (variant) => {
+    const qualityResult = await assessGeneratedQuestionQuality({
+      source_question_id: sourceQuestionId,
+      requested_difficulty: getRequestedDifficulty(),
+      candidate: variant.candidate,
+    });
+
+    return {
+      ...variant,
+      quality: qualityResult,
+      canSave: qualityResult.can_save,
+      qaScore: getQualityScore(qualityResult),
+      strategy: qualityResult.quality_warnings?.length
+        ? qualityResult.quality_warnings.join(", ")
+        : variant.strategy,
+    };
+  };
+
+  const handleGen = async () => {
+    if (!sourceQuestionId) {
+      return;
+    }
+
     setGenerating(true);
-    setTimeout(() => setGenerating(false), 2000);
+    setGenerationError(null);
+
+    try {
+      const payload = {
+        source_question_id: sourceQuestionId,
+        generation_count: Number(count),
+        constraints: {
+          subject: sourceQuestion?.subject || null,
+          chapter: sourceQuestion?.chapter || null,
+          difficulty: getRequestedDifficulty(),
+          skills: sourceQuestion?.skills || [],
+          preserve_formula_style: true,
+          avoid_duplicate: true,
+        },
+      };
+
+      const data = await previewGeneratedQuestions(payload);
+      const previewVariants = data.candidates.map(mapCandidateToVariant);
+      setVariants(previewVariants);
+
+      setCheckingQuality(true);
+      const checkedVariants = await Promise.all(
+        previewVariants.map((variant) => checkVariantQuality(variant))
+      );
+      setVariants(checkedVariants);
+    } catch (requestError) {
+      setGenerationError(requestError.message);
+      setVariants([]);
+    } finally {
+      setGenerating(false);
+      setCheckingQuality(false);
+    }
+  };
+
+  const handleSaveSelected = async () => {
+    const selectedVariants = variants.filter((variant) => variant.selected);
+
+    if (!sourceQuestionId || selectedVariants.length === 0) {
+      return;
+    }
+
+    setSaving(true);
+    setGenerationError(null);
+    setSaveMessage(null);
+
+    try {
+      const savedResults = [];
+
+      for (const variant of selectedVariants) {
+        if (variant.canSave === false) {
+          throw new Error(`Biến thể ${variant.id} chưa đạt chất lượng để lưu`);
+        }
+
+        const saved = await saveGeneratedQuestion({
+          source_question_id: sourceQuestionId,
+          candidate: variant.candidate,
+        });
+
+        savedResults.push({ variantId: variant.id, saved });
+      }
+
+      setVariants((currentVariants) =>
+        currentVariants.map((variant) => {
+          const savedResult = savedResults.find(
+            (item) => item.variantId === variant.id
+          );
+
+          if (!savedResult) {
+            return variant;
+          }
+
+          return {
+            ...variant,
+            selected: false,
+            savedQuestionId: savedResult.saved.question_id,
+            embeddingStatus: savedResult.saved.embedding_status,
+          };
+        })
+      );
+
+      setSaveMessage(
+        `Đã lưu ${savedResults.length} biến thể vào corpus`
+      );
+    } catch (requestError) {
+      setGenerationError(requestError.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCopy = (id) => {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
   };
+
+  useEffect(() => {
+    if (!sourceQuestionId) {
+      setSourceQuestion(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSourceQuestion() {
+      setSourceLoading(true);
+      setSourceError(null);
+
+      try {
+        const data = await getQuestion(sourceQuestionId);
+
+        if (!cancelled) {
+          setSourceQuestion(data);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setSourceError(requestError.message);
+          setSourceQuestion(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setSourceLoading(false);
+        }
+      }
+    }
+
+    loadSourceQuestion();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceQuestionId]);
+
+  const displayOriginal = sourceQuestion
+    ? {
+        id: sourceQuestion.id,
+        latex: sourceQuestion.formulas?.[0]?.latex || sourceQuestion.marker || "Question",
+        topic: sourceQuestion.chapter || sourceQuestion.subject || "Chưa phân loại",
+        difficulty: sourceQuestion.difficulty || "Chưa rõ",
+        statement: sourceQuestion.statement,
+      }
+    : ORIGINAL;
+
+  const hasSourceQuestion = Boolean(sourceQuestionId);
 
   const selectedCount = variants.filter((v) => v.selected).length;
 
@@ -156,7 +407,9 @@ export default function GenVariants({ activePage = "gen", onNavigate = () => {} 
               <ArrowLeft size={12} /> Chi tiết bài tập
             </button>
             <div className="flex items-center gap-1 text-[11px] text-slate-400">
-              <span>{ORIGINAL.id}</span><ChevronRight size={11} /><span className="text-slate-600 font-semibold">Sinh biến thể</span>
+              <span>{sourceQuestionId || displayOriginal.id}</span>
+              <ChevronRight size={11} />
+              <span className="text-slate-600 font-semibold">Sinh biến thể</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -179,10 +432,38 @@ export default function GenVariants({ activePage = "gen", onNavigate = () => {} 
               {/* Original */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
                 <p className="text-[10px] font-bold text-blue-700 mb-1.5 uppercase tracking-wide">Bài gốc</p>
-                <code className="text-[12px] font-mono text-blue-800 font-bold block mb-1">{ORIGINAL.latex}</code>
+
+                {!sourceQuestionId && (
+                  <p className="text-[10px] text-amber-600 mb-2">
+                    Chưa chọn câu hỏi nguồn. Hãy chọn một câu hỏi từ Semantic Search hoặc Chi tiết bài tập.
+                  </p>
+                )}
+
+                {sourceLoading && (
+                  <p className="text-[10px] text-blue-600 mb-2">
+                    Đang tải câu hỏi nguồn...
+                  </p>
+                )}
+
+                {sourceError && (
+                  <p className="text-[10px] text-red-600 mb-2">
+                    {sourceError}
+                  </p>
+                )}
+
+                <p className="text-[10px] text-blue-600 font-mono break-all mb-2">
+                  {sourceQuestionId || "Chưa chọn câu hỏi nguồn"}
+                </p>
+                <code className="text-[12px] font-mono text-blue-800 font-bold block mb-1">
+                  {displayOriginal.latex}
+                </code>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded">{ORIGINAL.topic}</span>
-                  <span className="text-[10px] text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">{ORIGINAL.difficulty}</span>
+                  <span className="text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
+                    {displayOriginal.topic}
+                  </span>
+                  <span className="text-[10px] text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                    {displayOriginal.difficulty}
+                  </span>
                 </div>
               </div>
 
@@ -203,7 +484,7 @@ export default function GenVariants({ activePage = "gen", onNavigate = () => {} 
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">Số biến thể</label>
                   <div className="flex gap-1.5">
-                    {["3", "5", "10"].map((n) => (
+                    {["1", "3", "5"].map((n) => (
                       <button key={n} onClick={() => setCount(n)}
                         className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg border transition-all ${count === n ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-500 border-slate-200 hover:border-blue-300"}`}>
                         {n}
@@ -239,8 +520,16 @@ export default function GenVariants({ activePage = "gen", onNavigate = () => {} 
                 </div>
               </div>
 
-              <button onClick={handleGen}
-                className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-xl transition-all ${generating ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700"}`}>
+              <button
+                type="button"
+                onClick={handleGen}
+                disabled={!hasSourceQuestion || sourceLoading || generating}
+                className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-xl transition-all ${
+                  !hasSourceQuestion || sourceLoading || generating
+                    ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
                 {generating ? <RefreshCw size={13} className="animate-spin" /> : <Sparkles size={13} />}
                 {generating ? "Đang sinh..." : "Sinh biến thể"}
               </button>
@@ -255,6 +544,11 @@ export default function GenVariants({ activePage = "gen", onNavigate = () => {} 
                 <span className="text-[12px] font-bold text-slate-700">Kết quả sinh</span>
                 <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{variants.length} biến thể</span>
                 <span className="text-[10px] bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">{selectedCount} đã chọn</span>
+                {checkingQuality && (
+                  <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">
+                    Đang kiểm định
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {selectedCount > 0 && (
@@ -262,16 +556,59 @@ export default function GenVariants({ activePage = "gen", onNavigate = () => {} 
                     <button className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-all">
                       <Download size={12} /> Export LaTeX ({selectedCount})
                     </button>
-                    <button className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-all">
-                      <DatabaseZap size={12} /> Thêm vào corpus
+                    <button
+                      type="button"
+                      onClick={handleSaveSelected}
+                      disabled={saving || checkingQuality}
+                      className={`flex items-center gap-1.5 text-[11px] font-semibold border px-3 py-1.5 rounded-lg transition-all ${
+                        saving || checkingQuality
+                          ? "text-slate-400 bg-slate-100 border-slate-200 cursor-not-allowed"
+                          : "text-emerald-600 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
+                      }`}
+                    >
+                      {saving ? <RefreshCw size={12} className="animate-spin" /> : <DatabaseZap size={12} />}
+                      {saving ? "Đang lưu..." : "Thêm vào corpus"}
                     </button>
                   </>
                 )}
               </div>
             </div>
 
-            <div className="space-y-3">
-              {variants.map((v) => {
+            {generationError && (
+              <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] text-red-600">
+                {generationError}
+              </div>
+            )}
+
+            {saveMessage && (
+              <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] text-emerald-700">
+                {saveMessage}
+              </div>
+            )}
+
+            {!hasSourceQuestion ? (
+              <div className="bg-white border border-dashed border-slate-200 rounded-xl p-8 text-center">
+                <Sparkles size={24} className="text-slate-300 mx-auto mb-3" />
+                <p className="text-[13px] font-bold text-slate-700">
+                  Hãy chọn một câu hỏi nguồn để sinh biến thể
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Vào Semantic Search hoặc Chi tiết bài tập, sau đó bấm Sinh biến thể.
+                </p>
+              </div>
+            ) : variants.length === 0 ? (
+              <div className="bg-white border border-dashed border-slate-200 rounded-xl p-8 text-center">
+                <Sparkles size={24} className="text-blue-300 mx-auto mb-3" />
+                <p className="text-[13px] font-bold text-slate-700">
+                  Chưa có biến thể nào
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Bấm Sinh biến thể để tạo kết quả từ câu hỏi nguồn hiện tại.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {variants.map((v) => {
                 const DiffIcon = v.diffIcon;
                 const isSelected = v.selected;
                 return (
@@ -294,6 +631,17 @@ export default function GenVariants({ activePage = "gen", onNavigate = () => {} 
                             <div className={`h-full rounded-full ${v.qaScore >= 96 ? "bg-emerald-500" : "bg-amber-400"}`} style={{ width: `${v.qaScore}%` }} />
                           </div>
                         </div>
+
+                        {v.quality && (
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                            v.canSave
+                              ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                              : "text-red-700 bg-red-50 border-red-200"
+                          }`}>
+                            {v.canSave ? "Có thể lưu" : "Không thể lưu"}
+                          </span>
+                        )}
+
                         <button onClick={() => handleCopy(v.id)}
                           className="p-1.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
                           {copiedId === v.id ? <CheckCircle size={12} className="text-emerald-500" /> : <Copy size={12} />}
@@ -313,26 +661,40 @@ export default function GenVariants({ activePage = "gen", onNavigate = () => {} 
                         </code>
                       </div>
                       <p className="text-[11px] text-slate-600 leading-relaxed mb-2">{v.statement}</p>
+
+                      {v.savedQuestionId && (
+                        <div className="mb-2 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-[10px] text-emerald-700">
+                          Đã lưu: <span className="font-mono">{v.savedQuestionId}</span>
+                          {v.embeddingStatus && (
+                            <span className="ml-2 text-emerald-600">
+                              embedding: {v.embeddingStatus}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] text-slate-400">Chiến lược:</span>
                         <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">{v.strategy}</span>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                    );
+                })}
+                </div>
+              )}
 
             {/* AI Explanation */}
-            <div className="mt-4 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 text-white">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={13} className="text-blue-400" />
-                <span className="text-[11px] font-bold text-blue-300">Giải thích từ AI</span>
+            {variants.length > 0 && (
+              <div className="mt-4 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles size={13} className="text-blue-400" />
+                  <span className="text-[11px] font-bold text-blue-300">Giải thích từ AI</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  {variants.length} biến thể được sinh từ câu hỏi nguồn hiện tại. Các cảnh báo trong từng card lấy từ bước preview của backend; bước tiếp theo sẽ chạy kiểm định chất lượng chi tiết trước khi lưu vào corpus.
+                </p>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                5 biến thể được tạo bằng cách thay đổi có kiểm soát một hoặc hai tham số duy nhất trong mỗi lần sinh, đảm bảo bảo toàn cấu trúc cốt lõi của phương pháp tích phân từng phần. Tất cả biến thể đều qua QA tự động — không có vấn đề về cú pháp LaTeX. Biến thể VAR-004 có QA score thấp hơn (94%) do độ phức tạp tăng, khuyến nghị kiểm tra thủ công trước khi sử dụng.
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </div>
