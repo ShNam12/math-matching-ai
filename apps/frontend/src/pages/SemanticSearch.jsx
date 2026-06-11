@@ -6,6 +6,8 @@ import {
   Cpu, SlidersHorizontal, ArrowRight, Star, Copy, Share2, LayoutDashboard
 } from "lucide-react";
 
+import { searchFormulas, searchQuestions } from "../services/searchApi";
+
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
   { icon: Upload, label: "Upload Document", sub: "Ingestion", id: "upload" },
@@ -77,20 +79,81 @@ const diffConfig = {
 
 export default function SemanticSearch({ activePage = "search", onNavigate = () => {} }) {
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState("question");
   const [topic, setTopic] = useState("");
   const [diff, setDiff] = useState("");
   const [skill, setSkill] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [starred, setStarred] = useState({ "BK-2023-M1-042": true, "HUST-2023-M3-091": true });
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const filtered = PROBLEMS.filter((p) => {
-    return (
-      (!topic || p.topic === topic) &&
-      (!diff || p.difficulty === diff) &&
-      (!skill || p.skill === skill) &&
-      (!query || p.statement.toLowerCase().includes(query.toLowerCase()) || p.latex.includes(query))
-    );
-  });
+  const filtered = results;
+
+  async function handleSearch() {
+    const trimmedQuery = query.trim();
+
+    if (!trimmedQuery || searching) return;
+
+    setSearching(true);
+    setError(null);
+    setHasSearched(true);
+
+    try {
+      const data =
+        searchMode === "formula"
+          ? await searchFormulas({
+              latex: trimmedQuery,
+              limit: 10,
+            })
+          : await searchQuestions({
+              query: trimmedQuery,
+              limit: 10,
+              subject: topic || null,
+              difficulty: diff || null,
+            });
+
+      setResults(
+        data.results.map((item) => ({
+          id:
+            searchMode === "formula"
+              ? `${item.question_id}-${item.formula_index}`
+              : item.question_id,
+          questionId: item.question_id,
+          documentId: item.document_id,
+          topic: item.subject || "Chưa phân loại",
+          subtopic: item.chapter || "Chưa có chương",
+          difficulty: item.difficulty || "Chưa rõ",
+          skill: item.skills?.[0] || "Chưa gán kỹ năng",
+          match: Math.round(item.score * 100),
+          latex:
+            searchMode === "formula"
+              ? item.latex || item.normalized_latex
+              : item.answer || item.marker || "Question",
+          statement: item.statement,
+          solution: item.solution,
+          answer: item.answer,
+          formulaSource: item.source,
+          formulaIndex: item.formula_index,
+          normalizedLatex: item.normalized_latex,
+          tags:
+            searchMode === "formula"
+              ? [item.source || "formula"]
+              : item.skills?.length
+                ? item.skills
+                : ["Backend"],
+          starred: false,
+        })),
+      );
+    } catch (requestError) {
+      setError(requestError.message);
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -143,17 +206,66 @@ export default function SemanticSearch({ activePage = "search", onNavigate = () 
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Nhập từ khóa ngữ nghĩa hoặc mã LaTeX  (vd: \int x^2 dx, tích phân từng phần)..."
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    handleSearch();
+                  }
+                }}
+                placeholder={
+                  searchMode === "formula"
+                    ? "Nhập công thức LaTeX cần tìm (vd: x^2, \\frac{1}{x}, \\sqrt{3}+i)..."
+                    : "Nhập từ khóa ngữ nghĩa (vd: dao ham x binh phuong, tich phan tung phan)..."
+                }
                 className="w-full pl-9 pr-9 py-2.5 text-[12px] font-mono bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400/30 focus:border-blue-400 text-slate-700 placeholder:text-slate-400 transition-all"
               />
               {query && (
-                <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <button
+                  onClick={() => {
+                    setQuery("");
+                    setResults([]);
+                    setError(null);
+                    setHasSearched(false);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
                   <X size={13} />
                 </button>
               )}
             </div>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-xl hover:bg-blue-700 transition-colors flex-shrink-0">
-              <Sparkles size={13} /> Tìm kiếm AI
+
+            <div className="flex rounded-xl overflow-hidden border border-slate-200 bg-white flex-shrink-0">
+              {[
+                ["question", "Câu hỏi"],
+                ["formula", "Công thức"],
+              ].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => {
+                    setSearchMode(mode);
+                    setResults([]);
+                    setError(null);
+                    setHasSearched(false);
+                  }}
+                  className={`px-3 py-2.5 text-[11px] font-semibold transition-all ${
+                    searchMode === mode
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-500 hover:bg-slate-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              disabled={searching || !query.trim()}
+              onClick={handleSearch}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-xl hover:bg-blue-700 transition-colors flex-shrink-0 disabled:opacity-60"
+            >
+              <Sparkles size={13} />
+              {searching ? "Đang tìm..." : "Tìm kiếm AI"}
             </button>
             <div className="flex items-center gap-1.5 ml-2">
               <button className="relative p-2 rounded-lg hover:bg-slate-50 text-slate-400">
@@ -174,7 +286,10 @@ export default function SemanticSearch({ activePage = "search", onNavigate = () 
               { label: "Kỹ năng", val: skill, setter: setSkill, opts: ["Tính toán", "Chứng minh", "Ứng dụng"] },
             ].map((f) => (
               <div key={f.label} className="relative">
-                <select value={f.val} onChange={(e) => f.setter(e.target.value)}
+                <select
+                  value={f.val}
+                  disabled={searchMode === "formula"}
+                  onChange={(e) => f.setter(e.target.value)}
                   className={`appearance-none pl-2.5 pr-6 py-1.5 text-[11px] border rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all ${
                     f.val ? "bg-blue-50 border-blue-300 text-blue-700 font-semibold" : "bg-white border-slate-200 text-slate-500"
                   }`}
@@ -201,90 +316,119 @@ export default function SemanticSearch({ activePage = "search", onNavigate = () 
 
         {/* Results */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-2 gap-3">
-            {filtered.map((p) => {
-              const dc = diffConfig[p.difficulty];
-              const isExp = expanded === p.id;
-              const isStarred = starred[p.id];
-              const matchColor = p.match >= 95 ? "text-blue-700 bg-blue-50 border-blue-200" : p.match >= 88 ? "text-indigo-700 bg-indigo-50 border-indigo-200" : "text-slate-600 bg-slate-50 border-slate-200";
+          {error && (
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+              {error}
+            </div>
+          )}
 
-              return (
-                <div key={p.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden hover:border-blue-100 hover:shadow-md transition-all duration-200">
-                  {/* Top bar */}
-                  <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-slate-400 tracking-wide">{p.id}</span>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${dc.bg} ${dc.text} ${dc.border}`}>{p.difficulty}</span>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500">{p.skill}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${matchColor}`}>
-                        <TrendingUp size={10} />
-                        {p.match}%
-                        <div className="ml-1 w-10 h-1 rounded-full bg-slate-200 overflow-hidden">
-                          <div className="h-full rounded-full bg-current opacity-60" style={{ width: `${p.match}%` }} />
+          {searching && (
+            <div className="flex items-center justify-center h-40 text-slate-400">
+              <div className="flex items-center gap-2 text-[12px] font-semibold">
+                <Sparkles size={14} className="animate-pulse text-blue-500" />
+                Đang tìm kiếm trên dữ liệu đã embedding...
+              </div>
+            </div>
+          )}
+
+          {!searching && (
+            <div className="grid grid-cols-2 gap-3">
+              {filtered.map((p) => {
+                const dc = diffConfig[p.difficulty] ?? {
+                  bg: "bg-slate-50",
+                  text: "text-slate-600",
+                  border: "border-slate-200",
+                  bar: "bg-slate-400",
+                };
+                const isExp = expanded === p.id;
+                const isStarred = starred[p.id];
+                const matchColor = p.match >= 95 ? "text-blue-700 bg-blue-50 border-blue-200" : p.match >= 88 ? "text-indigo-700 bg-indigo-50 border-indigo-200" : "text-slate-600 bg-slate-50 border-slate-200";
+
+                return (
+                  <div key={p.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden hover:border-blue-100 hover:shadow-md transition-all duration-200">
+                    {/* Top bar */}
+                    <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-slate-400 tracking-wide">{p.id}</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${dc.bg} ${dc.text} ${dc.border}`}>{p.difficulty}</span>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500">{p.skill}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${matchColor}`}>
+                          <TrendingUp size={10} />
+                          {p.match}%
+                          <div className="ml-1 w-10 h-1 rounded-full bg-slate-200 overflow-hidden">
+                            <div className="h-full rounded-full bg-current opacity-60" style={{ width: `${p.match}%` }} />
+                          </div>
                         </div>
+                        <button onClick={() => setStarred((s) => ({ ...s, [p.id]: !s[p.id] }))}
+                          className={`p-1 rounded transition-all ${isStarred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}>
+                          <Star size={12} fill={isStarred ? "currentColor" : "none"} />
+                        </button>
                       </div>
-                      <button onClick={() => setStarred((s) => ({ ...s, [p.id]: !s[p.id] }))}
-                        className={`p-1 rounded transition-all ${isStarred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}>
-                        <Star size={12} fill={isStarred ? "currentColor" : "none"} />
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-3.5">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{p.topic}</span>
+                        <ArrowRight size={9} className="text-slate-300" />
+                        <span className="text-[10px] text-slate-400">{p.subtopic}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold" style={{ fontSize: 9 }}>∫</span>
+                        </div>
+                        <code className="text-[11px] font-mono text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 flex-1 truncate">
+                          {p.latex}
+                        </code>
+                        <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
+                          <Copy size={11} />
+                        </button>
+                      </div>
+
+                      {searchMode === "formula" && (
+                        <p className="mt-1 mb-2 text-[10px] text-slate-400">
+                          Formula #{p.formulaIndex} · source: {p.formulaSource || "unknown"}
+                        </p>
+                      )}
+
+                      <p className={`text-[11px] text-slate-600 leading-relaxed ${!isExp ? "line-clamp-2" : ""}`}>
+                        {p.statement}
+                      </p>
+                      <button onClick={() => setExpanded(isExp ? null : p.id)}
+                        className="text-[10px] text-blue-500 hover:text-blue-700 font-medium mt-1 transition-colors">
+                        {isExp ? "Thu gọn ▲" : "Đọc đầy đủ ▼"}
+                      </button>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {p.tags.map((t) => (
+                          <span key={t} className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-medium">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="px-3.5 pb-3 flex items-center gap-1.5">
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-all">
+                        <Eye size={11} /> Xem lời giải
+                      </button>
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all">
+                        <GitBranch size={11} /> Bài tương tự
+                      </button>
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-all ml-auto">
+                        <Zap size={11} /> Sinh biến thể
+                      </button>
+                      <button className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-all">
+                        <Share2 size={11} />
                       </button>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
 
-                  {/* Body */}
-                  <div className="p-3.5">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{p.topic}</span>
-                      <ArrowRight size={9} className="text-slate-300" />
-                      <span className="text-[10px] text-slate-400">{p.subtopic}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold" style={{ fontSize: 9 }}>∫</span>
-                      </div>
-                      <code className="text-[11px] font-mono text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 flex-1 truncate">
-                        {p.latex}
-                      </code>
-                      <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
-                        <Copy size={11} />
-                      </button>
-                    </div>
-                    <p className={`text-[11px] text-slate-600 leading-relaxed ${!isExp ? "line-clamp-2" : ""}`}>
-                      {p.statement}
-                    </p>
-                    <button onClick={() => setExpanded(isExp ? null : p.id)}
-                      className="text-[10px] text-blue-500 hover:text-blue-700 font-medium mt-1 transition-colors">
-                      {isExp ? "Thu gọn ▲" : "Đọc đầy đủ ▼"}
-                    </button>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {p.tags.map((t) => (
-                        <span key={t} className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded font-medium">{t}</span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="px-3.5 pb-3 flex items-center gap-1.5">
-                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-all">
-                      <Eye size={11} /> Xem lời giải
-                    </button>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all">
-                      <GitBranch size={11} /> Bài tương tự
-                    </button>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-all ml-auto">
-                      <Zap size={11} /> Sinh biến thể
-                    </button>
-                    <button className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-all">
-                      <Share2 size={11} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {filtered.length === 0 && (
+          {hasSearched && !searching && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center h-64 text-slate-400">
               <Search size={32} className="mb-3 opacity-30" />
               <p className="text-sm font-medium">Không tìm thấy bài tập phù hợp</p>
@@ -292,7 +436,7 @@ export default function SemanticSearch({ activePage = "search", onNavigate = () 
             </div>
           )}
 
-          {filtered.length > 0 && (
+          {false && filtered.length > 0 && (
             <div className="mt-4 text-center">
               <button className="text-[11px] text-blue-500 hover:text-blue-700 font-medium px-4 py-2 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all">
                 Tải thêm kết quả →

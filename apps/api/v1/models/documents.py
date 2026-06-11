@@ -44,3 +44,8 @@ class DocumentMarkdownResponse(BaseModel):
     id: str
     markdown_content: str
     markdown_checksum: str | None = None
+
+class DocumentStoreResponse(BaseModel):
+    document_id: str
+    question_count: int = Field(ge=0)
+    formula_count: int = Field(ge=0)

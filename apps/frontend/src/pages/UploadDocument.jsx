@@ -11,6 +11,7 @@ import {
   getDocumentMarkdown,
   getDocumentStatus,
   listDocuments,
+  storeDocument,
   uploadDocument,
 } from "../services/ingestionApi";
   
@@ -92,6 +93,8 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [refreshingDocumentId, setRefreshingDocumentId] = useState(null);
+  const [storingDocumentId, setStoringDocumentId] = useState(null);
+  const [storeResults, setStoreResults] = useState({});
   const [markdownViewer, setMarkdownViewer] = useState({
     open: false,
     loading: false,
@@ -236,6 +239,26 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
       setError(requestError.message);
     } finally {
       setRefreshingDocumentId(null);
+    }
+  }
+
+  async function handleStoreDocument(documentId) {
+    if (storingDocumentId) return;
+
+    setStoringDocumentId(documentId);
+    setError(null);
+
+    try {
+      const result = await storeDocument(documentId);
+
+      setStoreResults((currentResults) => ({
+        ...currentResults,
+        [documentId]: result,
+      }));
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setStoringDocumentId(null);
     }
   }
 
@@ -510,6 +533,13 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
                       </>
                     )}
                   </div>
+
+                  {storeResults[doc.id] && (
+                    <p className="mt-1 text-[10px] font-semibold text-emerald-600">
+                      Đã store: {storeResults[doc.id].question_count} câu hỏi ·{" "}
+                      {storeResults[doc.id].formula_count} công thức
+                    </p>
+                  )}
                 </div>
 
                 <StatusBadge status={doc.status} />
@@ -547,6 +577,24 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
                   >
                     <Eye size={13} />
                   </button>
+
+                  <button
+                    type="button"
+                    disabled={doc.status !== "completed" || storingDocumentId === doc.id}
+                    title={
+                      doc.status === "completed"
+                        ? "Tách câu hỏi & tạo embedding"
+                        : "Chỉ store được document đã hoàn thành"
+                    }
+                    onClick={() => handleStoreDocument(doc.id)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                  >
+                    <Database
+                      size={13}
+                      className={storingDocumentId === doc.id ? "animate-pulse" : ""}
+                    />
+                  </button>
+
                   <button className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
                     <Trash2 size={13} />
                   </button>

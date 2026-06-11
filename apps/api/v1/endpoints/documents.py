@@ -6,16 +6,24 @@ from apps.api.v1.models.documents import (
     DocumentMarkdownResponse,
     DocumentResponse,
     DocumentStatusResponse,
+    DocumentStoreResponse,
     DocumentUploadResponse,
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.v1.services.documents import DocumentService
+from core.config.settings import settings
 from infra.db.repositories.documents import DocumentRepository
+from infra.db.repositories.questions import QuestionRepository
 from infra.db.session import AsyncSessionLocal, get_db_session
 from infra.storage.r2_client import R2StorageClient
+from infra.vector_db.qdrant_client import create_qdrant_client
+from infra.vector_db.repositories.embeddings import EmbeddingVectorRepository
+from modules.embeddings import GeminiEmbedder, QuestionEmbeddingService
 from modules.ingestion.service import IngestionService
+from modules.question_catalog import QuestionCatalogService
+from modules.question_storage.service import QuestionStorageService
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -147,3 +155,46 @@ async def get_document_markdown(
         markdown_content=document.markdown_content,
         markdown_checksum=document.markdown_checksum,
     )
+
+@router.post("/{document_id}/store", response_model=DocumentStoreResponse)
+async def store_document(
+    document_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> DocumentStoreResponse:
+    client = create_qdrant_client()
+
+    try:
+        document_repository = DocumentRepository(session)
+        question_repository = QuestionRepository(session)
+
+        storage_service = QuestionStorageService(
+            question_catalog_service=QuestionCatalogService(
+                document_repository=document_repository,
+                question_repository=question_repository,
+            ),
+            embedding_service=QuestionEmbeddingService(
+                question_repository=question_repository,
+                vector_repository=EmbeddingVectorRepository(
+                    client=client,
+                    dimension=settings.embedding_dimension,
+                    question_collection=settings.qdrant_question_collection,
+                    formula_collection=settings.qdrant_formula_collection,
+                ),
+                embedder=GeminiEmbedder(),
+            ),
+        )
+
+        result = await storage_service.store_document(document_id)
+
+        return DocumentStoreResponse(
+            document_id=result.document_id,
+            question_count=result.question_count,
+            formula_count=result.formula_count,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    finally:
+        await client.close()

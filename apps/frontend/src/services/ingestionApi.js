@@ -25,3 +25,9 @@ export function getDocumentStatus(documentId) {
 export function getDocumentMarkdown(documentId) {
   return apiRequest(`/documents/${documentId}/markdown`);
 }
+
+export function storeDocument(documentId) {
+  return apiRequest(`/documents/${documentId}/store`, {
+    method: "POST",
+  });
+}
