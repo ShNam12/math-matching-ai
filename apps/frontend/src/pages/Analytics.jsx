@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
@@ -6,6 +6,8 @@ import {
   FileText as FT, Zap, Users, Clock, Download,
   ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LayoutDashboard
 } from "lucide-react";
+
+import { getAnalyticsSummary } from "../services/analyticsApi";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -65,7 +67,7 @@ const LOGS = [
 ];
 
 // Simple Donut SVG
-function Donut({ data }) {
+function Donut({ data, totalLabel = "12,847" }) {
   let offset = 0;
   const r = 34;
   const circ = 2 * Math.PI * r;
@@ -84,7 +86,7 @@ function Donut({ data }) {
         offset += dash;
         return el;
       })}
-      <text x="40" y="37" textAnchor="middle" fontSize="9" fill="#1e293b" fontWeight="700">12,847</text>
+      <text x="40" y="37" textAnchor="middle" fontSize="9" fill="#1e293b" fontWeight="700">{totalLabel}</text>
       <text x="40" y="47" textAnchor="middle" fontSize="6.5" fill="#94a3b8">bài tập</text>
     </svg>
   );
@@ -92,6 +94,223 @@ function Donut({ data }) {
 
 export default function Analytics({ activePage = "analytics", onNavigate = () => {} }) {
   const [period, setPeriod] = useState("7d");
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState(null);
+
+  const loadAnalyticsSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+
+    try {
+      const data = await getAnalyticsSummary();
+      setSummary(data);
+    } catch (requestError) {
+      setSummaryError(requestError.message);
+      setSummary(null);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  // useEffect(() => {
+  //   let cancelled = false;
+
+  //   async function loadAnalyticsSummary() {
+  //     setSummaryLoading(true);
+  //     setSummaryError(null);
+
+  //     try {
+  //       const data = await getAnalyticsSummary();
+
+  //       if (!cancelled) {
+  //         setSummary(data);
+  //       }
+  //     } catch (requestError) {
+  //       if (!cancelled) {
+  //         setSummaryError(requestError.message);
+  //         setSummary(null);
+  //       }
+  //     } finally {
+  //       if (!cancelled) {
+  //         setSummaryLoading(false);
+  //       }
+  //     }
+  //   }
+
+  //   loadAnalyticsSummary();
+
+  //   return () => {
+  //     cancelled = true;
+  //   };
+  // }, []);
+
+  useEffect(() => {
+    loadAnalyticsSummary();
+  }, []);
+
+  const formatNumber = (value) => {
+    if (value === null || value === undefined) {
+      return "0";
+    }
+
+    return Number(value).toLocaleString("vi-VN");
+  };
+
+  const difficultyLabel = (difficulty) => {
+    const labels = {
+      easy: "Dễ",
+      medium: "Vừa",
+      hard: "Khó",
+      unknown: "Chưa rõ",
+    };
+
+    return labels[difficulty] || difficulty;
+  };
+
+  const chapterLabel = (chapter) => {
+    if (!chapter || chapter === "unknown") {
+      return "Chưa có chương";
+    }
+
+    return chapter;
+  };
+
+  const difficultyStyle = {
+    easy: {
+      color: "#22c55e",
+      light: "bg-emerald-500",
+    },
+    medium: {
+      color: "#f59e0b",
+      light: "bg-amber-500",
+    },
+    hard: {
+      color: "#ef4444",
+      light: "bg-red-500",
+    },
+    unknown: {
+      color: "#94a3b8",
+      light: "bg-slate-400",
+    },
+  };
+
+  const topicColors = [
+    "bg-blue-500",
+    "bg-indigo-500",
+    "bg-purple-500",
+    "bg-teal-500",
+    "bg-emerald-500",
+    "bg-amber-500",
+    "bg-red-500",
+  ];
+
+  const summaryStats = summaryError
+    ? []
+    : summary
+    ? [
+        {
+          label: "Tổng bài tập",
+          val: formatNumber(summary.question_count),
+          delta: `${formatNumber(summary.embedded_question_count)} embedded`,
+          trend: "up",
+          sub: "từ PostgreSQL",
+          icon: FT,
+          color: "text-blue-600",
+          bg: "bg-blue-50",
+        },
+        {
+          label: "Tài liệu đã index",
+          val: formatNumber(summary.completed_document_count),
+          delta: `${formatNumber(summary.document_count)} tổng`,
+          trend: "up",
+          sub: "documents",
+          icon: Database,
+          color: "text-indigo-600",
+          bg: "bg-indigo-50",
+        },
+        {
+          label: "Công thức",
+          val: formatNumber(summary.formula_count),
+          delta: "",
+          trend: "flat",
+          sub: "formula_count",
+          icon: Activity,
+          color: "text-teal-600",
+          bg: "bg-teal-50",
+        },
+        {
+          label: "Câu đã embedding",
+          val: formatNumber(summary.embedded_question_count),
+          delta: `${formatNumber(summary.embedding_status_counts?.pending || 0)} pending`,
+          trend: "up",
+          sub: "embedding",
+          icon: Zap,
+          color: "text-purple-600",
+          bg: "bg-purple-50",
+        },
+        {
+          label: "Tài liệu lỗi",
+          val: formatNumber(summary.failed_document_count),
+          delta: "",
+          trend: summary.failed_document_count > 0 ? "down" : "flat",
+          sub: "failed documents",
+          icon: Users,
+          color: "text-red-600",
+          bg: "bg-red-50",
+        },
+        {
+          label: "Trạng thái API",
+          val: "Live",
+          delta: "",
+          trend: "up",
+          sub: "/analytics/summary",
+          icon: Clock,
+          color: "text-emerald-600",
+          bg: "bg-emerald-50",
+        },
+      ]
+    : STATS;
+
+  const hasAnalyticsData =
+    Number(summary?.document_count || 0) > 0 ||
+    Number(summary?.question_count || 0) > 0 ||
+    Number(summary?.formula_count || 0) > 0;
+
+  const difficultyEntries = Object.entries(summary?.difficulty_counts || {});
+  const difficultyTotal = difficultyEntries.reduce(
+    (total, [, count]) => total + Number(count || 0),
+    0
+  );
+
+  const difficultyData = difficultyTotal > 0
+    ? difficultyEntries.map(([difficulty, count]) => {
+        const style = difficultyStyle[difficulty] || difficultyStyle.unknown;
+
+        return {
+          label: difficultyLabel(difficulty),
+          pct: Math.round((Number(count || 0) / difficultyTotal) * 100),
+          count: Number(count || 0),
+          color: style.color,
+          light: style.light,
+        };
+      })
+    : DIFF_DATA;    
+
+  const topicEntries = Object.entries(summary?.chapter_counts || {});
+  const topicTotal = topicEntries.reduce(
+    (total, [, count]) => total + Number(count || 0),
+    0
+  );
+
+  const topicData = topicTotal > 0
+    ? topicEntries.map(([chapter, count], index) => ({
+        label: chapterLabel(chapter),
+        val: Number(count || 0),
+        color: topicColors[index % topicColors.length],
+        pct: Math.round((Number(count || 0) / topicTotal) * 100),
+      }))
+    : TOPIC_DATA;    
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -156,9 +375,29 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+          {summaryLoading && (
+            <div className="bg-blue-50 border border-blue-100 text-blue-700 text-[11px] rounded-xl px-4 py-3">
+              Đang tải analytics summary...
+            </div>
+          )}
+
+          {summaryError && (
+            <div className="bg-red-50 border border-red-100 text-red-700 text-[11px] rounded-xl px-4 py-3 flex items-center justify-between">
+              <span>{summaryError}</span>
+              <button
+                type="button"
+                onClick={loadAnalyticsSummary}
+                className="text-[11px] font-semibold text-red-700 bg-white border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-100"
+              >
+                Thử lại
+              </button>
+            </div>
+          )}
+
           {/* Stats grid */}
           <div className="grid grid-cols-6 gap-3">
-            {STATS.map((s, i) => (
+            {summaryStats.map((s, i) => (
               <div key={i} className="bg-white border border-slate-100 rounded-xl p-3">
                 <div className={`w-7 h-7 rounded-lg ${s.bg} flex items-center justify-center mb-2`}>
                   <s.icon size={14} className={s.color} />
@@ -178,98 +417,112 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
             ))}
           </div>
 
-          {/* Charts row */}
-          <div className="grid grid-cols-3 gap-3">
-            {/* Query trend */}
-            <div className="col-span-2 bg-white border border-slate-100 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[12px] font-bold text-slate-700">Truy vấn theo ngày</p>
-                <span className="text-[10px] text-slate-400">7 ngày gần nhất</span>
-              </div>
-              <div className="flex items-end gap-2 h-28">
-                {QUERY_TREND.map((d, i) => {
-                  const h = Math.round((d.val / MAX_QUERY) * 100);
-                  const isToday = i === QUERY_TREND.length - 1;
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                      <span className="text-[9px] text-slate-400 font-semibold">{d.val.toLocaleString()}</span>
-                      <div className="w-full rounded-t-md transition-all"
-                        style={{ height: `${h}%`, background: isToday ? "#2563eb" : "#bfdbfe" }} />
-                      <span className="text-[9px] text-slate-400">{d.day}</span>
-                    </div>
-                  );
-                })}
-              </div>
+          {!summaryLoading && !summaryError && summary && !hasAnalyticsData && (
+            <div className="bg-white border border-dashed border-slate-200 rounded-xl px-4 py-10 text-center">
+              <p className="text-[13px] font-bold text-slate-700">
+                Chưa có dữ liệu analytics
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Hãy upload tài liệu, store document và tạo embedding trước khi xem thống kê.
+              </p>
             </div>
+          )}
+          {hasAnalyticsData && (
+            <>
+              {/* Charts row */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Query trend */}
+                <div className="col-span-2 bg-white border border-slate-100 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[12px] font-bold text-slate-700">Truy vấn theo ngày</p>
+                    <span className="text-[10px] text-slate-400">7 ngày gần nhất</span>
+                  </div>
+                  <div className="flex items-end gap-2 h-28">
+                    {QUERY_TREND.map((d, i) => {
+                      const h = Math.round((d.val / MAX_QUERY) * 100);
+                      const isToday = i === QUERY_TREND.length - 1;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                          <span className="text-[9px] text-slate-400 font-semibold">{d.val.toLocaleString()}</span>
+                          <div className="w-full rounded-t-md transition-all"
+                            style={{ height: `${h}%`, background: isToday ? "#2563eb" : "#bfdbfe" }} />
+                          <span className="text-[9px] text-slate-400">{d.day}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
-            {/* Donut */}
-            <div className="bg-white border border-slate-100 rounded-xl p-4">
-              <p className="text-[12px] font-bold text-slate-700 mb-3">Phân bố độ khó</p>
-              <div className="flex items-center gap-3">
-                <Donut data={DIFF_DATA} />
-                <div className="space-y-2 flex-1">
-                  {DIFF_DATA.map((d) => (
-                    <div key={d.label}>
-                      <div className="flex justify-between mb-0.5">
-                        <span className="text-[11px] text-slate-500">{d.label}</span>
-                        <span className="text-[11px] font-bold text-slate-700">{d.pct}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                        <div className={`h-full rounded-full ${d.light}`} style={{ width: `${d.pct}%` }} />
-                      </div>
+                {/* Donut */}
+                <div className="bg-white border border-slate-100 rounded-xl p-4">
+                  <p className="text-[12px] font-bold text-slate-700 mb-3">Phân bố độ khó</p>
+                  <div className="flex items-center gap-3">
+                    <Donut data={difficultyData} totalLabel={formatNumber(difficultyTotal)} />
+                    <div className="space-y-2 flex-1">
+                      {difficultyData.map((d) => (
+                        <div key={d.label}>
+                          <div className="flex justify-between mb-0.5">
+                            <span className="text-[11px] text-slate-500">{d.label}</span>
+                            <span className="text-[11px] font-bold text-slate-700">{d.pct}%</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div className={`h-full rounded-full ${d.light}`} style={{ width: `${d.pct}%` }} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Topic breakdown + Activity log */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Topic */}
-            <div className="bg-white border border-slate-100 rounded-xl p-4">
-              <p className="text-[12px] font-bold text-slate-700 mb-3">Bài tập theo chủ đề</p>
-              <div className="space-y-3">
-                {TOPIC_DATA.map((t) => (
-                  <div key={t.label}>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-[11px] text-slate-600 font-medium">{t.label}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-bold text-slate-700">{t.val.toLocaleString()}</span>
-                        <span className="text-[10px] text-slate-400">({t.pct}%)</span>
+              {/* Topic breakdown + Activity log */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Topic */}
+                <div className="bg-white border border-slate-100 rounded-xl p-4">
+                  <p className="text-[12px] font-bold text-slate-700 mb-3">Bài tập theo chủ đề</p>
+                  <div className="space-y-3">
+                    {topicData.map((t) => (
+                      <div key={t.label}>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-[11px] text-slate-600 font-medium">{t.label}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-slate-700">{t.val.toLocaleString()}</span>
+                            <span className="text-[10px] text-slate-400">({t.pct}%)</span>
+                          </div>
+                        </div>
+                        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div className={`h-full rounded-full ${t.color} transition-all`} style={{ width: `${t.pct}%` }} />
+                        </div>
                       </div>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div className={`h-full rounded-full ${t.color} transition-all`} style={{ width: `${t.pct}%` }} />
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Activity log */}
-            <div className="bg-white border border-slate-100 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[12px] font-bold text-slate-700">Hoạt động gần đây</p>
-                <button className="text-[10px] text-blue-500 hover:text-blue-700 font-medium">Xem tất cả →</button>
-              </div>
-              <div className="space-y-0">
-                {LOGS.map((log, i) => (
-                  <div key={i} className="flex items-start gap-2.5 py-2 border-b border-slate-50 last:border-0">
-                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${log.status === "done" ? "bg-emerald-500" : "bg-amber-400"}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-semibold text-slate-700">{log.action}</span>
-                        <span className="text-[10px] text-slate-400">— {log.user}</span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 truncate">{log.detail}</p>
-                    </div>
-                    <span className="text-[10px] text-slate-400 flex-shrink-0">{log.time.split(" ")[1]}</span>
+                {/* Activity log */}
+                <div className="bg-white border border-slate-100 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[12px] font-bold text-slate-700">Hoạt động gần đây</p>
+                    <button className="text-[10px] text-blue-500 hover:text-blue-700 font-medium">Xem tất cả →</button>
                   </div>
-                ))}
+                  <div className="space-y-0">
+                    {LOGS.map((log, i) => (
+                      <div key={i} className="flex items-start gap-2.5 py-2 border-b border-slate-50 last:border-0">
+                        <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${log.status === "done" ? "bg-emerald-500" : "bg-amber-400"}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-semibold text-slate-700">{log.action}</span>
+                            <span className="text-[10px] text-slate-400">— {log.user}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 truncate">{log.detail}</p>
+                        </div>
+                        <span className="text-[10px] text-slate-400 flex-shrink-0">{log.time.split(" ")[1]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

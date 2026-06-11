@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles, LayoutDashboard,
@@ -7,12 +7,14 @@ import {
   Star, Bookmark, Filter
 } from "lucide-react";
 
+import { getHealth, getReadiness } from "../services/healthApi";
+import { listDocuments } from "../services/ingestionApi";
+
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
   { icon: Upload, label: "Upload Document", sub: "Ingestion", id: "upload" },
   { icon: Search, label: "Semantic Search", sub: "Tìm kiếm", id: "search" },
   { icon: BookOpen, label: "Calculus Taxonomy", sub: "Phân loại", id: "taxonomy" },
-  { icon: BookOpen, label: "Taxonomy", sub: "Phân loại", id: "taxonomy" },
   { icon: CheckSquare, label: "QA Rules", sub: "Kiểm định", id: "qa", badge: 3 },
   { icon: Sparkles, label: "Sinh biến thể", sub: "Gen AI", id: "gen" },
   { icon: BarChart2, label: "Analytics", sub: "Thống kê", id: "analytics" },
@@ -148,6 +150,138 @@ const dotColor = {
 export default function MainDashboard({ activePage = "dashboard", onNavigate = () => {} }) {
   const [query, setQuery] = useState("");
   const [starred, setStarred] = useState({});
+  const [health, setHealth] = useState(null);
+  const [readiness, setReadiness] = useState(null);
+  const [systemLoading, setSystemLoading] = useState(true);
+  const [systemError, setSystemError] = useState(null);
+  const [documents, setDocuments] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSystemStatus() {
+      setSystemLoading(true);
+      setSystemError(null);
+
+      try {
+        const [healthData, readinessData, documentData] = await Promise.all([
+          getHealth(),
+          getReadiness(),
+          listDocuments(),
+        ]);
+
+        if (!cancelled) {
+          setHealth(healthData);
+          setReadiness(readinessData);
+          setDocuments(Array.isArray(documentData) ? documentData : []);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setSystemError(requestError.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setSystemLoading(false);
+        }
+      }
+    }
+
+    loadSystemStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);  
+
+  const apiOnline = health?.status === "ok";
+  const databaseOnline = readiness?.checks?.database === true;
+  const qdrantOnline = readiness?.checks?.qdrant === true;
+  const systemReady = readiness?.status === "ready";
+
+  const documentCount = documents.length;
+  const completedDocumentCount = documents.filter((doc) => doc.status === "completed").length;
+  const processingDocumentCount = documents.filter((doc) =>
+    ["uploaded", "processing"].includes(doc.status)
+  ).length;
+  const failedDocumentCount = documents.filter((doc) => doc.status === "failed").length;
+
+  const statusCards = [
+    {
+      label: "Backend API",
+      value: systemLoading ? "Đang kiểm tra" : apiOnline ? "Online" : "Offline",
+      delta: systemError || (apiOnline ? "GET /health trả status ok" : "Không nhận được health"),
+      trend: apiOnline ? "up" : "error",
+      icon: Activity,
+      iconBg: apiOnline ? "#EAF3DE" : "#FCEBEB",
+      iconColor: apiOnline ? "#3B6D11" : "#A32D2D",
+    },
+    {
+      label: "Database",
+      value: systemLoading ? "Đang kiểm tra" : databaseOnline ? "Ready" : "Lỗi",
+      delta: databaseOnline ? "PostgreSQL sẵn sàng" : "Database chưa sẵn sàng",
+      trend: databaseOnline ? "up" : "error",
+      icon: FileText,
+      iconBg: databaseOnline ? "#EAF3DE" : "#FCEBEB",
+      iconColor: databaseOnline ? "#3B6D11" : "#A32D2D",
+    },
+    {
+      label: "Vector DB",
+      value: systemLoading ? "Đang kiểm tra" : qdrantOnline ? "Ready" : "Lỗi",
+      delta: qdrantOnline ? "Qdrant sẵn sàng" : "Qdrant chưa sẵn sàng",
+      trend: qdrantOnline ? "up" : "error",
+      icon: Zap,
+      iconBg: qdrantOnline ? "#EAF3DE" : "#FCEBEB",
+      iconColor: qdrantOnline ? "#3B6D11" : "#A32D2D",
+    },
+    {
+      label: "Readiness",
+      value: systemLoading ? "Đang kiểm tra" : systemReady ? "Ready" : "Not ready",
+      delta: systemReady ? "Hệ thống có thể phục vụ request" : "Có dependency chưa sẵn sàng",
+      trend: systemReady ? "up" : "warn",
+      icon: CheckSquare,
+      iconBg: systemReady ? "#EAF3DE" : "#FAEEDA",
+      iconColor: systemReady ? "#3B6D11" : "#854F0B",
+    },
+  ];
+
+  const documentCards = [
+    {
+      label: "Tổng tài liệu",
+      value: systemLoading ? "Đang tải" : `${documentCount}`,
+      delta: "GET /documents",
+      trend: "up",
+      icon: FileText,
+      iconBg: "#E6F1FB",
+      iconColor: "#185FA5",
+    },
+    {
+      label: "Hoàn thành",
+      value: systemLoading ? "Đang tải" : `${completedDocumentCount}`,
+      delta: "Tài liệu xử lý xong",
+      trend: "up",
+      icon: CheckSquare,
+      iconBg: "#EAF3DE",
+      iconColor: "#3B6D11",
+    },
+    {
+      label: "Đang xử lý",
+      value: systemLoading ? "Đang tải" : `${processingDocumentCount}`,
+      delta: "uploaded / processing",
+      trend: "warn",
+      icon: Loader,
+      iconBg: "#FAEEDA",
+      iconColor: "#854F0B",
+    },
+    {
+      label: "Lỗi tài liệu",
+      value: systemLoading ? "Đang tải" : `${failedDocumentCount}`,
+      delta: failedDocumentCount > 0 ? "Cần kiểm tra ingestion" : "Không có lỗi",
+      trend: failedDocumentCount > 0 ? "error" : "up",
+      icon: AlertTriangle,
+      iconBg: failedDocumentCount > 0 ? "#FCEBEB" : "#EAF3DE",
+      iconColor: failedDocumentCount > 0 ? "#A32D2D" : "#3B6D11",
+    },
+  ];
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -215,7 +349,13 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
         <header className="bg-white border-b border-slate-100 px-5 py-2.5 flex items-center justify-between flex-shrink-0">
           <div>
             <p className="text-sm font-bold text-slate-800">Dashboard</p>
-            <p className="text-[11px] text-slate-400">Chào buổi sáng, An — corpus đang hoạt động ổn định</p>
+            <p className="text-[11px] text-slate-400">
+              {systemLoading
+                ? "Đang kiểm tra trạng thái hệ thống..."
+                : systemReady
+                  ? "Backend, database và vector DB đang sẵn sàng"
+                  : "Một số thành phần hệ thống chưa sẵn sàng"}
+            </p>
           </div>
           <div className="flex items-center gap-1.5">
             <button className="relative w-7 h-7 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100">
@@ -288,7 +428,25 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
 
           {/* ② Corpus Health */}
           <div className="grid grid-cols-4 gap-2.5">
-            {HEALTH.map((h, i) => (
+            {statusCards.map((h, i) => (
+              <div key={i} className="bg-white border border-slate-100 rounded-xl p-3 flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: h.iconBg }}>
+                  <h.icon size={16} style={{ color: h.iconColor }} strokeWidth={1.8} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-slate-400 truncate">{h.label}</p>
+                  <p className={`text-[15px] font-bold leading-tight ${h.trend === "error" ? "text-red-700" : "text-slate-800"}`}>{h.value}</p>
+                  <p className={`text-[10px] mt-0.5 ${h.trend === "up" ? "text-emerald-600" : h.trend === "error" ? "text-red-600" : "text-amber-600"}`}>
+                    {h.delta}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-4 gap-2.5">
+            {documentCards.map((h, i) => (
               <div key={i} className="bg-white border border-slate-100 rounded-xl p-3 flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: h.iconBg }}>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
@@ -6,6 +6,8 @@ import {
   ChevronRight, Save, RotateCcw, Plus, Trash2,
   Edit3, CheckCircle, AlertTriangle, Eye, EyeOff, Key, LayoutDashboard
 } from "lucide-react";
+
+import { getHealth, getReadiness } from "../services/healthApi";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -76,6 +78,52 @@ export default function SettingsPage({ activePage = "settings", onNavigate = () 
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [devMode, setDevMode] = useState(false);
   const [saveHistory, setSaveHistory] = useState(true);
+
+  const [health, setHealth] = useState(null);
+  const [readiness, setReadiness] = useState(null);
+  const [systemLoading, setSystemLoading] = useState(true);
+  const [systemError, setSystemError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSystemStatus() {
+      setSystemLoading(true);
+      setSystemError(null);
+
+      try {
+        const [healthData, readinessData] = await Promise.all([
+          getHealth(),
+          getReadiness(),
+        ]);
+
+        if (!cancelled) {
+          setHealth(healthData);
+          setReadiness(readinessData);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setSystemError(requestError.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setSystemLoading(false);
+        }
+      }
+    }
+
+    loadSystemStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+  const apiOnline = health?.status === "ok";
+  const databaseOnline = readiness?.checks?.database === true;
+  const qdrantOnline = readiness?.checks?.qdrant === true;
+  const systemReady = readiness?.status === "ready";
 
   const handleSave = () => {
     setSaved(true);
@@ -320,6 +368,46 @@ export default function SettingsPage({ activePage = "settings", onNavigate = () 
             {/* System tab */}
             {activeTab === "system" && (
               <div className="max-w-2xl space-y-4">
+                <div
+                  className={`border rounded-xl p-4 ${
+                    systemLoading
+                      ? "bg-blue-50 border-blue-200"
+                      : systemReady
+                        ? "bg-emerald-50 border-emerald-200"
+                        : "bg-red-50 border-red-200"
+                  }`}
+                >
+                  <p className="text-[12px] font-bold text-slate-800 mb-1">
+                    Trạng thái kết nối backend
+                  </p>
+
+                  <p className="text-[11px] text-slate-600 mb-3">
+                    {systemLoading
+                      ? "Đang kiểm tra /health và /ready..."
+                      : systemError
+                        ? systemError
+                        : systemReady
+                          ? "Backend, database và vector DB đang sẵn sàng."
+                          : "Một hoặc nhiều thành phần hệ thống chưa sẵn sàng."}
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "API Base URL", value: apiBaseUrl },
+                      { label: "Backend API", value: apiOnline ? "Online" : "Offline" },
+                      { label: "Database", value: databaseOnline ? "Ready" : "Not ready" },
+                      { label: "Qdrant", value: qdrantOnline ? "Ready" : "Not ready" },
+                    ].map((item) => (
+                      <div key={item.label} className="bg-white/70 border border-white rounded-lg px-3 py-2">
+                        <p className="text-[10px] text-slate-400">{item.label}</p>
+                        <p className="text-[11px] font-semibold text-slate-700 break-all">
+                          {item.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="bg-white border border-slate-100 rounded-xl p-4">
                   <p className="text-[12px] font-bold text-slate-700 mb-3">Thông tin hệ thống</p>
                   {[

@@ -10,11 +10,12 @@ class FakeModels:
         self.response_text = response_text
         self.calls = []
 
-    def generate_content(self, *, model: str, contents: str):
+    def generate_content(self, *, model: str, contents: str, config=None):
         self.calls.append(
             {
                 "model": model,
                 "contents": contents,
+                "config": config,
             }
         )
 
@@ -39,12 +40,9 @@ def test_generate_text_returns_stripped_response_text() -> None:
     result = generator.generate_text("prompt")
 
     assert result == "generated text"
-    assert generator.client.models.calls == [
-        {
-            "model": "fake-model",
-            "contents": "prompt",
-        }
-    ]
+    assert generator.client.models.calls[0]["model"] == "fake-model"
+    assert generator.client.models.calls[0]["contents"] == "prompt"
+    assert generator.client.models.calls[0]["config"] is not None
 
 
 def test_generate_text_rejects_empty_prompt() -> None:
