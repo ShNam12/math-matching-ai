@@ -71,6 +71,27 @@ class QuestionRepository:
 
         return result.scalar_one_or_none()
     
+    async def update_metadata(
+        self,
+        question: Question,
+        *,
+        subject: str | None = None,
+        chapter: str | None = None,
+        difficulty: str | None = None,
+        skills: list[str] | None = None,
+    ) -> Question:
+        question.subject = subject
+        question.chapter = chapter
+        question.difficulty = difficulty
+
+        if skills is not None:
+            question.skills = skills
+
+        await self.session.commit()
+        await self.session.refresh(question)
+
+        return question
+
     async def create_generated_question(
         self,
         *,

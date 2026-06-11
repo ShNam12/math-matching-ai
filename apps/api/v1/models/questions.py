@@ -30,3 +30,9 @@ class QuestionResponse(BaseModel):
     embedded_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+class QuestionUpdateRequest(BaseModel):
+    subject: str | None = None
+    chapter: str | None = None
+    difficulty: str | None = None
+    skills: list[str] | None = None

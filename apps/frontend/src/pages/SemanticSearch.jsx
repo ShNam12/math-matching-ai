@@ -88,6 +88,35 @@ export default function SemanticSearch({
   const [topic, setTopic] = useState("");
   const [diff, setDiff] = useState("");
   const [skill, setSkill] = useState("");
+
+  const normalizeDifficultyFilter = (value) => {
+    const map = {
+      "Dễ": "easy",
+      "Vừa": "medium",
+      "Khó": "hard",
+    };
+
+    return map[value] || value || null;
+  };
+
+  const normalizeSubjectFilter = (value) => {
+    const map = {
+      "Đạo hàm": "Calculus",
+      "Tích phân": "Calculus",
+    };
+
+    return map[value] || value || null;
+  };
+
+  const normalizeChapterFilter = (value) => {
+    const map = {
+      "Đạo hàm": "Dao ham",
+      "Tích phân": "tích phân",
+    };
+
+    return map[value] || null;
+  };
+
   const [expanded, setExpanded] = useState(null);
   const [starred, setStarred] = useState({ "BK-2023-M1-042": true, "HUST-2023-M3-091": true });
   const [results, setResults] = useState([]);
@@ -114,11 +143,12 @@ export default function SemanticSearch({
               limit: 10,
             })
           : await searchQuestions({
-              query: trimmedQuery,
-              limit: 10,
-              subject: topic || null,
-              difficulty: diff || null,
-            });
+            query: trimmedQuery,
+            limit: 10,
+            subject: normalizeSubjectFilter(topic),
+            chapter: normalizeChapterFilter(topic),
+            difficulty: normalizeDifficultyFilter(diff),
+          });
 
       setResults(
         data.results.map((item) => ({

@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.v1.models.questions import QuestionFormulaItem, QuestionResponse
+from apps.api.v1.models.questions import (
+    QuestionFormulaItem,
+    QuestionResponse,
+    QuestionUpdateRequest,
+)
+
 from infra.db.models import Question
 from infra.db.repositories.questions import QuestionRepository
 from infra.db.session import get_db_session
@@ -57,3 +62,28 @@ async def get_question(
         )
 
     return to_question_response(question)
+
+@router.patch("/{question_id}", response_model=QuestionResponse)
+async def update_question(
+    question_id: str,
+    payload: QuestionUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> QuestionResponse:
+    repository = QuestionRepository(session)
+    question = await repository.get_question(question_id)
+
+    if question is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question not found",
+        )
+
+    updated_question = await repository.update_metadata(
+        question,
+        subject=payload.subject,
+        chapter=payload.chapter,
+        difficulty=payload.difficulty,
+        skills=payload.skills,
+    )
+
+    return to_question_response(updated_question)

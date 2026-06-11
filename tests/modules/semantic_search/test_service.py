@@ -120,10 +120,8 @@ def test_search_questions_returns_enriched_results_in_score_order() -> None:
 
     assert embedder.texts == ["dao ham ham so"]
     assert vector_repository.vector == [0.1, 0.2, 0.3]
-    assert vector_repository.limit == 2
-    assert vector_repository.filters.subject == "calculus"
-    assert vector_repository.filters.chapter == "derivative"
-    assert vector_repository.filters.difficulty == "easy"
+    assert vector_repository.limit == 2 * 3
+    assert vector_repository.filters == QuestionSearchFilters()
     assert question_repository.question_ids == ["q2", "q1"]
 
     assert [result.question_id for result in results] == ["q2", "q1"]

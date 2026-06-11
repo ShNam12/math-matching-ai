@@ -10,12 +10,17 @@ export async function apiRequest(path, options = {}) {
     : await response.text();
 
   if (!response.ok) {
-    const message =
+    const detail =
       typeof data === "object" && data?.detail
         ? data.detail
-        : "Request failed";
+        : data;
 
-    throw new Error(message);
+    const message =
+      typeof detail === "string"
+        ? detail
+        : JSON.stringify(detail);
+
+    throw new Error(message || "Request failed");
   }
 
   return data;

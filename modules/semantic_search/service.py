@@ -74,8 +74,8 @@ class SemanticSearchService:
 
         hits = await self.vector_repository.search_questions(
             vector=query_vector,
-            limit=limit,
-            filters=filters,
+            limit=limit * 3,
+            filters=QuestionSearchFilters(),
         )
 
         if not hits:
@@ -99,6 +99,15 @@ class SemanticSearchService:
             if question.embedding_status != "completed":
                 continue
 
+            if filters.subject and question.subject != filters.subject:
+                continue
+
+            if filters.chapter and question.chapter != filters.chapter:
+                continue
+
+            if filters.difficulty and question.difficulty != filters.difficulty:
+                continue
+
             results.append(
                 QuestionSearchResult(
                     question_id=question.id,
@@ -116,7 +125,7 @@ class SemanticSearchService:
                 )
             )
 
-        return results
+        return results[:limit]
 
     async def search_formulas(
         self,

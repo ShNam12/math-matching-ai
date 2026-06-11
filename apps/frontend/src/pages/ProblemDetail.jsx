@@ -6,7 +6,7 @@ import {
   Zap, ChevronRight, CheckCircle, BookMarked,
   TrendingUp, Tag, Clock, User, Printer, Download, LayoutDashboard
 } from "lucide-react";
-import { getQuestion } from "../services/questionApi";
+import { getQuestion, updateQuestion } from "../services/questionApi";
 import { searchQuestions } from "../services/searchApi";
 
 const NAV = [
@@ -86,6 +86,17 @@ export default function ProblemDetail({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const [metadataForm, setMetadataForm] = useState({
+    subject: "",
+    chapter: "",
+    difficulty: "",
+    skillsText: "",
+  });
+
+  const [metadataSaving, setMetadataSaving] = useState(false);
+  const [metadataError, setMetadataError] = useState(null);
+  const [metadataMessage, setMetadataMessage] = useState(null);
+
   const [similarQuestions, setSimilarQuestions] = useState([]);
   const [similarLoading, setSimilarLoading] = useState(false);
   const [similarError, setSimilarError] = useState(null);
@@ -94,6 +105,44 @@ export default function ProblemDetail({
   const handleCopy = () => {
     setCopiedLatex(true);
     setTimeout(() => setCopiedLatex(false), 1500);
+  };
+
+  const handleMetadataChange = (field, value) => {
+    setMetadataForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveMetadata = async () => {
+    if (!question?.id) {
+      return;
+    }
+
+    setMetadataSaving(true);
+    setMetadataError(null);
+    setMetadataMessage(null);
+
+    const skills = metadataForm.skillsText
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    try {
+      const updatedQuestion = await updateQuestion(question.id, {
+        subject: metadataForm.subject.trim() || null,
+        chapter: metadataForm.chapter.trim() || null,
+        difficulty: metadataForm.difficulty || null,
+        skills,
+      });
+
+      setQuestion(updatedQuestion);
+      setMetadataMessage("Đã cập nhật metadata.");
+    } catch (requestError) {
+      setMetadataError(requestError.message);
+    } finally {
+      setMetadataSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -132,6 +181,25 @@ export default function ProblemDetail({
       cancelled = true;
     };
   }, [selectedQuestionId]);
+
+  useEffect(() => {
+    if (!question) {
+      setMetadataForm({
+        subject: "",
+        chapter: "",
+        difficulty: "",
+        skillsText: "",
+      });
+      return;
+    }
+
+    setMetadataForm({
+      subject: question.subject || "",
+      chapter: question.chapter || "",
+      difficulty: question.difficulty || "",
+      skillsText: Array.isArray(question.skills) ? question.skills.join(", ") : "",
+    });
+  }, [question]);
 
   useEffect(() => {
     if (!question?.statement) {
@@ -412,6 +480,64 @@ export default function ProblemDetail({
                   <span className="text-[11px] font-semibold text-slate-700 truncate">{row.val}</span>
                 </div>
               ))}
+
+              {question && (
+                <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                  <p className="text-[11px] font-bold text-slate-700">
+                    Sửa metadata
+                  </p>
+
+                  <input
+                    value={metadataForm.subject}
+                    onChange={(event) => handleMetadataChange("subject", event.target.value)}
+                    placeholder="Subject, ví dụ: Calculus"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  />
+
+                  <input
+                    value={metadataForm.chapter}
+                    onChange={(event) => handleMetadataChange("chapter", event.target.value)}
+                    placeholder="Chapter, ví dụ: Dao ham"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  />
+
+                  <select
+                    value={metadataForm.difficulty}
+                    onChange={(event) => handleMetadataChange("difficulty", event.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  >
+                    <option value="">Chưa rõ</option>
+                    <option value="easy">Dễ</option>
+                    <option value="medium">Vừa</option>
+                    <option value="hard">Khó</option>
+                  </select>
+
+                  <textarea
+                    value={metadataForm.skillsText}
+                    onChange={(event) => handleMetadataChange("skillsText", event.target.value)}
+                    rows={2}
+                    placeholder="Skills, cách nhau bằng dấu phẩy"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[11px] text-slate-700 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  />
+
+                  {metadataError && (
+                    <p className="text-[10px] text-red-600">{metadataError}</p>
+                  )}
+
+                  {metadataMessage && (
+                    <p className="text-[10px] text-emerald-600">{metadataMessage}</p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSaveMetadata}
+                    disabled={metadataSaving}
+                    className="w-full rounded-lg bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {metadataSaving ? "Đang lưu..." : "Lưu metadata"}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Stats */}
