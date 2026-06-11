@@ -9,6 +9,10 @@ import {
 
 import { getHealth, getReadiness } from "../services/healthApi";
 import { listDocuments } from "../services/ingestionApi";
+import { getQuestion } from "../services/questionApi";
+import { getRecentQuestionIds } from "../services/recentQuestions";
+import LatexInline from "../components/LatexInline";
+import MathText from "../components/MathText";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -139,6 +143,7 @@ const RECENT_QUERIES = [
 const diffStyle = {
   red: "bg-red-50 text-red-800 border-red-200",
   amber: "bg-amber-50 text-amber-800 border-amber-200",
+  blue: "bg-blue-50 text-blue-800 border-blue-200",
 };
 
 const dotColor = {
@@ -155,6 +160,9 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
   const [systemLoading, setSystemLoading] = useState(true);
   const [systemError, setSystemError] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [recentQuestions, setRecentQuestions] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [recentError, setRecentError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -192,6 +200,64 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
       cancelled = true;
     };
   }, []);  
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRecentQuestions() {
+      const ids = getRecentQuestionIds();
+
+      if (ids.length === 0) {
+        setRecentQuestions([]);
+        return;
+      }
+
+      setRecentLoading(true);
+      setRecentError(null);
+
+      try {
+        const questions = await Promise.all(
+          ids.map((id) => getQuestion(id))
+        );
+
+        if (!cancelled) {
+          setRecentQuestions(questions);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setRecentError(requestError.message);
+          setRecentQuestions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setRecentLoading(false);
+        }
+      }
+    }
+
+    loadRecentQuestions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const recentProblemItems = recentQuestions.map((question) => ({
+    id: question.id,
+    symbol: "∫",
+    latex: question.formulas?.[0]?.latex || question.answer || question.marker || "Question",
+    statement: question.statement,
+    topic: question.subject || "Chưa phân loại",
+    diff: question.difficulty || "Chưa rõ",
+    diffColor:
+      question.difficulty === "hard"
+        ? "red"
+        : question.difficulty === "medium"
+          ? "amber"
+          : "blue",
+    source: question.document_id,
+    match: 100,
+  }));
 
   const apiOnline = health?.status === "ok";
   const databaseOnline = readiness?.checks?.database === true;
@@ -479,14 +545,36 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
               </div>
 
               <div className="divide-y divide-slate-50">
-                {RECENT_PROBLEMS.map((p, i) => (
+                {recentLoading && (
+                  <div className="px-4 py-4 text-[11px] text-slate-500">
+                    Đang tải bài tập đã xem gần đây...
+                  </div>
+                )}
+
+                {!recentLoading && recentError && (
+                  <div className="px-4 py-4 text-[11px] text-red-600">
+                    {recentError}
+                  </div>
+                )}
+
+                {!recentLoading && !recentError && recentProblemItems.length === 0 && (
+                  <div className="px-4 py-4 text-[11px] text-slate-500">
+                    Chưa có bài tập đã xem gần đây.
+                  </div>
+                )}
+
+                {!recentLoading && !recentError && recentProblemItems.map((p, i) => (
                   <div key={i} className="flex items-start gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer transition-all group">
                     <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <span className="text-[11px] font-bold text-blue-700">{p.symbol}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <code className="text-[11px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block mb-1.5 max-w-full truncate">{p.latex}</code>
-                      <p className="text-[11px] text-slate-500 leading-snug truncate">{p.statement}</p>
+                      <div className="text-[13px] text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100 inline-block mb-1.5 max-w-full overflow-hidden">
+                        <LatexInline value={p.latex} />
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug truncate">
+                        <MathText value={p.statement} />
+                      </p>
                       <div className="flex items-center gap-1.5 mt-1.5">
                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-800 border-blue-200">{p.topic}</span>
                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${diffStyle[p.diffColor]}`}>{p.diff}</span>

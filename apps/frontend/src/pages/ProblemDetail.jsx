@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { getQuestion, updateQuestion } from "../services/questionApi";
 import { searchQuestions } from "../services/searchApi";
+import { rememberRecentQuestion } from "../services/recentQuestions";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -162,6 +163,7 @@ export default function ProblemDetail({
 
         if (!cancelled) {
           setQuestion(data);
+          rememberRecentQuestion(data.id);
         }
       } catch (requestError) {
         if (!cancelled) {

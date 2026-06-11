@@ -6,6 +6,7 @@ class GenerationConstraintsRequest(BaseModel):
     chapter: str | None = None
     difficulty: str | None = None
     skills: list[str] = Field(default_factory=list)
+    note: str | None = None
     preserve_formula_style: bool = True
     avoid_duplicate: bool = True
 

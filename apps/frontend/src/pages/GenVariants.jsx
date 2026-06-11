@@ -225,6 +225,7 @@ export default function GenVariants({
           chapter: sourceQuestion?.chapter || null,
           difficulty: getRequestedDifficulty(),
           skills: sourceQuestion?.skills || [],
+          note: note.trim() || null,
           preserve_formula_style: true,
           avoid_duplicate: true,
         },

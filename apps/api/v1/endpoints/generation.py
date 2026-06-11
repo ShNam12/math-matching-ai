@@ -86,6 +86,7 @@ def _to_generation_constraints(
         chapter=request.chapter,
         difficulty=request.difficulty,
         skills=request.skills,
+        note=request.note,
         preserve_formula_style=request.preserve_formula_style,
         avoid_duplicate=request.avoid_duplicate,
     )

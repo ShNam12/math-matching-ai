@@ -14,6 +14,7 @@ def build_question_generation_prompt(
     skills = constraints.skills or source_question.skills
 
     skills_text = ", ".join(skills) if skills else "same as source"
+    note_text = constraints.note.strip() if constraints.note else "none"
 
     return f"""
 You are an expert mathematics question generator.
@@ -49,6 +50,9 @@ Target metadata:
 - skills: {skills_text}
 - preserve_formula_style: {constraints.preserve_formula_style}
 - avoid_duplicate: {constraints.avoid_duplicate}
+
+Additional user instruction:
+{note_text}
 
 Source question:
 Marker: {source_question.marker} {source_question.marker_number}
