@@ -9,6 +9,7 @@ from infra.vector_db.qdrant_client import create_qdrant_client
 
 from apps.api.v1.endpoints.documents import router as documents_router
 from apps.api.v1.endpoints.generation import router as generation_router
+from apps.api.v1.endpoints.questions import router as questions_router
 from apps.api.v1.endpoints.search import router as search_router
 
 
@@ -62,3 +63,4 @@ async def readiness_check(
 app.include_router(documents_router)
 app.include_router(search_router)
 app.include_router(generation_router)
+app.include_router(questions_router)

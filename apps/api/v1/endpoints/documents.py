@@ -9,6 +9,8 @@ from apps.api.v1.models.documents import (
     DocumentStoreResponse,
     DocumentUploadResponse,
 )
+from apps.api.v1.models.questions import QuestionResponse
+from apps.api.v1.endpoints.questions import to_question_response
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -198,3 +200,25 @@ async def store_document(
         ) from exc
     finally:
         await client.close()
+
+@router.get("/{document_id}/questions", response_model=list[QuestionResponse])
+async def list_document_questions(
+    document_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[QuestionResponse]:
+    document_repository = DocumentRepository(session)
+    document = await document_repository.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    question_repository = QuestionRepository(session)
+    questions = await question_repository.list_by_document(document_id)
+
+    return [
+        to_question_response(question)
+        for question in questions
+    ]

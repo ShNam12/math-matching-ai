@@ -24,13 +24,21 @@ const PAGES = {
 
 function App() {
   const [activePage, setActivePage] = useState("dashboard")
+  const [selectedQuestionId, setSelectedQuestionId] = useState(null)
 
   const ActivePage = PAGES[activePage]
+
+  function handleOpenQuestionDetail(questionId) {
+    setSelectedQuestionId(questionId)
+    setActivePage("detail")
+  }
 
   return (
     <ActivePage
       activePage={activePage}
       onNavigate={setActivePage}
+      selectedQuestionId={selectedQuestionId}
+      onOpenQuestionDetail={handleOpenQuestionDetail}
     />
   )
 }

@@ -77,7 +77,11 @@ const diffConfig = {
   Khó: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", bar: "bg-red-500" },
 };
 
-export default function SemanticSearch({ activePage = "search", onNavigate = () => {} }) {
+export default function SemanticSearch({
+  activePage = "search",
+  onNavigate = () => {},
+  onOpenQuestionDetail = () => {},
+}) {
   const [query, setQuery] = useState("");
   const [searchMode, setSearchMode] = useState("question");
   const [topic, setTopic] = useState("");
@@ -409,7 +413,11 @@ export default function SemanticSearch({ activePage = "search", onNavigate = () 
 
                     {/* Actions */}
                     <div className="px-3.5 pb-3 flex items-center gap-1.5">
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-all">
+                      <button
+                        type="button"
+                        onClick={() => onOpenQuestionDetail(p.questionId)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-all"
+                      >
                         <Eye size={11} /> Xem lời giải
                       </button>
                       <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all">

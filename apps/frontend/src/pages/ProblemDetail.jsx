@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
@@ -6,6 +6,8 @@ import {
   Zap, ChevronRight, CheckCircle, BookMarked,
   TrendingUp, Tag, Clock, User, Printer, Download, LayoutDashboard
 } from "lucide-react";
+import { getQuestion } from "../services/questionApi";
+import { searchQuestions } from "../services/searchApi";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -70,14 +72,149 @@ const SIMILAR = [
   { id: "VNU-2024-M2-029", latex: "\\int x e^{2x} \\, dx", match: 82 },
 ];
 
-export default function ProblemDetail({ activePage = "detail", onNavigate = () => {} }) {
+export default function ProblemDetail({
+  activePage = "detail",
+  onNavigate = () => {},
+  selectedQuestionId = null,
+  onOpenQuestionDetail = () => {},
+}) {
   const [starred, setStarred] = useState(true);
   const [copiedLatex, setCopiedLatex] = useState(false);
+
+  const [question, setQuestion] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [similarQuestions, setSimilarQuestions] = useState([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [similarError, setSimilarError] = useState(null);
+  const similarPanelRef = useRef(null);
 
   const handleCopy = () => {
     setCopiedLatex(true);
     setTimeout(() => setCopiedLatex(false), 1500);
   };
+
+  useEffect(() => {
+    if (!selectedQuestionId) {
+      setQuestion(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadQuestion() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await getQuestion(selectedQuestionId);
+
+        if (!cancelled) {
+          setQuestion(data);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(requestError.message);
+          setQuestion(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadQuestion();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedQuestionId]);
+
+  useEffect(() => {
+    if (!question?.statement) {
+      setSimilarQuestions([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSimilarQuestions() {
+      setSimilarLoading(true);
+      setSimilarError(null);
+
+      try {
+        const data = await searchQuestions({
+          query: question.statement,
+          limit: 6,
+        });
+
+        if (!cancelled) {
+          setSimilarQuestions(
+            data.results
+              .filter((item) => item.question_id !== question.id)
+              .slice(0, 3),
+          );
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setSimilarError(requestError.message);
+          setSimilarQuestions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSimilarLoading(false);
+        }
+      }
+    }
+
+    loadSimilarQuestions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [question]);
+
+  const displayProblem = question
+    ? {
+        id: question.id,
+        topic: question.subject || "Chưa phân loại",
+        subtopic: question.chapter || "Chưa có chương",
+        chapter: `Câu ${question.sequence_number}`,
+        difficulty: question.difficulty || "Chưa rõ",
+        skill: question.skills?.[0] || "Chưa gán kỹ năng",
+        source: question.document_id,
+        addedBy: "Backend",
+        addedDate: new Date(question.created_at).toLocaleDateString("vi-VN"),
+        latex: question.formulas?.[0]?.latex || question.marker || "Question",
+        statement: question.statement,
+        tags: question.skills?.length ? question.skills : ["Backend"],
+        similarCount: similarQuestions.length,
+        variantCount: 0,
+        solution: question.solution,
+        answer: question.answer,
+        formulas: question.formulas || [],
+        embeddingStatus: question.embedding_status,
+      }
+    : PROBLEM;
+
+  const solutionBlocks = question
+    ? [
+        question.solution && {
+          num: 1,
+          title: "Lời giải",
+          content: question.solution,
+          latex: question.answer || "",
+        },
+        question.answer && {
+          num: 2,
+          title: "Đáp án",
+          content: question.answer,
+          latex: "",
+        },
+      ].filter(Boolean)
+    : STEPS;
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -124,13 +261,19 @@ export default function ProblemDetail({ activePage = "detail", onNavigate = () =
         {/* Header */}
         <header className="bg-white border-b border-slate-100 px-5 py-3 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-1.5 text-[11px] text-blue-600 hover:text-blue-800 font-semibold bg-blue-50 px-2.5 py-1.5 rounded-lg transition-all">
+            <button
+              type="button"
+              onClick={() => onNavigate("search")}
+              className="flex items-center gap-1.5 text-[11px] text-blue-600 hover:text-blue-800 font-semibold bg-blue-50 px-2.5 py-1.5 rounded-lg transition-all"
+            >
               <ArrowLeft size={12} /> Quay lại kết quả
             </button>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
               <span>Semantic Search</span>
               <ChevronRight size={11} />
-              <span className="font-mono font-semibold text-slate-600">{PROBLEM.id}</span>
+              <span className="font-mono font-semibold text-slate-600">
+                {displayProblem.id}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -156,29 +299,42 @@ export default function ProblemDetail({ activePage = "detail", onNavigate = () =
         </header>
 
         <div className="flex-1 overflow-y-auto p-5 flex gap-5">
+
+          {loading && (
+            <div className="absolute inset-x-0 top-16 mx-auto w-fit rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-semibold text-blue-700">
+              Đang tải chi tiết câu hỏi...
+            </div>
+          )}
+
+          {error && (
+            <div className="absolute inset-x-0 top-16 mx-auto w-fit rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* Left — problem + solution */}
           <div className="flex-1 min-w-0 space-y-4">
             {/* Hero card */}
             <div className="bg-blue-600 rounded-2xl p-5 text-white">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[10px] font-bold bg-white/20 px-2.5 py-0.5 rounded-full">{PROBLEM.chapter}</span>
+                <span className="text-[10px] font-bold bg-white/20 px-2.5 py-0.5 rounded-full">{displayProblem.chapter}</span>
                 <ChevronRight size={11} className="opacity-60" />
-                <span className="text-[11px] opacity-80">{PROBLEM.topic}</span>
+                <span className="text-[11px] opacity-80">{displayProblem.topic}</span>
                 <ChevronRight size={11} className="opacity-60" />
-                <span className="text-[11px] opacity-80">{PROBLEM.subtopic}</span>
+                <span className="text-[11px] opacity-80">{displayProblem.subtopic}</span>
               </div>
               <div className="bg-white/15 rounded-xl px-4 py-3 mb-3 font-mono text-[15px] font-bold flex items-center gap-3">
                 <span className="text-2xl opacity-70">∫</span>
-                {PROBLEM.latex}
+                {displayProblem.latex}
                 <button onClick={handleCopy} className="ml-auto text-white/60 hover:text-white transition-colors">
                   {copiedLatex ? <CheckCircle size={14} /> : <Copy size={14} />}
                 </button>
               </div>
-              <p className="text-[12px] leading-relaxed text-white/90">{PROBLEM.statement}</p>
+              <p className="text-[12px] leading-relaxed text-white/90">{displayProblem.statement}</p>
               <div className="flex flex-wrap gap-2 mt-3">
-                <span className="text-[10px] font-semibold bg-red-400/30 border border-red-300/30 text-white px-2.5 py-1 rounded-full">{PROBLEM.difficulty}</span>
-                <span className="text-[10px] font-semibold bg-white/15 border border-white/20 text-white px-2.5 py-1 rounded-full">{PROBLEM.skill}</span>
-                {PROBLEM.tags.map((t) => (
+                <span className="text-[10px] font-semibold bg-red-400/30 border border-red-300/30 text-white px-2.5 py-1 rounded-full">{displayProblem.difficulty}</span>
+                <span className="text-[10px] font-semibold bg-white/15 border border-white/20 text-white px-2.5 py-1 rounded-full">{displayProblem.skill}</span>
+                {displayProblem.tags.map((t) => (
                   <span key={t} className="text-[10px] bg-white/10 text-white/80 px-2.5 py-1 rounded-full">{t}</span>
                 ))}
               </div>
@@ -189,10 +345,10 @@ export default function ProblemDetail({ activePage = "detail", onNavigate = () =
               <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
                 <BookMarked size={14} className="text-blue-600" />
                 <span className="text-[12px] font-bold text-slate-700">Lời giải từng bước</span>
-                <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full ml-1">{STEPS.length} bước</span>
+                <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full ml-1">{solutionBlocks.length} bước</span>
               </div>
               <div className="divide-y divide-slate-50">
-                {STEPS.map((step) => (
+                {solutionBlocks.map((step) => (
                   <div key={step.num} className="px-5 py-4 flex gap-4">
                     <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 mt-0.5">
                       {step.num}
@@ -200,11 +356,13 @@ export default function ProblemDetail({ activePage = "detail", onNavigate = () =
                     <div className="flex-1">
                       <p className="text-[12px] font-bold text-slate-700 mb-1">{step.title}</p>
                       <p className="text-[11px] text-slate-500 leading-relaxed mb-2">{step.content}</p>
-                      <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                        <code className="text-[11px] font-mono text-blue-800 break-all leading-relaxed">
-                          {step.latex}
-                        </code>
-                      </div>
+                      {step.latex && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <code className="text-[11px] font-mono text-blue-800 break-all leading-relaxed">
+                            {step.latex}
+                          </code>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -216,7 +374,11 @@ export default function ProblemDetail({ activePage = "detail", onNavigate = () =
               <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-xl hover:bg-blue-700 transition-all">
                 <Zap size={13} /> Sinh biến thể từ bài này
               </button>
-              <button className="flex items-center gap-2 px-4 py-2.5 text-blue-600 bg-blue-50 border border-blue-200 text-[12px] font-semibold rounded-xl hover:bg-blue-100 transition-all">
+              <button
+                type="button"
+                onClick={() => similarPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className="flex items-center gap-2 px-4 py-2.5 text-blue-600 bg-blue-50 border border-blue-200 text-[12px] font-semibold rounded-xl hover:bg-blue-100 transition-all"
+              >
                 <GitBranch size={13} /> Tìm bài tương tự
               </button>
               <button className="flex items-center gap-2 px-4 py-2.5 text-slate-600 bg-slate-50 border border-slate-200 text-[12px] font-semibold rounded-xl hover:bg-slate-100 transition-all ml-auto">
@@ -231,12 +393,12 @@ export default function ProblemDetail({ activePage = "detail", onNavigate = () =
             <div className="bg-white border border-slate-100 rounded-xl p-4">
               <p className="text-[11px] font-bold text-slate-700 mb-3">Thông tin bài tập</p>
               {[
-                { icon: Tag, label: "Mã bài", val: PROBLEM.id },
-                { icon: BookOpen, label: "Nguồn", val: PROBLEM.source },
-                { icon: TrendingUp, label: "Độ khó", val: PROBLEM.difficulty },
-                { icon: CheckCircle, label: "Kỹ năng", val: PROBLEM.skill },
-                { icon: User, label: "Thêm bởi", val: PROBLEM.addedBy },
-                { icon: Clock, label: "Ngày thêm", val: PROBLEM.addedDate },
+                { icon: Tag, label: "Mã bài", val: displayProblem.id },
+                { icon: BookOpen, label: "Nguồn", val: displayProblem.source },
+                { icon: TrendingUp, label: "Độ khó", val: displayProblem.difficulty },
+                { icon: CheckCircle, label: "Kỹ năng", val: displayProblem.skill },
+                { icon: User, label: "Thêm bởi", val: displayProblem.addedBy },
+                { icon: Clock, label: "Ngày thêm", val: displayProblem.addedDate },
               ].map((row) => (
                 <div key={row.label} className="flex items-start gap-2 py-1.5 border-b border-slate-50 last:border-0">
                   <row.icon size={11} className="text-slate-400 mt-0.5 flex-shrink-0" />
@@ -251,10 +413,10 @@ export default function ProblemDetail({ activePage = "detail", onNavigate = () =
               <p className="text-[11px] font-bold text-slate-700 mb-3">Thống kê</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "Bài tương tự", val: PROBLEM.similarCount },
-                  { label: "Biến thể đã sinh", val: PROBLEM.variantCount },
-                  { label: "Lượt xem", val: 142 },
-                  { label: "Lần dùng đề", val: 3 },
+                  { label: "Bài tương tự", val: displayProblem.similarCount },
+                  { label: "Biến thể đã sinh", val: displayProblem.variantCount },
+                  { label: "Lượt xem", val: 0 },
+                  { label: "Lần dùng đề", val: 0 },
                 ].map((s) => (
                   <div key={s.label} className="bg-slate-50 rounded-lg p-2.5 text-center">
                     <p className="text-[15px] font-bold text-blue-700">{s.val}</p>
@@ -265,27 +427,62 @@ export default function ProblemDetail({ activePage = "detail", onNavigate = () =
             </div>
 
             {/* Similar problems */}
-            <div className="bg-white border border-slate-100 rounded-xl p-4">
+            <div ref={similarPanelRef} className="bg-white border border-slate-100 rounded-xl p-4">
               <p className="text-[11px] font-bold text-slate-700 mb-3">Bài tập tương tự</p>
-              <div className="space-y-2">
-                {SIMILAR.map((s) => (
-                  <div key={s.id} className="flex items-center gap-2 p-2.5 border border-slate-100 rounded-lg hover:border-blue-200 cursor-pointer transition-all group">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-slate-500 font-mono">{s.id}</p>
-                      <code className="text-[10px] font-mono text-blue-700 truncate block mt-0.5">{s.latex}</code>
+                <div className="space-y-2">
+                  {similarLoading && (
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+                      Đang tìm bài tương tự...
                     </div>
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-[11px] font-bold text-indigo-700">{s.match}%</span>
-                      <div className="w-8 h-1 rounded-full bg-slate-100 overflow-hidden">
-                        <div className="h-full rounded-full bg-indigo-500" style={{ width: `${s.match}%` }} />
-                      </div>
+                  )}
+
+                  {!similarLoading && similarError && (
+                    <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-[11px] text-red-600">
+                      {similarError}
                     </div>
-                  </div>
-                ))}
-                <button className="w-full text-[11px] text-blue-500 hover:text-blue-700 font-medium py-1 transition-colors">
-                  Xem tất cả {PROBLEM.similarCount} bài →
-                </button>
-              </div>
+                  )}
+
+                  {!similarLoading && !similarError && similarQuestions.length === 0 && (
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+                      Chưa có bài tương tự.
+                    </div>
+                  )}
+
+                  {!similarLoading &&
+                    !similarError &&
+                    similarQuestions.map((s) => (
+                      <button
+                        key={s.question_id}
+                        type="button"
+                        onClick={() => onOpenQuestionDetail(s.question_id)}
+                        className="w-full flex items-center gap-2 p-2.5 border border-slate-100 rounded-lg hover:border-blue-200 cursor-pointer transition-all group text-left"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-slate-500 font-mono truncate">
+                            {s.question_id}
+                          </p>
+                          <code className="text-[10px] font-mono text-blue-700 truncate block mt-0.5">
+                            {s.answer || s.marker || "Question"}
+                          </code>
+                        </div>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-[11px] font-bold text-indigo-700">
+                            {Math.round(s.score * 100)}%
+                          </span>
+                          <div className="w-8 h-1 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-indigo-500"
+                              style={{ width: `${Math.round(s.score * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+
+                  <button className="w-full text-[11px] text-blue-500 hover:text-blue-700 font-medium py-1 transition-colors">
+                    Xem tất cả {displayProblem.similarCount} bài →
+                  </button>
+                </div>
             </div>
           </div>
         </div>
