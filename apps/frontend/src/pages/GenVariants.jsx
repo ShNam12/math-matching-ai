@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import LatexInline from "../components/LatexInline";
+import MathText from "../components/MathText";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
@@ -18,7 +20,7 @@ const NAV = [
   { icon: Upload, label: "Upload Document", sub: "Ingestion", id: "upload" },
   { icon: Search, label: "Semantic Search", sub: "Tìm kiếm", id: "search" },
   { icon: BookOpen, label: "Calculus Taxonomy", sub: "Phân loại", id: "taxonomy" },
-  { icon: CheckSquare, label: "QA Rules", sub: "Kiểm định", id: "qa", badge: 3 },
+  { icon: CheckSquare, label: "QA Rules", sub: "Kiểm định", id: "qa" },
   { icon: FileText, label: "Chi tiết bài tập", sub: "Xem & Giải", id: "detail" },
   { icon: Sparkles, label: "Sinh biến thể", sub: "Gen AI", id: "gen", active: true },
   { icon: BarChart2, label: "Analytics", sub: "Thống kê", id: "analytics" },
@@ -456,9 +458,9 @@ export default function GenVariants({
                 <p className="text-[10px] text-blue-600 font-mono break-all mb-2">
                   {sourceQuestionId || "Chưa chọn câu hỏi nguồn"}
                 </p>
-                <code className="text-[12px] font-mono text-blue-800 font-bold block mb-1">
-                  {displayOriginal.latex}
-                </code>
+                <div className="text-[13px] text-blue-800 font-bold block mb-1">
+                  <LatexInline value={displayOriginal.latex} />
+                </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
                     {displayOriginal.topic}
@@ -670,11 +672,13 @@ export default function GenVariants({
                         <div className="w-5 h-5 rounded bg-purple-600 flex items-center justify-center flex-shrink-0">
                           <span className="text-white font-bold" style={{ fontSize: 9 }}>∫</span>
                         </div>
-                        <code className="text-[12px] font-mono text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100 font-bold">
-                          {v.latex}
-                        </code>
+                        <div className="text-[13px] text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100 font-bold">
+                          <LatexInline value={v.latex} />
+                        </div>
                       </div>
-                      <p className="text-[11px] text-slate-600 leading-relaxed mb-2">{v.statement}</p>
+                      <p className="text-[11px] text-slate-600 leading-relaxed mb-2">
+                        <MathText value={v.statement} />
+                      </p>
 
                       {v.savedQuestionId && (
                         <div className="mb-2 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-[10px] text-emerald-700">

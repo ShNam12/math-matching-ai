@@ -20,7 +20,7 @@ const NAV = [
   { icon: Upload, label: "Upload Document", sub: "Ingestion", id: "upload", active: true },
   { icon: Search, label: "Semantic Search", sub: "Tìm kiếm", id: "search" },
   { icon: BookOpen, label: "Calculus Taxonomy", sub: "Phân loại", id: "taxonomy" },
-  { icon: CheckSquare, label: "QA Rules", sub: "Kiểm định", id: "qa", badge: 3 },
+  { icon: CheckSquare, label: "QA Rules", sub: "Kiểm định", id: "qa" },
   { icon: FileText, label: "Chi tiết bài tập", sub: "Xem & Giải", id: "detail" },
   { icon: Sparkles, label: "Sinh biến thể", sub: "Gen AI", id: "gen" },
   { icon: BarChart2, label: "Analytics", sub: "Thống kê", id: "analytics" },
