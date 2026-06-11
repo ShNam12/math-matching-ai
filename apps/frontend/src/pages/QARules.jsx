@@ -119,6 +119,7 @@ const RULES = [
 ];
 
 const statusCfg = {
+  idle: { label: "Chưa chạy", icon: Clock, bg: "bg-slate-50", text: "text-slate-500", border: "border-slate-200", dot: "bg-slate-300" },
   ok:   { label: "Đã qua", icon: CheckCircle,    bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
   warn: { label: "Cảnh báo", icon: AlertTriangle, bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",   dot: "bg-amber-500" },
   error:{ label: "Lỗi",      icon: XCircle,       bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200",     dot: "bg-red-500" },
@@ -131,21 +132,72 @@ const catColor = {
   "Vector": "bg-indigo-50 text-indigo-700 border-indigo-200",
 };
 
-export default function QARules({ activePage = "qa", onNavigate = () => {} }) {
+export default function QARules({
+  activePage = "qa",
+  onNavigate = () => {},
+  selectedQualityContext = null,
+}) {
   const [filterStatus, setFilterStatus] = useState("all");
-  const [selected, setSelected] = useState(RULES[0]);
+  const [selected, setSelected] = useState(null);
   const [running, setRunning] = useState(false);
 
-  const filtered = RULES.filter((r) =>
+  const hasQualityContext = Boolean(selectedQualityContext?.quality);
+
+  const qualityResult = selectedQualityContext?.quality;
+  const candidate = selectedQualityContext?.candidate;
+  const warnings = qualityResult?.warnings || [];
+  const blockingIssues = qualityResult?.blocking_issues || [];
+  const semanticDuplicates = qualityResult?.semantic_duplicates || [];
+
+  const qualityRules = hasQualityContext
+    ? [
+        {
+          id: "QA-CANDIDATE",
+          title: "Kiểm định candidate sinh biến thể",
+          desc: selectedQualityContext.quality.can_save
+            ? "Candidate đạt điều kiện lưu vào corpus."
+            : "Candidate có vấn đề chặn lưu vào corpus.",
+          category: "Nội dung",
+          status: selectedQualityContext.quality.blocking_issues?.length
+            ? "error"
+            : selectedQualityContext.quality.warnings?.length
+              ? "warn"
+              : "ok",
+          passRate: selectedQualityContext.quality.blocking_issues?.length
+            ? 60
+            : selectedQualityContext.quality.warnings?.length
+              ? 85
+              : 100,
+          issues:
+            (selectedQualityContext.quality.warnings?.length || 0) +
+            (selectedQualityContext.quality.blocking_issues?.length || 0),
+          lastRun: "Vừa kiểm định",
+          icon: Shield,
+          affectedIds: [selectedQualityContext.variantId].filter(Boolean),
+        },
+      ]
+    : RULES.map((rule) => ({
+        ...rule,
+        status: "idle",
+        passRate: 0,
+        issues: 0,
+        lastRun: "Chưa chạy",
+        affectedIds: [],
+      }));
+
+  const filtered = qualityRules.filter((r) =>
     filterStatus === "all" ? true : r.status === filterStatus
   );
 
   const counts = {
-    all: RULES.length,
-    ok: RULES.filter((r) => r.status === "ok").length,
-    warn: RULES.filter((r) => r.status === "warn").length,
-    error: RULES.filter((r) => r.status === "error").length,
+    all: qualityRules.length,
+    ok: qualityRules.filter((r) => r.status === "ok").length,
+    warn: qualityRules.filter((r) => r.status === "warn").length,
+    error: qualityRules.filter((r) => r.status === "error").length,
+    idle: qualityRules.filter((r) => r.status === "idle").length,
   };
+
+  const selectedRule = selected || filtered[0] || qualityRules[0];
 
   const handleRun = () => {
     setRunning(true);
@@ -249,7 +301,7 @@ export default function QARules({ activePage = "qa", onNavigate = () => {} }) {
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {filtered.map((rule) => {
               const sc = statusCfg[rule.status];
-              const isSelected = selected?.id === rule.id;
+              const isSelected = selectedRule?.id === rule.id;
               return (
                 <div key={rule.id} onClick={() => setSelected(rule)}
                   className={`bg-white border rounded-xl p-4 cursor-pointer transition-all ${
@@ -283,7 +335,13 @@ export default function QARules({ activePage = "qa", onNavigate = () => {} }) {
                   </div>
                   {/* Progress bar */}
                   <div className="mt-2.5 ml-11 w-full h-1 rounded-full bg-slate-100 overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${rule.status === "ok" ? "bg-emerald-500" : rule.status === "warn" ? "bg-amber-400" : "bg-red-500"}`}
+                    <div className={`h-full rounded-full transition-all ${rule.status === "ok"
+                      ? "bg-emerald-500"
+                      : rule.status === "warn"
+                        ? "bg-amber-400"
+                        : rule.status === "error"
+                          ? "bg-red-500"
+                          : "bg-slate-300"}`}
                       style={{ width: `${rule.passRate}%` }} />
                   </div>
                 </div>
@@ -292,10 +350,10 @@ export default function QARules({ activePage = "qa", onNavigate = () => {} }) {
           </div>
 
           {/* Detail panel */}
-          {selected && (
+          {selectedRule && (
             <div className="w-72 flex-shrink-0 border-l border-slate-100 bg-white overflow-y-auto p-4 space-y-4">
               {(() => {
-                const sc = statusCfg[selected.status];
+                const sc = statusCfg[selectedRule.status];
                 return (
                   <>
                     <div className={`rounded-xl p-4 ${sc.bg} border ${sc.border}`}>
@@ -303,18 +361,32 @@ export default function QARules({ activePage = "qa", onNavigate = () => {} }) {
                         <sc.icon size={16} className={sc.text} />
                         <span className={`text-[11px] font-bold ${sc.text}`}>{sc.label.toUpperCase()}</span>
                       </div>
-                      <p className="text-[13px] font-bold text-slate-800 mb-1">{selected.title}</p>
-                      <p className="text-[11px] text-slate-600 leading-relaxed">{selected.desc}</p>
+                      <p className="text-[13px] font-bold text-slate-800 mb-1">{selectedRule.title}</p>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">{selectedRule.desc}</p>
                     </div>
+
+                    {hasQualityContext && candidate && (
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                        <p className="text-[11px] font-bold text-blue-700 mb-2">
+                          Candidate đang kiểm định
+                        </p>
+                        <code className="block text-[10px] font-mono text-blue-800 bg-white/70 border border-blue-100 rounded-lg px-2 py-1 mb-2 break-all">
+                          {candidate.formulas?.[0]?.latex || candidate.answer || "Không có công thức"}
+                        </code>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                          {candidate.statement}
+                        </p>
+                      </div>
+                    )}
 
                     <div className="bg-slate-50 rounded-xl p-3 space-y-2">
                       <p className="text-[11px] font-bold text-slate-600 mb-2">Thông tin chi tiết</p>
                       {[
-                        { label: "Rule ID", val: selected.id },
-                        { label: "Danh mục", val: selected.category },
-                        { label: "Pass rate", val: `${selected.passRate}%` },
-                        { label: "Số vấn đề", val: selected.issues === 0 ? "Không có" : selected.issues },
-                        { label: "Lần quét", val: selected.lastRun },
+                        { label: "Rule ID", val: selectedRule.id },
+                        { label: "Danh mục", val: selectedRule.category },
+                        { label: "Pass rate", val: `${selectedRule.passRate}%` },
+                        { label: "Số vấn đề", val: selectedRule.issues === 0 ? "Không có" : selectedRule.issues },
+                        { label: "Lần quét", val: selectedRule.lastRun },
                       ].map((row) => (
                         <div key={row.label} className="flex justify-between items-center">
                           <span className="text-[11px] text-slate-500">{row.label}</span>
@@ -323,11 +395,101 @@ export default function QARules({ activePage = "qa", onNavigate = () => {} }) {
                       ))}
                     </div>
 
-                    {selected.affectedIds.length > 0 && (
+                    {hasQualityContext && blockingIssues.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-bold text-red-700 mb-2">
+                          Lỗi chặn lưu
+                        </p>
+                        <div className="space-y-1.5">
+                          {blockingIssues.map((issue) => (
+                            <div key={`${issue.code}-${issue.field || "general"}`} className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-2">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <XCircle size={11} className="text-red-600" />
+                                <span className="text-[10px] font-bold text-red-700">{issue.code}</span>
+                                {issue.field && (
+                                  <span className="text-[10px] text-red-500">({issue.field})</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-red-700 leading-relaxed">
+                                {issue.message}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {hasQualityContext && warnings.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-bold text-amber-700 mb-2">
+                          Cảnh báo
+                        </p>
+                        <div className="space-y-1.5">
+                          {warnings.map((issue) => (
+                            <div key={`${issue.code}-${issue.field || "general"}`} className="rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-2">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <AlertTriangle size={11} className="text-amber-600" />
+                                <span className="text-[10px] font-bold text-amber-700">{issue.code}</span>
+                                {issue.field && (
+                                  <span className="text-[10px] text-amber-600">({issue.field})</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-amber-700 leading-relaxed">
+                                {issue.message}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {hasQualityContext && semanticDuplicates.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-bold text-purple-700 mb-2">
+                          Bài tương đồng semantic
+                        </p>
+                        <div className="space-y-1.5">
+                          {semanticDuplicates.map((duplicate) => (
+                            <div key={duplicate.question_id} className="rounded-lg border border-purple-100 bg-purple-50 px-2.5 py-2">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className="text-[10px] font-mono font-bold text-purple-700 truncate">
+                                  {duplicate.question_id}
+                                </span>
+                                <span className="text-[10px] font-bold text-purple-700">
+                                  {Math.round(duplicate.score * 100)}%
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-purple-700 leading-relaxed line-clamp-2">
+                                {duplicate.statement}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {hasQualityContext &&
+                      blockingIssues.length === 0 &&
+                      warnings.length === 0 &&
+                      semanticDuplicates.length === 0 && (
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CheckCircle size={13} className="text-emerald-600" />
+                            <p className="text-[11px] font-bold text-emerald-700">
+                              Không có vấn đề chất lượng
+                            </p>
+                          </div>
+                          <p className="text-[10px] text-emerald-700 leading-relaxed">
+                            Candidate có thể được lưu vào corpus.
+                          </p>
+                        </div>
+                      )}
+
+                    {selectedRule.affectedIds.length > 0 && (
                       <div>
                         <p className="text-[11px] font-bold text-slate-600 mb-2">Bài tập bị ảnh hưởng (mẫu)</p>
                         <div className="space-y-1">
-                          {selected.affectedIds.map((id) => (
+                          {selectedRule.affectedIds.map((id) => (
                             <div key={id} className="flex items-center gap-2 px-2.5 py-1.5 bg-red-50 border border-red-100 rounded-lg">
                               <AlertCircle size={11} className="text-red-500" />
                               <span className="text-[11px] font-mono text-red-700">{id}</span>
@@ -336,9 +498,9 @@ export default function QARules({ activePage = "qa", onNavigate = () => {} }) {
                               </button>
                             </div>
                           ))}
-                          {selected.issues > selected.affectedIds.length && (
+                          {selectedRule.issues > selectedRule.affectedIds.length && (
                             <p className="text-[10px] text-slate-400 text-center pt-1">
-                              +{selected.issues - selected.affectedIds.length} bài khác...
+                              +{selectedRule.issues - selectedRule.affectedIds.length} bài khác...
                             </p>
                           )}
                         </div>
@@ -349,7 +511,7 @@ export default function QARules({ activePage = "qa", onNavigate = () => {} }) {
                       <button className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
                         <Play size={12} /> Chạy rule này
                       </button>
-                      {selected.issues > 0 && (
+                      {selectedRule.issues > 0 && (
                         <button className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
                           <Download size={12} /> Xuất danh sách lỗi
                         </button>

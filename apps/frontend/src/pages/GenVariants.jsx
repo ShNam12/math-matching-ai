@@ -94,6 +94,7 @@ export default function GenVariants({
   activePage = "gen",
   onNavigate = () => {},
   sourceQuestionId = null,
+  onOpenQualityContext = () => {},
 }) {
   const [variants, setVariants] = useState([]);
   const [strategy, setStrategy] = useState("Đổi tham số");
@@ -646,7 +647,19 @@ export default function GenVariants({
                           className="p-1.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
                           {copiedId === v.id ? <CheckCircle size={12} className="text-emerald-500" /> : <Copy size={12} />}
                         </button>
-                        <button className="p-1.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenQualityContext({
+                              sourceQuestionId,
+                              variantId: v.id,
+                              candidate: v.candidate,
+                              quality: v.quality,
+                            })
+                          }
+                          disabled={!v.quality}
+                          className="p-1.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
                           <Eye size={12} />
                         </button>
                       </div>

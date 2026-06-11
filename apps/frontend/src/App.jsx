@@ -26,6 +26,7 @@ function App() {
   const [activePage, setActivePage] = useState("dashboard")
   const [selectedQuestionId, setSelectedQuestionId] = useState(null)
   const [sourceQuestionId, setSourceQuestionId] = useState(null)
+  const [selectedQualityContext, setSelectedQualityContext] = useState(null)
 
   const ActivePage = PAGES[activePage]
 
@@ -39,14 +40,21 @@ function App() {
     setActivePage("gen")
   }
 
+  function handleOpenQualityContext(context) {
+    setSelectedQualityContext(context)
+    setActivePage("qa")
+  }
+
   return (
     <ActivePage
       activePage={activePage}
       onNavigate={setActivePage}
       selectedQuestionId={selectedQuestionId}
       sourceQuestionId={sourceQuestionId}
+      selectedQualityContext={selectedQualityContext}
       onOpenQuestionDetail={handleOpenQuestionDetail}
       onOpenGeneration={handleOpenGeneration}
+      onOpenQualityContext={handleOpenQualityContext}
     />
   )
 }
