@@ -1,510 +1,854 @@
-# Kế hoạch AI Matching câu hỏi vào cây tri thức Giải tích
+# Kế hoạch triển khai pipeline AI Matching câu hỏi vào cây tri thức Giải tích 1
 
-Ngày lập: 2026-06-11
+Ngày cập nhật: 2026-06-12
 
 ## 1. Mục tiêu
 
-Mục tiêu của hướng phát triển này là biến hệ thống hiện tại thành một hệ thống **AI Matching câu hỏi Giải tích vào cây tri thức**.
-
-Hệ thống sau khi hoàn thiện cần làm được:
-
-- Nhận tài liệu PDF/Markdown.
-- Chuyển tài liệu thành Markdown chuẩn.
-- Tách tài liệu thành các câu hỏi riêng.
-- Dùng **bộ não tri thức Giải tích** để AI phân loại từng câu hỏi.
-- Gán câu hỏi vào đúng chương, chủ đề, dạng bài, kỹ năng và độ khó.
-- Lưu kết quả phân loại vào database.
-- Dùng metadata phân loại để tìm kiếm, lọc, thống kê, sinh biến thể và gợi ý bài tương tự.
-
-Định nghĩa ngắn gọn:
-
-> AI Matching trong dự án này là quá trình dùng AI để đọc hiểu câu hỏi Giải tích, đối chiếu với cây tri thức đã xây dựng, sau đó tự động match câu hỏi vào mục kiến thức phù hợp nhất.
-
-## 2. Lý do cần cập nhật
-
-Dự án hiện tại đã có nền tảng tốt:
-
-- Upload tài liệu.
-- Xử lý tài liệu đầu vào.
-- Tách câu hỏi.
-- Lưu câu hỏi.
-- Tạo embedding.
-- Tìm kiếm ngữ nghĩa.
-- Tìm kiếm công thức.
-- Sinh biến thể câu hỏi.
-- Kiểm định chất lượng câu hỏi sinh.
-- Giao diện Taxonomy.
-
-Tuy nhiên, hệ thống hiện chưa có bước bắt buộc để được gọi chắc là AI Matching theo hướng thầy yêu cầu:
-
-```text
-Câu hỏi -> AI đọc hiểu -> đối chiếu cây tri thức -> match vào mục kiến thức
-```
-
-Hiện tại các trường metadata như `subject`, `chapter`, `difficulty`, `skills` đã tồn tại trong bảng `questions`, nhưng chưa có cơ chế AI tự động gán đầy đủ sau khi tách câu hỏi.
-
-Vì vậy cần bổ sung một lớp mới: **AI Taxonomy Matching**.
-
-## 3. Bộ não tri thức của hệ thống
-
-Đây là phần bắt buộc và quan trọng nhất của hướng phát triển này.
-
-### 3.1. Vai trò của bộ não tri thức
-
-Bộ não tri thức là file Markdown chứa toàn bộ cấu trúc kiến thức Giải tích mà hệ thống dùng để match câu hỏi.
-
-File hiện tại:
-
-```text
-Plan/calculus_knowledge_taxonomy.md
-```
-
-File này đóng vai trò như:
-
-- Cây kiến thức Giải tích.
-- Ontology/taxonomy cho hệ thống.
-- Tài liệu chuẩn để AI classifier đối chiếu.
-- Nguồn dữ liệu để hiển thị trên giao diện Taxonomy.
-- Chuẩn metadata cho search, analytics và generation.
-
-Nói đơn giản:
-
-> Nếu AI classifier là người phân loại, thì `calculus_knowledge_taxonomy.md` là giáo trình/khung kiến thức mà AI phải bám theo.
-
-### 3.2. Nội dung cần có trong bộ não tri thức
-
-File tri thức cần có các phần sau:
-
-- Danh sách chương lớn.
-- Danh sách topic trong từng chương.
-- Danh sách subtopic/dạng bài.
-- Dấu hiệu nhận diện từng dạng bài.
-- Danh sách kỹ năng chuẩn.
-- Quy tắc đánh giá độ khó.
-- Schema JSON đầu ra.
-- Ví dụ phân loại mẫu.
-- Prompt template để gọi AI.
-
-Ví dụ cấu trúc:
-
-```text
-GT03_Integrals
-  GT03.03_Integration_By_Parts
-    GT03.03.01_Basic_By_Parts
-    GT03.03.02_Repeated_By_Parts
-    GT03.03.03_Cyclic_By_Parts
-```
-
-Ví dụ một câu hỏi:
-
-```text
-Tính tích phân ∫ x^2 e^x dx.
-```
-
-Kết quả match mong muốn:
-
-```json
-{
-  "subject": "Calculus",
-  "chapter": "GT03_Integrals",
-  "topic": "GT03.03_Integration_By_Parts",
-  "subtopic": "GT03.03.02_Repeated_By_Parts",
-  "skills": ["integration_by_parts", "indefinite_integral"],
-  "difficulty": "medium",
-  "confidence": 0.92,
-  "reason": "Bài có dạng tích của đa thức và hàm mũ, cần dùng tích phân từng phần lặp lại."
-}
-```
-
-### 3.3. Yêu cầu đối với bộ não tri thức
-
-Bộ não tri thức cần đảm bảo:
-
-- Không quá chung chung.
-- Mỗi topic/subtopic có mã định danh rõ ràng.
-- Tên mã ổn định để lưu database.
-- Có dấu hiệu nhận diện để AI dễ phân loại.
-- Có skill vocabulary thống nhất.
-- Có rubric độ khó để AI không gán tùy tiện.
-- Có ví dụ để tăng độ ổn định khi gọi model.
-
-### 3.4. Vai trò khi bảo vệ đồ án
-
-Khi bảo vệ, bộ não tri thức giúp chứng minh:
-
-- Hệ thống có cơ sở tri thức rõ ràng.
-- AI không phân loại ngẫu nhiên.
-- Mỗi câu hỏi được match vào một mục kiến thức có định nghĩa.
-- Có thể giải thích vì sao câu hỏi thuộc mục đó.
-- Có thể thống kê số lượng câu hỏi theo từng mục kiến thức.
-
-Đây là điểm giúp dự án khác với một hệ thống semantic search thông thường.
-
-## 4. Kiến trúc tổng thể sau cập nhật
-
-Flow hiện tại:
-
-```text
-Upload tài liệu
--> Ingestion
--> Segment câu hỏi
--> Embedding
--> Semantic Search
-```
-
-Flow cần cập nhật:
+Mục tiêu là hiện thực hóa pipeline:
 
 ```text
 Upload tài liệu
 -> Ingestion
 -> Segment câu hỏi
 -> AI Taxonomy Matching
--> Save metadata
+-> Lưu metadata phân loại
 -> Embedding
--> Semantic Search / Formula Search / Taxonomy Search
+-> Semantic Search / Taxonomy Search / Generation
 ```
 
-Trong đó bước mới là:
+Hệ thống sau khi hoàn thiện phải chứng minh được:
+
+- Có bộ não tri thức Giải tích 1 làm chuẩn phân loại.
+- AI tự động match câu hỏi vào `chapter -> topic -> subtopic`.
+- Kết quả match có `skills`, `difficulty`, `confidence`, `reason`.
+- Metadata được lưu vào database.
+- Search, taxonomy UI, problem detail và generation dùng được metadata này.
+- Mỗi bước triển khai đều có test đầy đủ trước khi chuyển sang bước tiếp theo.
+
+Nguyên tắc bắt buộc:
+
+> Không chuyển sang bước tiếp theo nếu test của bước hiện tại chưa pass.
+
+## 2. Tài liệu nền
+
+Bộ não tri thức chính thức:
 
 ```text
-AI Taxonomy Matching
+Plan/update/buoc4_bo_nao_tri_thuc_giai_tich_1.md
 ```
 
-Bước này sẽ:
+Các tài liệu nguồn:
 
-- Đọc câu hỏi.
-- Đọc bộ não tri thức.
-- Gọi AI classifier.
-- Nhận JSON phân loại.
-- Validate kết quả.
-- Lưu metadata vào database.
+```text
+Plan/update/buoc1_cay_kien_thuc_de_cuong.md
+Plan/update/buoc2_doi_chieu_giao_trinh_slide.md
+Plan/update/buoc3_trich_dang_bai_tu_bai_tap.md
+Giải tích 1/Đề cương/2025.1_BTTK_MI1111.md
+```
 
-## 5. Các module cần bổ sung
+Quy ước:
 
-### 5.1. Module taxonomy
+- Taxonomy code dùng tiếng Anh, không dấu, ổn định cho backend.
+- Tên hiển thị dùng tiếng Việt.
+- Mức phân loại: chương + chủ đề + dạng bài.
+- Độ khó: `easy`, `medium`, `hard`.
 
-Đề xuất thêm module:
+## 3. Pipeline đích
+
+Pipeline hiện tại:
+
+```text
+Document upload
+-> Ingestion
+-> Question segmentation
+-> Embedding
+-> Search
+```
+
+Pipeline cần đạt:
+
+```text
+Document upload
+-> Ingestion
+-> Question segmentation
+-> Taxonomy classification
+-> Classification validation
+-> Save classification metadata
+-> Embedding with taxonomy metadata
+-> Search/filter/statistics/generation
+```
+
+## 4. Nguyên tắc test bắt buộc
+
+Mỗi bước phải có tối thiểu:
+
+- Unit test cho logic thuần.
+- Service test cho workflow chính.
+- API test nếu có endpoint mới.
+- Regression test để đảm bảo flow cũ không hỏng.
+- Test case lỗi: input rỗng, output AI sai JSON, taxonomy code không tồn tại, confidence thấp.
+
+Trước khi hoàn thành một bước phải chạy:
+
+```text
+.venv/Scripts/python.exe -m pytest -q
+```
+
+Tiêu chí qua bước:
+
+- Toàn bộ test cũ pass.
+- Test mới của bước hiện tại pass.
+- Không phá vỡ API hiện có.
+- Không làm mất khả năng upload, segment, embed, search hiện tại.
+
+## 5. Bước 1 - Chuẩn hóa bộ não tri thức thành nguồn dùng được cho hệ thống
+
+### Mục tiêu
+
+Biến bộ não tri thức ở Markdown thành nguồn taxonomy ổn định để backend có thể sử dụng.
+
+Nguồn chính:
+
+```text
+Plan/update/buoc4_bo_nao_tri_thuc_giai_tich_1.md
+```
+
+Đích triển khai khuyến nghị:
+
+```text
+core/taxonomy/calculus_1_taxonomy.yaml
+```
+
+hoặc:
+
+```text
+core/taxonomy/calculus_1_taxonomy.json
+```
+
+### Việc cần làm
+
+1. Tạo bản taxonomy machine-readable.
+2. Mỗi node cần có:
+   - `code`
+   - `display_name`
+   - `level`
+   - `parent`
+   - `aliases`
+   - `positive_signals`
+   - `negative_signals`
+   - `skills`
+   - `default_difficulty`
+   - `confusable_with`
+   - `examples`
+3. Giữ Markdown làm tài liệu giải thích cho người đọc.
+4. Backend chỉ validate bằng YAML/JSON để tránh parse bảng Markdown phức tạp.
+
+### Module dự kiến
 
 ```text
 modules/taxonomy/
+  __init__.py
+  schemas.py
+  loader.py
+  validator.py
 ```
 
-Chức năng:
+### Test bắt buộc
 
-- Đọc file `calculus_knowledge_taxonomy.md`.
-- Trích xuất nội dung taxonomy.
-- Cung cấp taxonomy cho AI classifier.
-- Có thể parse một phần thành cấu trúc dùng cho UI/API.
-
-Các file dự kiến:
+Tạo test:
 
 ```text
-modules/taxonomy/__init__.py
-modules/taxonomy/loader.py
-modules/taxonomy/schemas.py
+tests/modules/taxonomy/test_loader.py
+tests/modules/taxonomy/test_validator.py
 ```
 
-### 5.2. Module question classification
+Test cần có:
 
-Đề xuất thêm module:
+- Load taxonomy thành công.
+- Không có code trùng.
+- Mọi `parent` đều tồn tại.
+- Mọi `confusable_with` đều tồn tại.
+- Mọi skill đều nằm trong skill vocabulary.
+- Mỗi subtopic có `display_name`, `parent`, `default_difficulty`.
+- Difficulty chỉ thuộc `easy`, `medium`, `hard`.
+- Taxonomy có đủ 3 chương chính.
 
-```text
-modules/question_classification/
-```
+### Tiêu chí qua bước
 
-Chức năng:
+- Taxonomy load được bằng code.
+- Validator pass.
+- Test taxonomy pass.
+- Toàn bộ test project cũ vẫn pass.
 
-- Nhận `Question`.
-- Build prompt từ câu hỏi và taxonomy.
-- Gọi Gemini.
-- Parse JSON.
-- Validate schema.
-- Trả kết quả classification.
+## 6. Bước 2 - Thiết kế schema classification
 
-Các file dự kiến:
+### Mục tiêu
 
-```text
-modules/question_classification/__init__.py
-modules/question_classification/schemas.py
-modules/question_classification/prompt_builder.py
-modules/question_classification/gemini_classifier.py
-modules/question_classification/service.py
-```
+Tạo schema chuẩn cho kết quả AI Matching.
 
-Output chính:
+Output chuẩn:
 
 ```json
 {
-  "subject": "Calculus",
-  "chapter": "GT03_Integrals",
-  "topic": "GT03.03_Integration_By_Parts",
-  "subtopic": "GT03.03.02_Repeated_By_Parts",
-  "skills": ["integration_by_parts", "indefinite_integral"],
+  "subject": "Calculus 1",
+  "chapter": "GT1_C1_Differential_Calculus_One_Variable",
+  "chapter_name": "Chương 1: Phép tính vi phân hàm một biến số",
+  "topic": "GT1_C1_05_Function_Limits",
+  "topic_name": "Giới hạn hàm số",
+  "subtopic": "GT1_C1_05_T02_Algebraic_Transformation_Limit",
+  "subtopic_name": "Tính giới hạn bằng biến đổi đại số",
+  "skills": ["function_limit", "algebraic_transformation"],
   "difficulty": "medium",
-  "confidence": 0.92,
-  "reason": "..."
+  "confidence": 0.88,
+  "reason": "Đề bài yêu cầu tính giới hạn hàm số và cần biến đổi biểu thức."
 }
 ```
 
-### 5.3. Tích hợp vào question storage
-
-Hiện có service:
+### Module dự kiến
 
 ```text
-modules/question_storage/service.py
+modules/question_classification/
+  __init__.py
+  schemas.py
 ```
 
-Service này đang làm:
+### Việc cần làm
+
+1. Tạo `QuestionClassificationResult`.
+2. Tạo `QuestionClassificationRequest`.
+3. Tạo `ClassificationIssue` nếu cần báo lỗi validate.
+4. Tạo validator:
+   - code tồn tại trong taxonomy
+   - parent chain đúng
+   - skill hợp lệ
+   - difficulty hợp lệ
+   - confidence trong `[0, 1]`
+
+### Test bắt buộc
+
+Tạo test:
 
 ```text
-segment_document -> embed_document
+tests/modules/question_classification/test_schemas.py
+tests/modules/question_classification/test_validation.py
 ```
 
-Cần đổi thành:
+Test cần có:
+
+- Classification hợp lệ pass.
+- Sai `chapter` fail.
+- Sai `topic` fail.
+- Sai `subtopic` fail.
+- Topic không thuộc chapter fail.
+- Subtopic không thuộc topic fail.
+- Skill không tồn tại fail.
+- Difficulty sai fail.
+- Confidence âm hoặc lớn hơn 1 fail.
+- Reason rỗng bị cảnh báo hoặc fail theo quy định.
+
+### Tiêu chí qua bước
+
+- Có schema rõ ràng.
+- Validator chặn được output AI sai.
+- Test pass toàn bộ.
+
+## 7. Bước 3 - Xây prompt builder cho AI Matching
+
+### Mục tiêu
+
+Tạo prompt ổn định để gọi Gemini hoặc model AI classifier.
+
+### Module dự kiến
+
+```text
+modules/question_classification/prompt_builder.py
+```
+
+### Việc cần làm
+
+1. Nhận câu hỏi gồm:
+   - statement
+   - solution nếu có
+   - answer nếu có
+   - formulas nếu có
+2. Nhận taxonomy context.
+3. Build prompt chứa:
+   - nhiệm vụ classifier
+   - output schema
+   - quy tắc chọn nhãn
+   - confidence policy
+   - danh sách topic/subtopic ứng viên
+   - câu hỏi cần phân loại
+4. Không để prompt quá dài ở MVP:
+   - MVP có thể đưa toàn bộ taxonomy.
+   - Bản tốt hơn chọn candidate topics trước.
+
+### Test bắt buộc
+
+Tạo test:
+
+```text
+tests/modules/question_classification/test_prompt_builder.py
+```
+
+Test cần có:
+
+- Prompt chứa statement.
+- Prompt chứa output schema.
+- Prompt chứa taxonomy code quan trọng.
+- Prompt chứa quy tắc không invent code.
+- Prompt chứa difficulty rubric.
+- Prompt không rỗng khi thiếu solution/answer.
+- Prompt xử lý công thức LaTeX không làm mất backslash.
+
+### Tiêu chí qua bước
+
+- Prompt builder deterministic.
+- Không phụ thuộc network.
+- Test pass.
+
+## 8. Bước 4 - Xây AI classifier adapter
+
+### Mục tiêu
+
+Tạo lớp gọi model AI để nhận JSON classification.
+
+### Module dự kiến
+
+```text
+modules/question_classification/gemini_classifier.py
+modules/question_classification/json_parser.py
+```
+
+### Việc cần làm
+
+1. Gọi Gemini bằng API hiện có trong dự án.
+2. Parse output JSON.
+3. Hỗ trợ output có hoặc không có markdown fence.
+4. Retry một lần nếu JSON lỗi.
+5. Trả lỗi rõ ràng nếu model trả sai schema.
+
+### Test bắt buộc
+
+Không gọi network trong unit test. Dùng fake classifier.
+
+Tạo test:
+
+```text
+tests/modules/question_classification/test_json_parser.py
+tests/modules/question_classification/test_gemini_classifier.py
+```
+
+Test cần có:
+
+- Parse JSON sạch.
+- Parse JSON bọc trong ```json.
+- JSON thiếu field bị fail.
+- JSON có taxonomy code sai bị fail.
+- Retry khi lần đầu JSON lỗi.
+- Không retry vô hạn.
+- Lỗi model được chuyển thành exception có message rõ.
+
+### Tiêu chí qua bước
+
+- Adapter có test bằng fake model.
+- Parser ổn định.
+- Test toàn project pass.
+
+## 9. Bước 5 - Xây service phân loại một câu hỏi
+
+### Mục tiêu
+
+Tạo service chính:
+
+```text
+QuestionClassificationService.classify_question(question)
+```
+
+### Module dự kiến
+
+```text
+modules/question_classification/service.py
+```
+
+### Việc cần làm
+
+1. Nhận `Question`.
+2. Build input từ statement/solution/answer/formulas.
+3. Load taxonomy.
+4. Build prompt.
+5. Gọi classifier.
+6. Validate result.
+7. Trả classification result.
+8. Không tự commit database ở service này nếu muốn test dễ; phần lưu để repository xử lý.
+
+### Test bắt buộc
+
+Tạo test:
+
+```text
+tests/modules/question_classification/test_service.py
+```
+
+Test cần có:
+
+- Classify câu "Tính tích phân từng phần" ra đúng expected với fake classifier.
+- Classify câu "Tìm tập xác định" ra đúng expected với fake classifier.
+- Nếu classifier trả code không tồn tại thì service fail.
+- Nếu confidence thấp thì service vẫn trả result nhưng đánh dấu QA flag nếu có.
+- Nếu question statement rỗng thì fail.
+
+### Tiêu chí qua bước
+
+- Service hoạt động độc lập với DB thật.
+- Có fake classifier test đủ nhánh.
+- Test pass.
+
+## 10. Bước 6 - Cập nhật database để lưu kết quả matching
+
+### Mục tiêu
+
+Lưu đầy đủ kết quả AI Matching vào bảng `questions`.
+
+### Field khuyến nghị
+
+Thêm vào model `Question`:
+
+```text
+topic
+subtopic
+chapter_name
+topic_name
+subtopic_name
+taxonomy_confidence
+taxonomy_reason
+taxonomy_version
+classification_model
+classified_at
+classification_status
+classification_error
+```
+
+Giữ field cũ:
+
+```text
+subject
+chapter
+difficulty
+skills
+```
+
+### Việc cần làm
+
+1. Cập nhật SQLAlchemy model.
+2. Tạo migration Alembic hoặc script migration theo style hiện tại.
+3. Cập nhật repository:
+   - `update_classification`
+   - `mark_classification_failed`
+   - `list_unclassified_by_document`
+   - `count_by_taxonomy`
+4. Cập nhật response model nếu cần.
+
+### Test bắt buộc
+
+Tạo/cập nhật test:
+
+```text
+tests/modules/question_storage/test_service.py
+tests/modules/question_classification/test_repository_integration.py
+tests/api/test_questions.py
+```
+
+Test cần có:
+
+- Update classification lưu đủ field.
+- Mark failed lưu status/error.
+- List unclassified trả đúng câu chưa classify.
+- Count by taxonomy đúng theo chapter/topic/subtopic.
+- Existing question API không hỏng.
+
+### Tiêu chí qua bước
+
+- Migration chạy được.
+- Model/repository test pass.
+- API cũ vẫn pass.
+
+## 11. Bước 7 - Tích hợp classify vào document storage pipeline
+
+### Mục tiêu
+
+Cập nhật pipeline chính:
 
 ```text
 segment_document -> classify_questions -> embed_document
 ```
 
-Đây là điểm tích hợp tự nhiên nhất vì nó nằm đúng giữa tách câu hỏi và embedding.
-
-## 6. Cập nhật database
-
-### 6.1. Phương án tối thiểu
-
-Không sửa database nhiều, tận dụng field có sẵn:
-
-- `subject`: lưu `Calculus`.
-- `chapter`: lưu chapter hoặc topic code.
-- `difficulty`: lưu `easy`, `medium`, `hard`.
-- `skills`: lưu danh sách kỹ năng.
-
-Ưu điểm:
-
-- Ít thay đổi.
-- Làm nhanh.
-- Phù hợp MVP.
-
-Nhược điểm:
-
-- Không lưu được đầy đủ topic/subtopic.
-- Không lưu được confidence/reason.
-- Khó chứng minh khả năng explainable matching.
-
-### 6.2. Phương án khuyến nghị
-
-Nên bổ sung thêm các field:
+### File liên quan
 
 ```text
-topic
-subtopic
-taxonomy_confidence
-taxonomy_reason
-taxonomy_version
-classified_at
-classification_model
+modules/question_storage/service.py
 ```
 
-Ý nghĩa:
+### Việc cần làm
 
-- `topic`: topic AI match được.
-- `subtopic`: dạng bài cụ thể.
-- `taxonomy_confidence`: độ tin cậy.
-- `taxonomy_reason`: lý do AI chọn mục đó.
-- `taxonomy_version`: phiên bản file tri thức.
-- `classified_at`: thời điểm phân loại.
-- `classification_model`: model đã dùng.
+1. Sau khi `QuestionCatalogService.segment_document`, gọi classification cho từng câu.
+2. Lưu metadata classification.
+3. Nếu một câu classify lỗi:
+   - lưu `classification_status = failed`
+   - tiếp tục câu khác hoặc fail cả document tùy cấu hình
+4. Sau khi classify xong, chạy embedding.
+5. Embedding text nên có thêm taxonomy metadata nếu phù hợp:
+   - chapter/topic/subtopic
+   - skills
+   - difficulty
 
-Ưu điểm:
+### Test bắt buộc
 
-- Rõ ràng hơn khi bảo vệ.
-- UI hiển thị được lý do match.
-- Có thể đánh giá chất lượng matching.
-- Dễ re-classify khi taxonomy thay đổi.
+Cập nhật/tạo test:
 
-Khuyến nghị: dùng phương án này nếu còn đủ thời gian.
+```text
+tests/modules/question_storage/test_service.py
+tests/modules/embeddings/test_text_builder.py
+```
 
-## 7. API cần bổ sung
+Test cần có:
 
-### 7.1. Classify một câu hỏi
+- Store document gọi segment, classify, embed theo đúng thứ tự.
+- Nếu không có câu hỏi thì fail như hiện tại.
+- Nếu classifier thành công, question có metadata trước khi embed.
+- Nếu classifier lỗi một câu, status failed được lưu.
+- Embed vẫn chạy cho các câu hợp lệ nếu policy cho phép.
+- Text builder có chứa taxonomy metadata nếu được cập nhật.
+
+### Tiêu chí qua bước
+
+- Pipeline unit test pass.
+- Không phá flow store document hiện tại.
+- Embedding vẫn pass test.
+
+## 12. Bước 8 - API classify/rematch
+
+### Mục tiêu
+
+Expose chức năng AI Matching qua API.
+
+### Endpoint cần có
 
 ```text
 POST /questions/{question_id}/classify
-```
-
-Chức năng:
-
-- Chạy AI matching cho một câu hỏi.
-- Cập nhật metadata.
-- Trả kết quả classification.
-
-Dùng cho:
-
-- Nút "Re-match" ở trang chi tiết câu hỏi.
-- Kiểm tra từng câu khi demo.
-
-### 7.2. Classify toàn bộ câu hỏi trong document
-
-```text
 POST /documents/{document_id}/classify
+GET /taxonomy
+GET /taxonomy/stats
 ```
 
-Chức năng:
-
-- Lấy tất cả câu hỏi của document.
-- Chạy AI matching từng câu.
-- Lưu metadata.
-- Trả số lượng thành công/thất bại.
-
-Dùng cho:
-
-- Tài liệu đã tách câu hỏi nhưng chưa phân loại.
-- Chạy lại classification khi cập nhật taxonomy.
-
-### 7.3. Store document full pipeline
-
-Endpoint hiện tại:
+Endpoint hiện có cần cập nhật:
 
 ```text
 POST /documents/{document_id}/store
 ```
 
-Cần cập nhật ý nghĩa thành:
+Ý nghĩa mới:
 
 ```text
 segment + classify + embed
 ```
 
-Đây sẽ là pipeline chính.
+### Test bắt buộc
 
-### 7.4. Lấy taxonomy
-
-```text
-GET /taxonomy
-```
-
-Chức năng:
-
-- Trả cây tri thức từ file Markdown hoặc bản parse.
-- Dùng cho frontend Taxonomy page.
-
-### 7.5. Lấy thống kê taxonomy
+Tạo/cập nhật test:
 
 ```text
-GET /taxonomy/stats
+tests/api/test_question_classification_endpoint.py
+tests/api/test_document_classification_endpoint.py
+tests/api/test_taxonomy_endpoint.py
+tests/api/test_documents_store_endpoint.py
 ```
 
-Chức năng:
+Test cần có:
 
-- Đếm số câu hỏi theo chapter/topic/subtopic.
-- Đếm số câu theo difficulty.
-- Đếm số câu thiếu classification.
-- Đếm số câu confidence thấp.
+- Classify question trả classification result.
+- Classify question 404 nếu question không tồn tại.
+- Classify document trả số lượng success/failed.
+- GET taxonomy trả đủ 3 chương.
+- GET taxonomy stats đếm đúng mock DB.
+- Store document chạy full pipeline.
+- API trả lỗi 400 nếu document chưa completed.
 
-## 8. Cập nhật frontend
+### Tiêu chí qua bước
 
-### 8.1. Trang Upload Document
+- API test pass.
+- Swagger/API contract rõ.
+- Frontend có thể gọi được.
 
-Hiện đã có nút store document.
+## 13. Bước 9 - Cập nhật Semantic Search theo taxonomy
 
-Cần cập nhật:
+### Mục tiêu
 
-- Nút này nên thể hiện rõ:
+Search tận dụng taxonomy metadata.
+
+### Việc cần làm
+
+1. Mở rộng search request:
+   - `chapter`
+   - `topic`
+   - `subtopic`
+   - `skill`
+   - `difficulty`
+2. Cập nhật Qdrant payload khi embed:
+   - `chapter`
+   - `topic`
+   - `subtopic`
+   - `skills`
+   - `difficulty`
+3. Cập nhật vector repository filter.
+4. Cập nhật search response trả classification metadata.
+
+### Test bắt buộc
+
+Cập nhật test:
+
+```text
+tests/modules/semantic_search/test_service.py
+tests/modules/embeddings/test_service.py
+tests/modules/embeddings/test_vector_search_repository.py
+tests/api/test_search.py
+```
+
+Test cần có:
+
+- Search filter theo chapter.
+- Search filter theo topic.
+- Search filter theo subtopic.
+- Search filter theo difficulty.
+- Search response có topic/subtopic.
+- Không có filter vẫn search như cũ.
+
+### Tiêu chí qua bước
+
+- Search cũ không hỏng.
+- Search taxonomy filter hoạt động.
+- Test pass toàn bộ.
+
+## 14. Bước 10 - Frontend Upload/Problem Detail/Taxonomy/Search
+
+### Mục tiêu
+
+Người dùng nhìn thấy rõ pipeline AI Matching.
+
+### Trang Upload Document
+
+Cần hiển thị:
 
 ```text
 Tách câu hỏi + AI match kiến thức + tạo embedding
 ```
 
-- Sau khi chạy xong, hiển thị:
+Sau khi store:
 
 ```text
-Đã tách: 50 câu
-Đã match taxonomy: 48 câu
-Confidence thấp: 2 câu
-Đã tạo embedding: 50 câu
+Đã tách: n câu
+Match thành công: x câu
+Confidence thấp: y câu
+Embedding: z câu
 ```
 
-### 8.2. Trang Calculus Taxonomy
+### Trang Problem Detail
 
-Hiện trang này đang giống ảnh thầy mong muốn nhưng dữ liệu còn static.
+Cần hiển thị:
 
-Cần cập nhật:
+- chapter/topic/subtopic name
+- difficulty
+- skills
+- confidence
+- reason
+- classification status
+- nút `Re-match taxonomy`
 
-- Lấy cây tri thức từ backend.
-- Lấy thống kê thật từ database.
-- Mỗi topic hiển thị:
-  - tổng số câu hỏi
-  - số easy
-  - số medium
-  - số hard
-  - số confidence thấp
+### Trang Calculus Taxonomy
 
-Khi click một topic:
+Cần dùng dữ liệu thật:
 
-- Hiển thị mô tả topic.
-- Hiển thị kỹ năng yêu cầu.
-- Hiển thị danh sách câu hỏi thuộc topic.
-- Có nút xem câu hỏi.
-- Có nút tìm bài tương tự trong topic.
+- GET taxonomy
+- GET taxonomy stats
+- danh sách câu hỏi theo topic/subtopic nếu có
 
-### 8.3. Trang Problem Detail
+### Trang Semantic Search
 
-Cần hiển thị kết quả AI Matching:
+Cần filter theo:
 
-- Chapter.
-- Topic.
-- Subtopic.
-- Skills.
-- Difficulty.
-- Confidence.
-- Reason.
-- Classification model.
-- Classified time.
+- chapter
+- topic
+- subtopic
+- difficulty
+- skill
 
-Cần thêm nút:
+### Test bắt buộc
+
+Nếu project frontend đã có test framework thì thêm test component/service. Nếu chưa có, tối thiểu phải kiểm tra build.
+
+Test cần có:
 
 ```text
-Re-match taxonomy
+cd apps/frontend
+npm run lint
+npm run build
 ```
 
-Nút này gọi:
+Nếu thêm test framework:
 
 ```text
-POST /questions/{question_id}/classify
+apps/frontend/src/services/taxonomyApi.test.js
+apps/frontend/src/services/questionApi.test.js
 ```
 
-### 8.4. Trang Semantic Search
+Manual test bắt buộc:
 
-Cần bổ sung filter theo taxonomy:
+- Upload document.
+- Store document.
+- Mở Problem Detail thấy metadata.
+- Re-match một question.
+- Taxonomy page có số liệu thật.
+- Search filter theo topic.
 
-- Chapter.
-- Topic.
-- Subtopic.
-- Difficulty.
-- Skill.
+### Tiêu chí qua bước
 
-Kết quả search nên hiển thị:
+- Frontend build pass.
+- Lint pass.
+- Không còn màn taxonomy chỉ dùng mock cho dữ liệu chính.
 
-- score semantic.
-- matched topic.
-- difficulty.
-- skills.
+## 15. Bước 11 - QA taxonomy
 
-### 8.5. Trang QA Rules
+### Mục tiêu
 
-Cần thêm nhóm kiểm định taxonomy:
+Phát hiện các câu hỏi chưa match tốt.
 
-- Câu hỏi chưa được match.
-- Câu hỏi confidence thấp.
-- Câu hỏi có topic nhưng thiếu skill.
-- Câu hỏi có difficulty không hợp lệ.
-- Câu hỏi bị nghi ngờ match sai.
+### Rule cần có
 
-## 9. Hybrid AI Matching
+- Missing classification.
+- Invalid taxonomy code.
+- Low confidence.
+- Missing skills.
+- Invalid difficulty.
+- Classification failed.
+- Topic/subtopic mismatch.
 
-Để hệ thống mạnh hơn, nên định nghĩa điểm match tổng hợp.
+### Test bắt buộc
 
-Ví dụ:
+Tạo test:
+
+```text
+tests/modules/question_quality/test_taxonomy_quality.py
+tests/api/test_taxonomy_quality_endpoint.py
+```
+
+Test cần có:
+
+- Câu chưa classify bị flag.
+- Confidence thấp bị warning.
+- Code sai bị error.
+- Difficulty sai bị error.
+- Missing skill bị warning.
+
+### Tiêu chí qua bước
+
+- QA phát hiện được lỗi taxonomy.
+- QA page/API hiển thị được lỗi.
+- Test pass.
+
+## 16. Bước 12 - Evaluation dataset
+
+### Mục tiêu
+
+Chứng minh AI Matching hoạt động bằng số liệu.
+
+### Dataset
+
+Tạo file:
+
+```text
+tests/fixtures/calculus_1_classification_eval.json
+```
+
+Nên lấy tối thiểu 50 câu/ý từ:
+
+```text
+Giải tích 1/Đề cương/2025.1_BTTK_MI1111.md
+```
+
+Mỗi mẫu gồm:
+
+```json
+{
+  "id": "Bai_58_a",
+  "statement": "Tính int (x+2)ln x dx",
+  "expected_chapter": "...",
+  "expected_topic": "...",
+  "expected_subtopic": "...",
+  "expected_difficulty": "medium"
+}
+```
+
+### Script đánh giá
+
+Tạo script:
+
+```text
+scripts/evaluate_taxonomy_matching.py
+```
+
+Chỉ số:
+
+```text
+chapter_accuracy
+topic_accuracy
+subtopic_accuracy
+difficulty_accuracy
+low_confidence_rate
+invalid_code_rate
+```
+
+### Test bắt buộc
+
+Unit test cho evaluator:
+
+```text
+tests/modules/question_classification/test_evaluator.py
+```
+
+Test cần có:
+
+- Tính accuracy đúng.
+- Invalid code rate đúng.
+- Low confidence rate đúng.
+- Report không crash khi dataset rỗng.
+
+### Tiêu chí qua bước
+
+MVP mục tiêu:
+
+```text
+chapter_accuracy >= 95%
+topic_accuracy >= 85%
+subtopic_accuracy >= 75%
+invalid_code_rate = 0%
+```
+
+Bản tốt:
+
+```text
+chapter_accuracy >= 98%
+topic_accuracy >= 90%
+subtopic_accuracy >= 82%
+invalid_code_rate = 0%
+```
+
+## 17. Bước 13 - Hybrid Matching
+
+### Mục tiêu
+
+Nâng search từ semantic search thành matching tổng hợp.
+
+### Công thức đề xuất
 
 ```text
 final_score =
@@ -515,251 +859,158 @@ final_score =
   + 0.05 * skill_score
 ```
 
-Trong đó:
+### Việc cần làm
 
-- `semantic_score`: độ tương tự embedding.
-- `taxonomy_score`: cùng chapter/topic/subtopic.
-- `formula_score`: độ tương tự công thức.
-- `difficulty_score`: cùng độ khó hoặc gần độ khó.
-- `skill_score`: trùng kỹ năng.
+1. Tính taxonomy score:
+   - cùng subtopic: cao nhất
+   - cùng topic: trung bình
+   - cùng chapter: thấp hơn
+2. Tính skill overlap.
+3. Tính difficulty compatibility.
+4. Kết hợp với formula score nếu có.
+5. Trả `final_score` và các thành phần score.
 
-Giai đoạn đầu có thể chưa cần làm đầy đủ. Nhưng khi trình bày đồ án, đây là hướng mở rộng rất tốt để chứng minh hệ thống là AI Matching chứ không chỉ semantic search.
+### Test bắt buộc
 
-## 10. Quy trình triển khai đề xuất
-
-### Giai đoạn 1: Chuẩn hóa bộ não tri thức
-
-Mục tiêu:
-
-- Hoàn thiện `Plan/calculus_knowledge_taxonomy.md`.
-- Chuẩn hóa mã chapter/topic/subtopic.
-- Chuẩn hóa skill vocabulary.
-- Chuẩn hóa difficulty rubric.
-
-Kết quả:
-
-- Có file tri thức dùng được cho classifier.
-
-### Giai đoạn 2: Xây dựng AI classifier
-
-Mục tiêu:
-
-- Tạo module classification.
-- Đọc taxonomy.
-- Build prompt.
-- Gọi Gemini.
-- Parse JSON.
-- Validate kết quả.
-
-Kết quả:
-
-- Có service phân loại một câu hỏi.
-
-### Giai đoạn 3: Lưu metadata classification
-
-Mục tiêu:
-
-- Cập nhật database nếu chọn phương án đầy đủ.
-- Thêm repository method để cập nhật classification.
-- Lưu `chapter`, `topic`, `subtopic`, `skills`, `difficulty`, `confidence`, `reason`.
-
-Kết quả:
-
-- Câu hỏi sau khi classify có metadata rõ ràng.
-
-### Giai đoạn 4: Tích hợp vào document pipeline
-
-Mục tiêu:
-
-- Cập nhật `QuestionStorageService`.
-- Sau segment thì chạy classify.
-- Sau classify thì chạy embed.
-
-Kết quả:
-
-- Một tài liệu sau khi store sẽ sẵn sàng cho AI Matching/Search.
-
-### Giai đoạn 5: API classify/rematch
-
-Mục tiêu:
-
-- Thêm endpoint classify question.
-- Thêm endpoint classify document.
-- Cập nhật endpoint store document.
-
-Kết quả:
-
-- Có thể chạy match tự động hoặc thủ công.
-
-### Giai đoạn 6: Cập nhật UI
-
-Mục tiêu:
-
-- Upload page hiển thị trạng thái classify.
-- Taxonomy page dùng dữ liệu thật.
-- Problem detail hiển thị kết quả matching.
-- Semantic search filter theo taxonomy.
-
-Kết quả:
-
-- Người dùng nhìn thấy rõ hệ thống đang match câu hỏi vào cây tri thức.
-
-### Giai đoạn 7: Đánh giá chất lượng AI Matching
-
-Mục tiêu:
-
-- Tạo bộ test 30-50 câu hỏi mẫu.
-- Gán nhãn đúng thủ công.
-- Chạy AI classifier.
-- So sánh kết quả.
-
-Chỉ số nên có:
-
-- Accuracy theo chapter.
-- Accuracy theo topic.
-- Accuracy theo difficulty.
-- Tỷ lệ confidence thấp.
-- Ví dụ đúng/sai.
-
-Kết quả:
-
-- Có bằng chứng định lượng để bảo vệ đồ án.
-
-## 11. Tiêu chí hoàn thành
-
-Hệ thống được xem là đạt hướng AI Matching khi có đủ:
-
-- Có file bộ não tri thức Giải tích.
-- AI tự động match câu hỏi vào cây tri thức.
-- Kết quả match được lưu vào database.
-- Có confidence và reason hoặc ít nhất có metadata rõ ràng.
-- Taxonomy page hiển thị dữ liệu thật.
-- Problem detail hiển thị câu hỏi thuộc mục kiến thức nào.
-- Search có thể lọc theo mục kiến thức.
-- Có demo end-to-end từ upload tài liệu đến câu hỏi được match.
-
-## 12. Demo bảo vệ đề xuất
-
-Kịch bản demo:
-
-1. Upload một file Markdown/PDF có nhiều câu hỏi Giải tích.
-2. Hệ thống xử lý tài liệu.
-3. Bấm store document.
-4. Hệ thống tách câu hỏi.
-5. Hệ thống AI match từng câu vào cây tri thức.
-6. Mở một câu hỏi cụ thể.
-7. Hiển thị:
+Tạo test:
 
 ```text
-Matched chapter: GT03_Integrals
-Matched topic: GT03.03_Integration_By_Parts
-Matched subtopic: GT03.03.02_Repeated_By_Parts
+tests/modules/semantic_search/test_hybrid_matching.py
+```
+
+Test cần có:
+
+- Cùng subtopic tăng score.
+- Cùng topic nhưng khác subtopic tăng vừa.
+- Khác chapter không tăng taxonomy score.
+- Difficulty match tăng score.
+- Skill overlap tăng score.
+- Final score nằm trong khoảng hợp lệ.
+
+### Tiêu chí qua bước
+
+- Hybrid score deterministic.
+- Search vẫn hoạt động nếu thiếu taxonomy metadata.
+- Test pass.
+
+## 18. Thứ tự triển khai khuyến nghị
+
+Không làm song song quá nhiều. Thứ tự đề xuất:
+
+```text
+1. Taxonomy YAML/JSON + loader + validator
+2. Classification schema + validator
+3. Prompt builder
+4. AI classifier adapter
+5. Classification service
+6. Database fields + repository
+7. Integrate into QuestionStorageService
+8. API classify/taxonomy/stats
+9. Search filter by taxonomy
+10. Frontend integration
+11. QA taxonomy
+12. Evaluation dataset
+13. Hybrid Matching
+```
+
+Mỗi bước phải có test pass trước khi chuyển bước.
+
+## 19. Definition of Done toàn hệ thống
+
+Hệ thống được xem là hoàn thành pipeline AI Matching khi:
+
+- Upload tài liệu được.
+- Ingestion hoàn thành.
+- Segment tách được câu hỏi.
+- Mỗi câu hỏi được AI classify vào `chapter/topic/subtopic`.
+- Classification được validate.
+- Metadata được lưu DB.
+- Embedding chứa taxonomy metadata.
+- Search lọc được theo taxonomy.
+- Problem Detail hiển thị kết quả match.
+- Taxonomy page hiển thị thống kê thật.
+- QA phát hiện câu chưa match hoặc confidence thấp.
+- Có evaluation dataset và báo cáo accuracy.
+- Toàn bộ backend test pass.
+- Frontend lint/build pass.
+
+## 20. Kịch bản demo bảo vệ
+
+1. Upload một file bài tập Giải tích 1.
+2. Chạy store document.
+3. Hệ thống hiển thị:
+
+```text
+Segmented: n questions
+Classified: x questions
+Low confidence: y questions
+Embedded: z questions
+```
+
+4. Mở một câu hỏi.
+5. Xem:
+
+```text
+Chapter: Chương 2: Phép tính tích phân hàm một biến số
+Topic: Tích phân bất định
+Subtopic: Tích phân từng phần
 Skills: integration_by_parts, indefinite_integral
 Difficulty: medium
-Confidence: 0.92
-Reason: ...
+Confidence: 0.98
+Reason: Đề bài nêu trực tiếp phương pháp tích phân từng phần.
 ```
 
-8. Mở Taxonomy page.
-9. Thấy topic tương ứng tăng số lượng câu hỏi.
-10. Tìm bài tương tự trong cùng topic.
-11. Sinh biến thể từ câu hỏi đã match.
+6. Mở Taxonomy page.
+7. Thấy số lượng câu hỏi theo topic/subtopic.
+8. Search theo topic.
+9. Tìm bài tương tự cùng subtopic.
+10. Sinh biến thể từ câu đã match.
 
-Kịch bản này chứng minh rõ:
+## 21. Rủi ro và kiểm soát
 
-- Có bộ não tri thức.
-- Có AI Matching.
-- Có lưu metadata.
-- Có sử dụng metadata để search, taxonomy và generation.
+### AI trả JSON sai
 
-## 13. Những rủi ro và cách xử lý
+Kiểm soát:
 
-### 13.1. AI trả JSON sai
+- JSON parser chặt.
+- Retry một lần.
+- Validate taxonomy code.
+- Test parser đầy đủ.
 
-Cách xử lý:
+### Match sai subtopic
 
-- Parse JSON chặt chẽ.
-- Nếu lỗi, retry một lần.
-- Nếu vẫn lỗi, lưu trạng thái classification failed.
+Kiểm soát:
 
-### 13.2. AI match sai topic
-
-Cách xử lý:
-
-- Lưu confidence.
-- Nếu confidence thấp, đưa vào QA.
-- Cho người dùng chỉnh metadata thủ công.
-- Có nút re-match.
-
-### 13.3. File taxonomy quá dài
-
-Cách xử lý:
-
-- Giai đoạn đầu đưa toàn bộ taxonomy vào prompt.
-- Giai đoạn sau có thể tách taxonomy theo chapter.
-- Có thể dùng embedding để chọn các topic ứng viên trước, rồi mới gọi AI classify.
-
-### 13.4. Chi phí gọi AI cao
-
-Cách xử lý:
-
-- Chỉ classify sau khi segment xong.
-- Cache kết quả theo checksum câu hỏi.
-- Batch classification nếu model hỗ trợ.
-- Chỉ re-classify khi taxonomy version thay đổi.
-
-### 13.5. Metadata thay đổi sau khi embedding
-
-Cách xử lý:
-
-- Pipeline chuẩn là classify trước, embed sau.
-- Nếu re-match sau này, cần re-embed document hoặc cập nhật payload vector.
-
-## 14. Phạm vi MVP
-
-Nếu cần làm nhanh để chắc chắn đúng hướng, MVP nên gồm:
-
-- Dùng `calculus_knowledge_taxonomy.md` làm bộ não tri thức.
-- Classify từng câu hỏi bằng Gemini.
-- Lưu `subject`, `chapter`, `difficulty`, `skills`.
-- Có API classify document.
-- Store document chạy `segment + classify + embed`.
-- Problem Detail hiển thị metadata AI match.
-- Taxonomy page hiển thị số lượng thật theo chapter/topic ở mức đơn giản.
-
-MVP này đã đủ để gọi là:
-
-> AI Matching câu hỏi Giải tích vào cây tri thức.
-
-## 15. Phạm vi bản hoàn thiện
-
-Bản hoàn thiện nên có thêm:
-
-- Lưu `topic`, `subtopic`, `confidence`, `reason`.
-- Taxonomy stats đầy đủ.
-- Re-match từng câu.
-- QA taxonomy.
+- Confidence policy.
+- QA low confidence.
+- Re-match thủ công.
 - Evaluation dataset.
-- Hybrid matching score.
-- Tìm bài tương tự ưu tiên cùng topic/subtopic.
 
-## 16. Kết luận
+### Taxonomy quá dài
 
-Hướng phát triển này khả thi vì tận dụng tối đa code hiện tại.
+Kiểm soát:
 
-Phần cần thêm không phải là xây lại toàn bộ hệ thống, mà là bổ sung một lớp mới:
+- MVP dùng full taxonomy.
+- Sau đó chọn candidate topics bằng keyword/embedding.
 
-```text
-AI Taxonomy Matching
-```
+### Chi phí AI cao
 
-Lớp này dựa trên bộ não tri thức:
+Kiểm soát:
 
-```text
-Plan/calculus_knowledge_taxonomy.md
-```
+- Cache theo checksum statement.
+- Chỉ re-classify khi taxonomy version đổi.
+- Batch classify nếu cần.
 
-Sau khi bổ sung, hệ thống sẽ chuyển từ:
+### Metadata thay đổi sau embedding
+
+Kiểm soát:
+
+- Pipeline chuẩn: classify trước, embed sau.
+- Nếu re-match thì update vector payload hoặc re-embed document.
+
+## 22. Kết luận
+
+Kế hoạch này biến dự án hiện tại từ:
 
 ```text
 Kho câu hỏi + semantic search
@@ -768,9 +1019,10 @@ Kho câu hỏi + semantic search
 thành:
 
 ```text
-Hệ thống AI Matching câu hỏi Giải tích vào cây tri thức,
-kết hợp semantic search, formula search và sinh biến thể câu hỏi.
+Hệ thống AI Matching câu hỏi Giải tích 1 vào cây tri thức,
+kết hợp taxonomy matching, semantic search, formula search và generation.
 ```
 
-Đây là hướng rõ ràng, đúng yêu cầu, dễ demo và có cơ sở để bảo vệ trước giảng viên.
+Điều kiện bắt buộc xuyên suốt:
 
+> Mọi bước code và triển khai phải có test đầy đủ. Chỉ được chuyển sang bước tiếp theo khi test của bước hiện tại và toàn bộ regression test đều pass.
