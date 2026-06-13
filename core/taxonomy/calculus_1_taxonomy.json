@@ -1,0 +1,3244 @@
+{
+  "taxonomy_id": "calculus_1_hust_mi1111",
+  "version": "1.0.0",
+  "subject_code": "CALCULUS_1",
+  "subject_display_name": "Giải tích 1",
+  "institution": "Đại học Bách Khoa Hà Nội",
+  "program": "Toán Tin",
+  "language": "vi",
+  "levels": [
+    "chapter",
+    "topic",
+    "problem_type"
+  ],
+  "difficulty_levels": [
+    "easy",
+    "medium",
+    "hard"
+  ],
+  "confidence_policy": {
+    "auto_accept": 0.75,
+    "soft_review_min": 0.6,
+    "mandatory_review_below": 0.6
+  },
+  "source_documents": [
+    "Đề cương học phần Giải tích 1",
+    "Giáo trình Giải tích 1",
+    "Slide SAMI_GT1 Chương 1-3",
+    "2025.1_BTTK_MI1111"
+  ],
+  "skill_vocabulary": [
+    "function_domain_range",
+    "piecewise_function_modeling",
+    "function_composition",
+    "inverse_function",
+    "periodicity",
+    "elementary_functions",
+    "inverse_trigonometric_functions",
+    "hyperbolic_functions",
+    "sequence_limit",
+    "squeeze_theorem",
+    "monotone_bounded_sequence",
+    "cauchy_criterion",
+    "function_limit",
+    "one_sided_limit",
+    "limit_at_infinity",
+    "infinite_limit",
+    "algebraic_transformation",
+    "piecewise_function_limit",
+    "infinitesimal_equivalent",
+    "infinite_comparison",
+    "asymptotic_comparison",
+    "continuity_analysis",
+    "piecewise_function",
+    "discontinuity_classification",
+    "parameter_analysis",
+    "intermediate_value_theorem",
+    "counterexample_construction",
+    "derivative_computation",
+    "one_sided_derivative",
+    "differentiability_analysis",
+    "chain_rule",
+    "inverse_function_derivative",
+    "differential",
+    "linear_approximation",
+    "higher_order_derivative",
+    "nth_derivative",
+    "higher_order_differential",
+    "rolle_theorem",
+    "lagrange_mean_value_theorem",
+    "cauchy_mean_value_theorem",
+    "taylor_maclaurin_expansion",
+    "l_hopital_rule",
+    "monotonicity_analysis",
+    "convexity_concavity",
+    "one_variable_extrema",
+    "max_min_closed_interval",
+    "newton_method",
+    "asymptote_analysis",
+    "parametric_curve",
+    "polar_curve",
+    "indefinite_integral",
+    "substitution_method",
+    "integration_by_parts",
+    "rational_function_integral",
+    "partial_fraction_decomposition",
+    "trigonometric_integral",
+    "irrational_integral",
+    "euler_substitution",
+    "reduction_formula",
+    "definite_integral",
+    "riemann_sum",
+    "newton_leibniz_formula",
+    "differentiation_under_integral_limit",
+    "limit_as_integral",
+    "integral_symmetry",
+    "integral_inequality",
+    "improper_integral_convergence",
+    "comparison_test",
+    "absolute_convergence",
+    "conditional_convergence",
+    "area_by_integral",
+    "volume_by_integral",
+    "volume_of_revolution",
+    "arc_length",
+    "surface_area_of_revolution",
+    "multivariable_domain",
+    "multivariable_function_composition",
+    "multivariable_limit",
+    "path_limit_counterexample",
+    "iterated_limit",
+    "multivariable_continuity",
+    "partial_derivative",
+    "total_differential",
+    "multivariable_approximation",
+    "multivariable_chain_rule",
+    "implicit_function_derivative",
+    "higher_order_partial_derivative",
+    "second_order_differential",
+    "schwarz_theorem",
+    "partial_differential_equation_verification",
+    "multivariable_taylor_expansion",
+    "critical_point",
+    "hessian_extrema_test",
+    "unconstrained_extrema",
+    "constrained_extrema",
+    "lagrange_multiplier",
+    "global_maximum_minimum",
+    "proof",
+    "application",
+    "case_analysis"
+  ],
+  "expected_counts": {
+    "chapters": 3,
+    "topics": 16,
+    "problem_types": 128
+  },
+  "chapters": [
+    {
+      "code": "GT1_C1_Differential_Calculus_One_Variable",
+      "display_name": "Chương 1: Phép tính vi phân hàm một biến số",
+      "level": "chapter",
+      "parent": null,
+      "description": "Chương này bao gồm hàm số một biến, dãy số, giới hạn, vô cùng bé/vô cùng lớn, liên tục, đạo hàm, vi phân, các định lý hàm khả vi và ứng dụng khảo sát hàm số.",
+      "aliases": [],
+      "positive_signals": [],
+      "negative_signals": [],
+      "skills": [],
+      "default_difficulty": null,
+      "confusable_with": [],
+      "examples": [],
+      "topics": [
+        {
+          "code": "GT1_C1_02_Function_Basics",
+          "display_name": "Hàm số và các khái niệm cơ bản",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Hàm số và các khái niệm cơ bản thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_02_T01_Domain_And_Range",
+              "display_name": "Tìm tập xác định, tập giá trị",
+              "level": "problem_type",
+              "parent": "GT1_C1_02_Function_Basics",
+              "description": "Tìm tập xác định, tập giá trị trong chủ đề Hàm số và các khái niệm cơ bản.",
+              "aliases": [
+                "Tìm tập xác định, tập giá trị"
+              ],
+              "positive_signals": [
+                "\"tìm tập xác định\", \"miền giá trị\", hàm chứa căn, log, lượng giác ngược"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "function_domain_range",
+                "algebraic_transformation"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_02_T02_Monotonicity_Boundedness_Parity",
+              "display_name": "Xét tính chất cơ bản của hàm số",
+              "level": "problem_type",
+              "parent": "GT1_C1_02_Function_Basics",
+              "description": "Xét tính chất cơ bản của hàm số trong chủ đề Hàm số và các khái niệm cơ bản.",
+              "aliases": [
+                "Xét tính chất cơ bản của hàm số"
+              ],
+              "positive_signals": [
+                "\"chẵn lẻ\", \"đơn điệu\", \"bị chặn\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "algebraic_transformation"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_02_T03_Function_Composition",
+              "display_name": "Hàm hợp",
+              "level": "problem_type",
+              "parent": "GT1_C1_02_Function_Basics",
+              "description": "Hàm hợp trong chủ đề Hàm số và các khái niệm cơ bản.",
+              "aliases": [
+                "Hàm hợp"
+              ],
+              "positive_signals": [
+                "\"tính f(g(x))\", \"hàm hợp\", \"f(h(x))=g(x)\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "function_composition"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_02_T04_Inverse_Function",
+              "display_name": "Hàm ngược",
+              "level": "problem_type",
+              "parent": "GT1_C1_02_Function_Basics",
+              "description": "Hàm ngược trong chủ đề Hàm số và các khái niệm cơ bản.",
+              "aliases": [
+                "Hàm ngược"
+              ],
+              "positive_signals": [
+                "\"tìm hàm ngược\", \"hàm số ngược\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "inverse_function"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_02_T05_Piecewise_Function_Modeling",
+              "display_name": "Mô hình hóa hàm từng khúc",
+              "level": "problem_type",
+              "parent": "GT1_C1_02_Function_Basics",
+              "description": "Mô hình hóa hàm từng khúc trong chủ đề Hàm số và các khái niệm cơ bản.",
+              "aliases": [
+                "Mô hình hóa hàm từng khúc"
+              ],
+              "positive_signals": [
+                "\"viết hàm số\", bảng bậc thang, theo khoảng"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "piecewise_function_modeling",
+                "application"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_02_T06_Periodicity",
+              "display_name": "Tính tuần hoàn và chu kỳ",
+              "level": "problem_type",
+              "parent": "GT1_C1_02_Function_Basics",
+              "description": "Tính tuần hoàn và chu kỳ trong chủ đề Hàm số và các khái niệm cơ bản.",
+              "aliases": [
+                "Tính tuần hoàn và chu kỳ"
+              ],
+              "positive_signals": [
+                "\"xét tính tuần hoàn\", \"tìm chu kỳ\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "periodicity"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C1_03_Elementary_Functions",
+          "display_name": "Các hàm số sơ cấp",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Các hàm số sơ cấp thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_03_T01_Identify_Elementary_Function",
+              "display_name": "Nhận diện hàm sơ cấp",
+              "level": "problem_type",
+              "parent": "GT1_C1_03_Elementary_Functions",
+              "description": "Nhận diện hàm sơ cấp trong chủ đề Các hàm số sơ cấp.",
+              "aliases": [
+                "Nhận diện hàm sơ cấp"
+              ],
+              "positive_signals": [
+                "\"hàm sơ cấp\", các hàm cơ bản"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "elementary_functions"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_03_T02_Inverse_Trigonometric_Function",
+              "display_name": "Hàm lượng giác ngược",
+              "level": "problem_type",
+              "parent": "GT1_C1_03_Elementary_Functions",
+              "description": "Hàm lượng giác ngược trong chủ đề Các hàm số sơ cấp.",
+              "aliases": [
+                "Hàm lượng giác ngược"
+              ],
+              "positive_signals": [
+                "arcsin, arccos, arctan, arccot"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "inverse_trigonometric_functions"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_03_T03_Hyperbolic_Function",
+              "display_name": "Hàm hyperbolic",
+              "level": "problem_type",
+              "parent": "GT1_C1_03_Elementary_Functions",
+              "description": "Hàm hyperbolic trong chủ đề Các hàm số sơ cấp.",
+              "aliases": [
+                "Hàm hyperbolic"
+              ],
+              "positive_signals": [
+                "sinh, cosh, tanh, chứng minh đẳng thức hyperbolic"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "hyperbolic_functions",
+                "proof"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C1_04_Sequences",
+          "display_name": "Dãy số",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Dãy số thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_04_T01_Compute_Sequence_Limit",
+              "display_name": "Tính giới hạn dãy số",
+              "level": "problem_type",
+              "parent": "GT1_C1_04_Sequences",
+              "description": "Tính giới hạn dãy số trong chủ đề Dãy số.",
+              "aliases": [
+                "Tính giới hạn dãy số"
+              ],
+              "positive_signals": [
+                "u_n, n -> infinity, \"xét sự hội tụ\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "sequence_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_04_T02_Squeeze_Theorem_Sequence",
+              "display_name": "Tiêu chuẩn kẹp cho dãy",
+              "level": "problem_type",
+              "parent": "GT1_C1_04_Sequences",
+              "description": "Tiêu chuẩn kẹp cho dãy trong chủ đề Dãy số.",
+              "aliases": [
+                "Tiêu chuẩn kẹp cho dãy"
+              ],
+              "positive_signals": [
+                "\"kẹp\", đánh giá trên dưới"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "squeeze_theorem",
+                "proof"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_04_T03_Monotone_Bounded_Sequence",
+              "display_name": "Dãy đơn điệu bị chặn",
+              "level": "problem_type",
+              "parent": "GT1_C1_04_Sequences",
+              "description": "Dãy đơn điệu bị chặn trong chủ đề Dãy số.",
+              "aliases": [
+                "Dãy đơn điệu bị chặn"
+              ],
+              "positive_signals": [
+                "\"đơn điệu\", \"bị chặn\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "monotone_bounded_sequence",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_04_T04_Cauchy_Criterion_Sequence",
+              "display_name": "Tiêu chuẩn Cauchy",
+              "level": "problem_type",
+              "parent": "GT1_C1_04_Sequences",
+              "description": "Tiêu chuẩn Cauchy trong chủ đề Dãy số.",
+              "aliases": [
+                "Tiêu chuẩn Cauchy"
+              ],
+              "positive_signals": [
+                "\"Cauchy\", chứng minh hội tụ"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "cauchy_criterion",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_04_T05_Recursive_Sequence",
+              "display_name": "Dãy truy hồi",
+              "level": "problem_type",
+              "parent": "GT1_C1_04_Sequences",
+              "description": "Dãy truy hồi trong chủ đề Dãy số.",
+              "aliases": [
+                "Dãy truy hồi"
+              ],
+              "positive_signals": [
+                "u_{n+1}, truy hồi"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "sequence_limit",
+                "case_analysis"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C1_05_Function_Limits",
+          "display_name": "Giới hạn hàm số",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Giới hạn hàm số thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_05_T01_Direct_Limit",
+              "display_name": "Tính giới hạn trực tiếp",
+              "level": "problem_type",
+              "parent": "GT1_C1_05_Function_Limits",
+              "description": "Tính giới hạn trực tiếp trong chủ đề Giới hạn hàm số.",
+              "aliases": [
+                "Tính giới hạn trực tiếp"
+              ],
+              "positive_signals": [
+                "thay trực tiếp, hàm liên tục đơn giản"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "function_limit"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_05_T02_Algebraic_Transformation_Limit",
+              "display_name": "Tính giới hạn bằng biến đổi đại số",
+              "level": "problem_type",
+              "parent": "GT1_C1_05_Function_Limits",
+              "description": "Tính giới hạn bằng biến đổi đại số trong chủ đề Giới hạn hàm số.",
+              "aliases": [
+                "Tính giới hạn bằng biến đổi đại số",
+                "giới hạn",
+                "khử dạng vô định",
+                "hữu tỉ hóa",
+                "rút gọn"
+              ],
+              "positive_signals": [
+                "căn thức, phân thức, hữu tỉ hóa, rút gọn",
+                "căn thức",
+                "phân thức",
+                "0/0",
+                "infinity - infinity",
+                "cần biến đổi đại số"
+              ],
+              "negative_signals": [
+                "nếu đề/lời giải nêu L'Hospital hoặc Taylor thì ưu tiên dạng tương ứng"
+              ],
+              "skills": [
+                "function_limit",
+                "algebraic_transformation"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_05_T03_One_Sided_Limit",
+              "display_name": "Giới hạn một phía",
+              "level": "problem_type",
+              "parent": "GT1_C1_05_Function_Limits",
+              "description": "Giới hạn một phía trong chủ đề Giới hạn hàm số.",
+              "aliases": [
+                "Giới hạn một phía",
+                "giới hạn một phía",
+                "giới hạn trái",
+                "giới hạn phải"
+              ],
+              "positive_signals": [
+                "x -> a+, x -> a-, hàm từng phần",
+                "x -> a+",
+                "x -> a-",
+                "hàm từng phần tại điểm nối"
+              ],
+              "negative_signals": [
+                "nếu câu hỏi chính là liên tục thì ưu tiên Continuity"
+              ],
+              "skills": [
+                "one_sided_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_05_T04_Limit_At_Infinity",
+              "display_name": "Giới hạn tại vô cực",
+              "level": "problem_type",
+              "parent": "GT1_C1_05_Function_Limits",
+              "description": "Giới hạn tại vô cực trong chủ đề Giới hạn hàm số.",
+              "aliases": [
+                "Giới hạn tại vô cực"
+              ],
+              "positive_signals": [
+                "x -> +infinity, x -> -infinity"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "limit_at_infinity"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_05_T05_Infinite_Limit",
+              "display_name": "Giới hạn vô cực",
+              "level": "problem_type",
+              "parent": "GT1_C1_05_Function_Limits",
+              "description": "Giới hạn vô cực trong chủ đề Giới hạn hàm số.",
+              "aliases": [
+                "Giới hạn vô cực"
+              ],
+              "positive_signals": [
+                "kết quả infinity, tiệm cận đứng"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "infinite_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_05_T06_Composite_Function_Limit",
+              "display_name": "Giới hạn hàm hợp",
+              "level": "problem_type",
+              "parent": "GT1_C1_05_Function_Limits",
+              "description": "Giới hạn hàm hợp trong chủ đề Giới hạn hàm số.",
+              "aliases": [
+                "Giới hạn hàm hợp"
+              ],
+              "positive_signals": [
+                "hàm lồng nhau"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "function_limit",
+                "function_composition"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_05_T07_Proof_By_Definition",
+              "display_name": "Chứng minh giới hạn bằng định nghĩa",
+              "level": "problem_type",
+              "parent": "GT1_C1_05_Function_Limits",
+              "description": "Chứng minh giới hạn bằng định nghĩa trong chủ đề Giới hạn hàm số.",
+              "aliases": [
+                "Chứng minh giới hạn bằng định nghĩa"
+              ],
+              "positive_signals": [
+                "\"bằng định nghĩa\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "function_limit",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_05_T08_Piecewise_Function_Limit",
+              "display_name": "Giới hạn của hàm từng phần",
+              "level": "problem_type",
+              "parent": "GT1_C1_05_Function_Limits",
+              "description": "Giới hạn của hàm từng phần trong chủ đề Giới hạn hàm số.",
+              "aliases": [
+                "Giới hạn của hàm từng phần"
+              ],
+              "positive_signals": [
+                "cases, xét hai phía"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "piecewise_function_limit",
+                "one_sided_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C1_06_Infinitesimal_Infinite",
+          "display_name": "Vô cùng bé, vô cùng lớn",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Vô cùng bé, vô cùng lớn thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_06_T01_Compare_Infinitesimal",
+              "display_name": "So sánh vô cùng bé",
+              "level": "problem_type",
+              "parent": "GT1_C1_06_Infinitesimal_Infinite",
+              "description": "So sánh vô cùng bé trong chủ đề Vô cùng bé, vô cùng lớn.",
+              "aliases": [
+                "So sánh vô cùng bé"
+              ],
+              "positive_signals": [
+                "\"so sánh các cặp VCB\", bậc VCB"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "infinitesimal_equivalent",
+                "asymptotic_comparison"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_06_T02_Equivalent_Infinitesimal",
+              "display_name": "Dùng VCB tương đương",
+              "level": "problem_type",
+              "parent": "GT1_C1_06_Infinitesimal_Infinite",
+              "description": "Dùng VCB tương đương trong chủ đề Vô cùng bé, vô cùng lớn.",
+              "aliases": [
+                "Dùng VCB tương đương",
+                "VCB tương đương",
+                "vô cùng bé tương đương",
+                "tương đương khi x -> 0"
+              ],
+              "positive_signals": [
+                "sin x, ln(1+x), e^x-1, x -> 0",
+                "sin x ~ x",
+                "ln(1+x) ~ x",
+                "e^x-1 ~ x",
+                "so sánh bậc nhỏ"
+              ],
+              "negative_signals": [
+                "nếu yêu cầu khai triển đến cấp cụ thể thì ưu tiên Taylor/Maclaurin"
+              ],
+              "skills": [
+                "infinitesimal_equivalent",
+                "function_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_06_T03_Compare_Infinite",
+              "display_name": "So sánh vô cùng lớn",
+              "level": "problem_type",
+              "parent": "GT1_C1_06_Infinitesimal_Infinite",
+              "description": "So sánh vô cùng lớn trong chủ đề Vô cùng bé, vô cùng lớn.",
+              "aliases": [
+                "So sánh vô cùng lớn"
+              ],
+              "positive_signals": [
+                "\"VCL\", x -> infinity"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "infinite_comparison"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_06_T04_Asymptotic_Simplification",
+              "display_name": "Ngắt bỏ VCB/VCL",
+              "level": "problem_type",
+              "parent": "GT1_C1_06_Infinitesimal_Infinite",
+              "description": "Ngắt bỏ VCB/VCL trong chủ đề Vô cùng bé, vô cùng lớn.",
+              "aliases": [
+                "Ngắt bỏ VCB/VCL"
+              ],
+              "positive_signals": [
+                "bỏ hạng bậc thấp/cao"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "asymptotic_comparison",
+                "algebraic_transformation"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C1_07_Continuity",
+          "display_name": "Hàm số liên tục",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Hàm số liên tục thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_07_T01_Continuity_At_Point",
+              "display_name": "Xét liên tục tại điểm",
+              "level": "problem_type",
+              "parent": "GT1_C1_07_Continuity",
+              "description": "Xét liên tục tại điểm trong chủ đề Hàm số liên tục.",
+              "aliases": [
+                "Xét liên tục tại điểm"
+              ],
+              "positive_signals": [
+                "\"liên tục tại\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "continuity_analysis"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_07_T02_Continuity_On_Set",
+              "display_name": "Xét liên tục trên khoảng/đoạn",
+              "level": "problem_type",
+              "parent": "GT1_C1_07_Continuity",
+              "description": "Xét liên tục trên khoảng/đoạn trong chủ đề Hàm số liên tục.",
+              "aliases": [
+                "Xét liên tục trên khoảng/đoạn"
+              ],
+              "positive_signals": [
+                "\"liên tục trên\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "continuity_analysis"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_07_T03_Piecewise_Continuity",
+              "display_name": "Liên tục của hàm từng phần",
+              "level": "problem_type",
+              "parent": "GT1_C1_07_Continuity",
+              "description": "Liên tục của hàm từng phần trong chủ đề Hàm số liên tục.",
+              "aliases": [
+                "Liên tục của hàm từng phần"
+              ],
+              "positive_signals": [
+                "cases, nhiều nhánh"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "piecewise_function",
+                "continuity_analysis"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_07_T04_Find_Parameter_For_Continuity",
+              "display_name": "Tìm tham số để liên tục",
+              "level": "problem_type",
+              "parent": "GT1_C1_07_Continuity",
+              "description": "Tìm tham số để liên tục trong chủ đề Hàm số liên tục.",
+              "aliases": [
+                "Tìm tham số để liên tục",
+                "tìm a để liên tục",
+                "chọn tham số để liên tục"
+              ],
+              "positive_signals": [
+                "\"tìm a\", \"tìm tham số để liên tục\"",
+                "hàm từng phần",
+                "tham số tại điểm nối",
+                "yêu cầu liên tục tại x=0 hoặc x=a"
+              ],
+              "negative_signals": [
+                "nếu yêu cầu khả vi thì ưu tiên Parameter_For_Differentiability"
+              ],
+              "skills": [
+                "parameter_analysis",
+                "continuity_analysis"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_07_T05_Classify_Discontinuity",
+              "display_name": "Phân loại điểm gián đoạn",
+              "level": "problem_type",
+              "parent": "GT1_C1_07_Continuity",
+              "description": "Phân loại điểm gián đoạn trong chủ đề Hàm số liên tục.",
+              "aliases": [
+                "Phân loại điểm gián đoạn",
+                "phân loại gián đoạn",
+                "gián đoạn loại 1",
+                "gián đoạn loại 2",
+                "khử được"
+              ],
+              "positive_signals": [
+                "\"phân loại điểm gián đoạn\"",
+                "yêu cầu xác định/phân loại điểm gián đoạn"
+              ],
+              "negative_signals": [
+                "nếu chỉ hỏi giới hạn tại điểm thì ưu tiên nhóm giới hạn"
+              ],
+              "skills": [
+                "discontinuity_classification"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_07_T06_Use_Continuity_Theorems",
+              "display_name": "Dùng định lý hàm liên tục",
+              "level": "problem_type",
+              "parent": "GT1_C1_07_Continuity",
+              "description": "Dùng định lý hàm liên tục trong chủ đề Hàm số liên tục.",
+              "aliases": [
+                "Dùng định lý hàm liên tục"
+              ],
+              "positive_signals": [
+                "chứng minh nghiệm, giao điểm"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "intermediate_value_theorem",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_07_T07_Parameter_For_Discontinuity_Type",
+              "display_name": "Tham số theo loại gián đoạn",
+              "level": "problem_type",
+              "parent": "GT1_C1_07_Continuity",
+              "description": "Tham số theo loại gián đoạn trong chủ đề Hàm số liên tục.",
+              "aliases": [
+                "Tham số theo loại gián đoạn"
+              ],
+              "positive_signals": [
+                "tìm tham số để gián đoạn loại 1/2"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "parameter_analysis",
+                "discontinuity_classification"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_07_T08_Construct_Continuity_Counterexample",
+              "display_name": "Dựng ví dụ/phản ví dụ liên tục",
+              "level": "problem_type",
+              "parent": "GT1_C1_07_Continuity",
+              "description": "Dựng ví dụ/phản ví dụ liên tục trong chủ đề Hàm số liên tục.",
+              "aliases": [
+                "Dựng ví dụ/phản ví dụ liên tục"
+              ],
+              "positive_signals": [
+                "\"tìm một hàm\", \"ví dụ\", \"phản ví dụ\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "counterexample_construction"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C1_08_Derivatives_Differentials",
+          "display_name": "Đạo hàm và vi phân",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Đạo hàm và vi phân thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_08_T01_Basic_Derivative",
+              "display_name": "Tính đạo hàm cơ bản",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Tính đạo hàm cơ bản trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Tính đạo hàm cơ bản",
+                "đạo hàm",
+                "tính f'(x)",
+                "đạo hàm thường"
+              ],
+              "positive_signals": [
+                "\"tìm đạo hàm\", f'(x)",
+                "đề yêu cầu tính đạo hàm trực tiếp"
+              ],
+              "negative_signals": [
+                "nếu có hàm ngược hoặc hàm hợp rõ thì ưu tiên subtopic cụ thể"
+              ],
+              "skills": [
+                "derivative_computation"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T02_One_Sided_Derivative",
+              "display_name": "Đạo hàm một phía",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Đạo hàm một phía trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Đạo hàm một phía"
+              ],
+              "positive_signals": [
+                "f'_+(a), f'_-(a), một phía"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "one_sided_derivative"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T03_Derivative_Existence",
+              "display_name": "Xét tồn tại đạo hàm/khả vi",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Xét tồn tại đạo hàm/khả vi trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Xét tồn tại đạo hàm/khả vi",
+                "khả vi",
+                "tồn tại đạo hàm",
+                "không khả vi"
+              ],
+              "positive_signals": [
+                "\"khả vi\", \"không khả vi\", \"tồn tại đạo hàm\"",
+                "giá trị tuyệt đối",
+                "hàm từng phần",
+                "xét tại điểm"
+              ],
+              "negative_signals": [
+                "nếu có tham số cần tìm thì ưu tiên Parameter_For_Differentiability"
+              ],
+              "skills": [
+                "differentiability_analysis"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T04_Chain_Rule",
+              "display_name": "Đạo hàm hàm hợp",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Đạo hàm hàm hợp trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Đạo hàm hàm hợp"
+              ],
+              "positive_signals": [
+                "hàm lồng nhau, ln, sin, exp phức hợp"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "chain_rule"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T05_Inverse_Function_Derivative",
+              "display_name": "Đạo hàm hàm ngược",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Đạo hàm hàm ngược trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Đạo hàm hàm ngược"
+              ],
+              "positive_signals": [
+                "\"hàm số ngược\", g'(x) với g=f^{-1}"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "inverse_function_derivative"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T06_Differential",
+              "display_name": "Tính vi phân",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Tính vi phân trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Tính vi phân"
+              ],
+              "positive_signals": [
+                "\"tìm vi phân\", dy, df"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "differential"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T07_Linear_Approximation",
+              "display_name": "Vi phân tính gần đúng",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Vi phân tính gần đúng trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Vi phân tính gần đúng",
+                "tính gần đúng",
+                "xấp xỉ",
+                "vi phân"
+              ],
+              "positive_signals": [
+                "\"tính gần đúng\"",
+                "số gần 1 hoặc gần giá trị đặc biệt",
+                "yêu cầu dùng vi phân"
+              ],
+              "negative_signals": [
+                "nếu là Taylor cấp cao thì ưu tiên Taylor/Maclaurin"
+              ],
+              "skills": [
+                "linear_approximation",
+                "differential"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T08_Higher_Order_Derivative",
+              "display_name": "Đạo hàm cấp cao",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Đạo hàm cấp cao trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Đạo hàm cấp cao"
+              ],
+              "positive_signals": [
+                "f'', f'''"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "higher_order_derivative"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T09_Higher_Order_Differential",
+              "display_name": "Vi phân cấp cao",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Vi phân cấp cao trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Vi phân cấp cao"
+              ],
+              "positive_signals": [
+                "\"vi phân cấp cao\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "higher_order_differential"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T10_Parameter_For_Differentiability",
+              "display_name": "Tham số để liên tục/khả vi",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Tham số để liên tục/khả vi trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Tham số để liên tục/khả vi"
+              ],
+              "positive_signals": [
+                "\"tìm n để khả vi\", tham số"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "parameter_analysis",
+                "differentiability_analysis"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_08_T11_Nth_Derivative",
+              "display_name": "Đạo hàm cấp n",
+              "level": "problem_type",
+              "parent": "GT1_C1_08_Derivatives_Differentials",
+              "description": "Đạo hàm cấp n trong chủ đề Đạo hàm và vi phân.",
+              "aliases": [
+                "Đạo hàm cấp n"
+              ],
+              "positive_signals": [
+                "f^{(n)}, \"đạo hàm cấp n\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "nth_derivative"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+          "display_name": "Các định lý về hàm khả vi và ứng dụng",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Các định lý về hàm khả vi và ứng dụng thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_09_T01_Fermat_Rolle_Lagrange_Cauchy",
+              "display_name": "Định lý Fermat, Rolle, Lagrange, Cauchy",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Định lý Fermat, Rolle, Lagrange, Cauchy trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Định lý Fermat, Rolle, Lagrange, Cauchy",
+                "Rolle",
+                "Lagrange",
+                "Cauchy",
+                "Fermat",
+                "định lý giá trị trung bình"
+              ],
+              "positive_signals": [
+                "tên định lý, nghiệm, đạo hàm",
+                "chứng minh tồn tại nghiệm/điểm",
+                "có đạo hàm trên khoảng"
+              ],
+              "negative_signals": [
+                "nếu chỉ xét đơn điệu/cực trị thì ưu tiên dạng ứng dụng cụ thể"
+              ],
+              "skills": [
+                "rolle_theorem",
+                "lagrange_mean_value_theorem",
+                "cauchy_mean_value_theorem",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T02_Proof_Using_Mean_Value_Theorem",
+              "display_name": "Chứng minh bằng định lý giá trị trung bình",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Chứng minh bằng định lý giá trị trung bình trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Chứng minh bằng định lý giá trị trung bình"
+              ],
+              "positive_signals": [
+                "chứng minh bất đẳng thức, phương trình có nghiệm"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "proof",
+                "lagrange_mean_value_theorem"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T03_Taylor_Maclaurin_Expansion",
+              "display_name": "Khai triển Taylor/Maclaurin",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Khai triển Taylor/Maclaurin trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Khai triển Taylor/Maclaurin",
+                "Taylor",
+                "Maclaurin",
+                "khai triển"
+              ],
+              "positive_signals": [
+                "\"khai triển Taylor\", \"Maclaurin\"",
+                "yêu cầu khai triển đến cấp n",
+                "lân cận điểm"
+              ],
+              "negative_signals": [
+                "nếu chỉ dùng khai triển để tính giới hạn thì có thể chọn Limit_By_Taylor"
+              ],
+              "skills": [
+                "taylor_maclaurin_expansion"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T04_Limit_By_Taylor",
+              "display_name": "Tính giới hạn bằng Taylor",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Tính giới hạn bằng Taylor trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Tính giới hạn bằng Taylor"
+              ],
+              "positive_signals": [
+                "giới hạn dạng vô định, yêu cầu khai triển"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "taylor_maclaurin_expansion",
+                "function_limit"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T05_LHopital_Rule",
+              "display_name": "Quy tắc L'Hospital",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Quy tắc L'Hospital trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Quy tắc L'Hospital",
+                "L'Hospital",
+                "L'Hopital",
+                "quy tắc Hospital"
+              ],
+              "positive_signals": [
+                "\"L'Hospital\", dạng 0/0, infinity/infinity",
+                "dạng 0/0",
+                "infinity/infinity",
+                "dùng đạo hàm tử/mẫu"
+              ],
+              "negative_signals": [
+                "nếu đề dùng VCB/Taylor rõ ràng thì không chọn L'Hospital"
+              ],
+              "skills": [
+                "l_hopital_rule"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T06_Monotonicity_By_Derivative",
+              "display_name": "Xét đơn điệu bằng đạo hàm",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Xét đơn điệu bằng đạo hàm trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Xét đơn điệu bằng đạo hàm"
+              ],
+              "positive_signals": [
+                "\"khảo sát tính đơn điệu\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "monotonicity_analysis"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T07_Convexity_Concavity",
+              "display_name": "Hàm lồi/lõm, bất đẳng thức",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Hàm lồi/lõm, bất đẳng thức trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Hàm lồi/lõm, bất đẳng thức"
+              ],
+              "positive_signals": [
+                "\"lồi\", \"lõm\", bất đẳng thức"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "convexity_concavity",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T08_One_Variable_Extrema",
+              "display_name": "Cực trị hàm một biến",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Cực trị hàm một biến trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Cực trị hàm một biến"
+              ],
+              "positive_signals": [
+                "\"tìm cực trị\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "one_variable_extrema"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T09_Newton_Method",
+              "display_name": "Phương pháp Newton",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Phương pháp Newton trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Phương pháp Newton"
+              ],
+              "positive_signals": [
+                "\"Newton\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "newton_method"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T10_Parameter_Problem_Differentiable_Theorem",
+              "display_name": "Bài toán tham số trong hàm khả vi",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Bài toán tham số trong hàm khả vi trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Bài toán tham số trong hàm khả vi"
+              ],
+              "positive_signals": [
+                "\"tìm điều kiện\", \"tham số\", \"giới hạn hữu hạn\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "parameter_analysis",
+                "case_analysis"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T11_Partial_Fraction_And_Nth_Derivative",
+              "display_name": "Phân thức và đạo hàm cấp cao",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "Phân thức và đạo hàm cấp cao trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "Phân thức và đạo hàm cấp cao"
+              ],
+              "positive_signals": [
+                "phân tích phân thức, đạo hàm cấp k/n"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "partial_fraction_decomposition",
+                "nth_derivative"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_09_T12_Max_Min_On_Closed_Interval",
+              "display_name": "GTLN/GTNN trên đoạn",
+              "level": "problem_type",
+              "parent": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+              "description": "GTLN/GTNN trên đoạn trong chủ đề Các định lý về hàm khả vi và ứng dụng.",
+              "aliases": [
+                "GTLN/GTNN trên đoạn"
+              ],
+              "positive_signals": [
+                "\"giá trị lớn nhất\", \"giá trị nhỏ nhất\", \"trên đoạn\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "max_min_closed_interval"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C1_10_Curve_Function_Graph_Survey",
+          "display_name": "Khảo sát hàm số, đường cong",
+          "level": "topic",
+          "parent": "GT1_C1_Differential_Calculus_One_Variable",
+          "description": "Khảo sát hàm số, đường cong thuộc Chương 1: Phép tính vi phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C1_10_T01_Function_Graph_Survey",
+              "display_name": "Khảo sát và vẽ đồ thị hàm số",
+              "level": "problem_type",
+              "parent": "GT1_C1_10_Curve_Function_Graph_Survey",
+              "description": "Khảo sát và vẽ đồ thị hàm số trong chủ đề Khảo sát hàm số, đường cong.",
+              "aliases": [
+                "Khảo sát và vẽ đồ thị hàm số"
+              ],
+              "positive_signals": [
+                "\"khảo sát hàm số\", \"vẽ đồ thị\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "monotonicity_analysis",
+                "convexity_concavity"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_10_T02_Asymptote_Analysis",
+              "display_name": "Tìm tiệm cận",
+              "level": "problem_type",
+              "parent": "GT1_C1_10_Curve_Function_Graph_Survey",
+              "description": "Tìm tiệm cận trong chủ đề Khảo sát hàm số, đường cong.",
+              "aliases": [
+                "Tìm tiệm cận"
+              ],
+              "positive_signals": [
+                "\"tìm tiệm cận\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "asymptote_analysis",
+                "function_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_10_T03_Variation_Table",
+              "display_name": "Bảng biến thiên",
+              "level": "problem_type",
+              "parent": "GT1_C1_10_Curve_Function_Graph_Survey",
+              "description": "Bảng biến thiên trong chủ đề Khảo sát hàm số, đường cong.",
+              "aliases": [
+                "Bảng biến thiên"
+              ],
+              "positive_signals": [
+                "\"bảng biến thiên\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "monotonicity_analysis"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_10_T04_Convexity_Inflection",
+              "display_name": "Lồi/lõm và điểm uốn",
+              "level": "problem_type",
+              "parent": "GT1_C1_10_Curve_Function_Graph_Survey",
+              "description": "Lồi/lõm và điểm uốn trong chủ đề Khảo sát hàm số, đường cong.",
+              "aliases": [
+                "Lồi/lõm và điểm uốn"
+              ],
+              "positive_signals": [
+                "\"điểm uốn\", \"lồi\", \"lõm\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "convexity_concavity"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_10_T05_Parametric_Curve",
+              "display_name": "Đường cong tham số",
+              "level": "problem_type",
+              "parent": "GT1_C1_10_Curve_Function_Graph_Survey",
+              "description": "Đường cong tham số trong chủ đề Khảo sát hàm số, đường cong.",
+              "aliases": [
+                "Đường cong tham số"
+              ],
+              "positive_signals": [
+                "x(t), y(t), \"tham số\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "parametric_curve"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C1_10_T06_Polar_Curve",
+              "display_name": "Đường cong tọa độ cực",
+              "level": "problem_type",
+              "parent": "GT1_C1_10_Curve_Function_Graph_Survey",
+              "description": "Đường cong tọa độ cực trong chủ đề Khảo sát hàm số, đường cong.",
+              "aliases": [
+                "Đường cong tọa độ cực"
+              ],
+              "positive_signals": [
+                "\"tọa độ cực\", r, theta"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "polar_curve"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "GT1_C2_Integral_Calculus_One_Variable",
+      "display_name": "Chương 2: Phép tính tích phân hàm một biến số",
+      "level": "chapter",
+      "parent": null,
+      "description": "Chương này gồm tích phân bất định, tích phân xác định, tích phân suy rộng và các ứng dụng của tích phân xác định.",
+      "aliases": [],
+      "positive_signals": [],
+      "negative_signals": [],
+      "skills": [],
+      "default_difficulty": null,
+      "confusable_with": [],
+      "examples": [],
+      "topics": [
+        {
+          "code": "GT1_C2_01_Indefinite_Integrals",
+          "display_name": "Tích phân bất định",
+          "level": "topic",
+          "parent": "GT1_C2_Integral_Calculus_One_Variable",
+          "description": "Tích phân bất định thuộc Chương 2: Phép tính tích phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C2_01_T01_Basic_Antiderivative",
+              "display_name": "Nguyên hàm cơ bản",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Nguyên hàm cơ bản trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Nguyên hàm cơ bản",
+                "nguyên hàm",
+                "tích phân bất định",
+                "họ nguyên hàm"
+              ],
+              "positive_signals": [
+                "tích phân trực tiếp",
+                "int f(x) dx không có cận",
+                "công thức trực tiếp"
+              ],
+              "negative_signals": [
+                "nếu đề nêu phương pháp đổi biến/từng phần thì ưu tiên phương pháp đó"
+              ],
+              "skills": [
+                "indefinite_integral"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T02_Substitution_Method",
+              "display_name": "Phương pháp đổi biến",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Phương pháp đổi biến trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Phương pháp đổi biến",
+                "đổi biến",
+                "đặt u",
+                "phép thế"
+              ],
+              "positive_signals": [
+                "\"đổi biến\", dạng f'(x)g(f(x))",
+                "dạng f'(x)g(f(x))",
+                "đề nêu \"theo phương pháp đổi biến\""
+              ],
+              "negative_signals": [
+                "nếu có cận thì có thể thuộc tích phân xác định đổi biến"
+              ],
+              "skills": [
+                "substitution_method",
+                "indefinite_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T03_Integration_By_Parts",
+              "display_name": "Tích phân từng phần",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Tích phân từng phần trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Tích phân từng phần",
+                "tích phân từng phần",
+                "từng phần"
+              ],
+              "positive_signals": [
+                "\"từng phần\", tích đa thức với log/mũ/lượng giác",
+                "tích đa thức với log/mũ/lượng giác",
+                "đề nêu \"từng phần\""
+              ],
+              "negative_signals": [
+                "nếu là tích phân xác định có cận thì chọn bản definite nếu trọng tâm là cận"
+              ],
+              "skills": [
+                "integration_by_parts",
+                "indefinite_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T04_Rational_Function_Integral",
+              "display_name": "Tích phân phân thức hữu tỉ",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Tích phân phân thức hữu tỉ trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Tích phân phân thức hữu tỉ"
+              ],
+              "positive_signals": [
+                "phân thức hữu tỉ"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "rational_function_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T05_Partial_Fractions",
+              "display_name": "Phân tích phân thức đơn giản",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Phân tích phân thức đơn giản trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Phân tích phân thức đơn giản"
+              ],
+              "positive_signals": [
+                "mẫu đa thức, phân tích thành phân thức"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "partial_fraction_decomposition"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T06_Trigonometric_Integral",
+              "display_name": "Tích phân lượng giác",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Tích phân lượng giác trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Tích phân lượng giác"
+              ],
+              "positive_signals": [
+                "sin, cos, tan, tích lượng giác"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "trigonometric_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T07_Irrational_Integral",
+              "display_name": "Tích phân hàm vô tỉ",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Tích phân hàm vô tỉ trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Tích phân hàm vô tỉ"
+              ],
+              "positive_signals": [
+                "căn thức, biểu thức vô tỉ"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "irrational_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T08_Euler_Substitution",
+              "display_name": "Đổi biến Euler",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Đổi biến Euler trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Đổi biến Euler"
+              ],
+              "positive_signals": [
+                "căn bậc hai của tam thức bậc hai"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "euler_substitution"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T09_Mixed_Indefinite_Integral_Methods",
+              "display_name": "Tích phân phối hợp nhiều phương pháp",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Tích phân phối hợp nhiều phương pháp trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Tích phân phối hợp nhiều phương pháp"
+              ],
+              "positive_signals": [
+                "đề không nêu phương pháp, cần chọn"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "case_analysis",
+                "indefinite_integral"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_01_T10_Reduction_Formula",
+              "display_name": "Công thức truy hồi tích phân",
+              "level": "problem_type",
+              "parent": "GT1_C2_01_Indefinite_Integrals",
+              "description": "Công thức truy hồi tích phân trong chủ đề Tích phân bất định.",
+              "aliases": [
+                "Công thức truy hồi tích phân",
+                "công thức truy hồi",
+                "lập công thức I_n"
+              ],
+              "positive_signals": [
+                "I_n, \"lập công thức truy hồi\"",
+                "xuất hiện I_n",
+                "yêu cầu lập công thức tổng quát"
+              ],
+              "negative_signals": [
+                "nếu chỉ tính một tích phân cụ thể thì không chọn"
+              ],
+              "skills": [
+                "reduction_formula",
+                "integration_by_parts"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C2_02_Definite_Integrals",
+          "display_name": "Tích phân xác định",
+          "level": "topic",
+          "parent": "GT1_C2_Integral_Calculus_One_Variable",
+          "description": "Tích phân xác định thuộc Chương 2: Phép tính tích phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C2_02_T01_Definition_And_Geometric_Meaning",
+              "display_name": "Định nghĩa và ý nghĩa tích phân xác định",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Định nghĩa và ý nghĩa tích phân xác định trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Định nghĩa và ý nghĩa tích phân xác định"
+              ],
+              "positive_signals": [
+                "định nghĩa, ý nghĩa hình học/cơ học"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "definite_integral"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T02_Integrability_Criterion",
+              "display_name": "Tiêu chuẩn khả tích",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Tiêu chuẩn khả tích trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Tiêu chuẩn khả tích"
+              ],
+              "positive_signals": [
+                "\"khả tích\", tiêu chuẩn"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "definite_integral",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T03_Integral_Properties",
+              "display_name": "Tính chất tích phân xác định",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Tính chất tích phân xác định trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Tính chất tích phân xác định"
+              ],
+              "positive_signals": [
+                "dùng tính chất"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "definite_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T04_Newton_Leibniz",
+              "display_name": "Công thức Newton-Leibniz",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Công thức Newton-Leibniz trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Công thức Newton-Leibniz"
+              ],
+              "positive_signals": [
+                "tính tích phân xác định bằng nguyên hàm"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "newton_leibniz_formula"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T05_Substitution_Definite_Integral",
+              "display_name": "Đổi biến trong tích phân xác định",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Đổi biến trong tích phân xác định trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Đổi biến trong tích phân xác định"
+              ],
+              "positive_signals": [
+                "đổi biến có cận"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "substitution_method",
+                "definite_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T06_By_Parts_Definite_Integral",
+              "display_name": "Từng phần trong tích phân xác định",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Từng phần trong tích phân xác định trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Từng phần trong tích phân xác định"
+              ],
+              "positive_signals": [
+                "từng phần có cận"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "integration_by_parts",
+                "definite_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T07_Differentiation_Under_Variable_Limits",
+              "display_name": "Đạo hàm tích phân theo cận",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Đạo hàm tích phân theo cận trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Đạo hàm tích phân theo cận"
+              ],
+              "positive_signals": [
+                "d/dx int, cận biến thiên"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "differentiation_under_integral_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T08_Riemann_Sum_Definition",
+              "display_name": "Tổng tích phân/Riemann sum",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Tổng tích phân/Riemann sum trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Tổng tích phân/Riemann sum",
+                "tổng tích phân",
+                "tổng Riemann",
+                "phép chia"
+              ],
+              "positive_signals": [
+                "\"tổng tích phân\", phép chia, điểm chọn",
+                "x_i",
+                "Delta x",
+                "điểm chọn",
+                "giới hạn tổng"
+              ],
+              "negative_signals": [
+                "nếu chỉ tính tích phân bằng Newton-Leibniz thì không chọn"
+              ],
+              "skills": [
+                "riemann_sum",
+                "definite_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T09_Limit_As_Definite_Integral",
+              "display_name": "Giới hạn dưới dạng tích phân xác định",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Giới hạn dưới dạng tích phân xác định trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Giới hạn dưới dạng tích phân xác định",
+                "giới hạn tổng thành tích phân",
+                "tổng Riemann"
+              ],
+              "positive_signals": [
+                "tổng có n, giới hạn khi n -> infinity",
+                "tổng có n",
+                "lim n -> infinity"
+              ],
+              "negative_signals": [
+                "nếu không có tổng hữu hạn thì không chọn"
+              ],
+              "skills": [
+                "limit_as_integral",
+                "riemann_sum"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T10_Asymptotic_Integral_Function",
+              "display_name": "VCB/VCL qua hàm tích phân",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "VCB/VCL qua hàm tích phân trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "VCB/VCL qua hàm tích phân"
+              ],
+              "positive_signals": [
+                "tích phân phụ thuộc cận trong giới hạn"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "asymptotic_comparison",
+                "differentiation_under_integral_limit"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T11_Piecewise_Definite_Integral",
+              "display_name": "Tích phân xác định của hàm từng phần",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Tích phân xác định của hàm từng phần trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Tích phân xác định của hàm từng phần"
+              ],
+              "positive_signals": [
+                "cases, chia khoảng"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "piecewise_function",
+                "definite_integral"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T12_Symmetry_Property_Definite_Integral",
+              "display_name": "Tính chất đối xứng tích phân",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Tính chất đối xứng tích phân trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Tính chất đối xứng tích phân"
+              ],
+              "positive_signals": [
+                "f(sin x), f(cos x), đối xứng"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "integral_symmetry",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_02_T13_Integral_Inequality",
+              "display_name": "Bất đẳng thức tích phân",
+              "level": "problem_type",
+              "parent": "GT1_C2_02_Definite_Integrals",
+              "description": "Bất đẳng thức tích phân trong chủ đề Tích phân xác định.",
+              "aliases": [
+                "Bất đẳng thức tích phân"
+              ],
+              "positive_signals": [
+                "Cauchy-Schwarz, chứng minh bất đẳng thức"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "integral_inequality",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C2_03_Improper_Integrals",
+          "display_name": "Tích phân suy rộng",
+          "level": "topic",
+          "parent": "GT1_C2_Integral_Calculus_One_Variable",
+          "description": "Tích phân suy rộng thuộc Chương 2: Phép tính tích phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C2_03_T01_Type_One_Infinite_Interval",
+              "display_name": "Tích phân suy rộng loại 1",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Tích phân suy rộng loại 1 trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Tích phân suy rộng loại 1"
+              ],
+              "positive_signals": [
+                "cận vô hạn"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "improper_integral_convergence"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T02_Type_Two_Unbounded_Function",
+              "display_name": "Tích phân suy rộng loại 2",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Tích phân suy rộng loại 2 trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Tích phân suy rộng loại 2"
+              ],
+              "positive_signals": [
+                "hàm không bị chặn tại điểm/cận"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "improper_integral_convergence"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T03_Compute_Improper_Integral",
+              "display_name": "Tính giá trị tích phân suy rộng",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Tính giá trị tích phân suy rộng trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Tính giá trị tích phân suy rộng"
+              ],
+              "positive_signals": [
+                "\"tính trong trường hợp hội tụ\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "improper_integral_convergence"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T04_Convergence_Divergence",
+              "display_name": "Xét hội tụ/phân kỳ",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Xét hội tụ/phân kỳ trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Xét hội tụ/phân kỳ"
+              ],
+              "positive_signals": [
+                "\"xét sự hội tụ\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "improper_integral_convergence"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T05_Comparison_Test",
+              "display_name": "Tiêu chuẩn so sánh",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Tiêu chuẩn so sánh trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Tiêu chuẩn so sánh"
+              ],
+              "positive_signals": [
+                "\"so sánh\", gần 0/vô cực"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "comparison_test"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T06_Absolute_Convergence",
+              "display_name": "Hội tụ tuyệt đối",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Hội tụ tuyệt đối trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Hội tụ tuyệt đối"
+              ],
+              "positive_signals": [
+                "\"hội tụ tuyệt đối\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "absolute_convergence"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T07_Conditional_Convergence",
+              "display_name": "Bán hội tụ",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Bán hội tụ trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Bán hội tụ"
+              ],
+              "positive_signals": [
+                "\"bán hội tụ\", hội tụ không tuyệt đối"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "conditional_convergence"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T08_Parameter_Improper_Integral",
+              "display_name": "Tích phân suy rộng có tham số",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Tích phân suy rộng có tham số trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Tích phân suy rộng có tham số",
+                "tích phân suy rộng có tham số",
+                "khảo sát theo alpha/beta"
+              ],
+              "positive_signals": [
+                "alpha, beta, \"khi và chỉ khi\"",
+                "alpha",
+                "beta",
+                "\"hội tụ khi nào\""
+              ],
+              "negative_signals": [
+                "nếu không có tham số thì chọn hội tụ/phân kỳ thông thường"
+              ],
+              "skills": [
+                "parameter_analysis",
+                "comparison_test"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T09_Proof_Improper_Integral_Condition",
+              "display_name": "Chứng minh điều kiện hội tụ",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Chứng minh điều kiện hội tụ trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Chứng minh điều kiện hội tụ"
+              ],
+              "positive_signals": [
+                "\"chứng minh\", \"khi và chỉ khi\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "proof",
+                "improper_integral_convergence"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_03_T10_Counterexample_Improper_Integral",
+              "display_name": "Phản ví dụ tích phân suy rộng",
+              "level": "problem_type",
+              "parent": "GT1_C2_03_Improper_Integrals",
+              "description": "Phản ví dụ tích phân suy rộng trong chủ đề Tích phân suy rộng.",
+              "aliases": [
+                "Phản ví dụ tích phân suy rộng"
+              ],
+              "positive_signals": [
+                "\"có suy ra được không\", \"ví dụ\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "counterexample_construction"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C2_04_Applications_Definite_Integrals",
+          "display_name": "Ứng dụng của tích phân xác định",
+          "level": "topic",
+          "parent": "GT1_C2_Integral_Calculus_One_Variable",
+          "description": "Ứng dụng của tích phân xác định thuộc Chương 2: Phép tính tích phân hàm một biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C2_04_T01_Area_Plane_Region",
+              "display_name": "Diện tích hình phẳng",
+              "level": "problem_type",
+              "parent": "GT1_C2_04_Applications_Definite_Integrals",
+              "description": "Diện tích hình phẳng trong chủ đề Ứng dụng của tích phân xác định.",
+              "aliases": [
+                "Diện tích hình phẳng"
+              ],
+              "positive_signals": [
+                "\"diện tích\", miền phẳng, giới hạn bởi đường"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "area_by_integral",
+                "application"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_04_T02_Arc_Length",
+              "display_name": "Độ dài cung phẳng",
+              "level": "problem_type",
+              "parent": "GT1_C2_04_Applications_Definite_Integrals",
+              "description": "Độ dài cung phẳng trong chủ đề Ứng dụng của tích phân xác định.",
+              "aliases": [
+                "Độ dài cung phẳng"
+              ],
+              "positive_signals": [
+                "\"độ dài cung\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "arc_length",
+                "application"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_04_T03_Volume_Of_Solid",
+              "display_name": "Thể tích vật thể",
+              "level": "problem_type",
+              "parent": "GT1_C2_04_Applications_Definite_Integrals",
+              "description": "Thể tích vật thể trong chủ đề Ứng dụng của tích phân xác định.",
+              "aliases": [
+                "Thể tích vật thể"
+              ],
+              "positive_signals": [
+                "\"thể tích vật thể\", mặt cong, mặt phẳng"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "volume_by_integral",
+                "application"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_04_T04_Volume_Of_Revolution",
+              "display_name": "Thể tích khối tròn xoay",
+              "level": "problem_type",
+              "parent": "GT1_C2_04_Applications_Definite_Integrals",
+              "description": "Thể tích khối tròn xoay trong chủ đề Ứng dụng của tích phân xác định.",
+              "aliases": [
+                "Thể tích khối tròn xoay"
+              ],
+              "positive_signals": [
+                "\"quay quanh trục\", \"khối tròn xoay\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "volume_of_revolution",
+                "application"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C2_04_T05_Surface_Area_Of_Revolution",
+              "display_name": "Diện tích mặt tròn xoay",
+              "level": "problem_type",
+              "parent": "GT1_C2_04_Applications_Definite_Integrals",
+              "description": "Diện tích mặt tròn xoay trong chủ đề Ứng dụng của tích phân xác định.",
+              "aliases": [
+                "Diện tích mặt tròn xoay"
+              ],
+              "positive_signals": [
+                "\"diện tích mặt tròn xoay\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "surface_area_of_revolution",
+                "application"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "GT1_C3_Multivariable_Functions",
+      "display_name": "Chương 3: Hàm số nhiều biến số",
+      "level": "chapter",
+      "parent": null,
+      "description": "Chương này gồm các khái niệm cơ bản về hàm nhiều biến, giới hạn, liên tục, đạo hàm riêng, vi phân, hàm ẩn, Taylor nhiều biến và cực trị.",
+      "aliases": [],
+      "positive_signals": [],
+      "negative_signals": [],
+      "skills": [],
+      "default_difficulty": null,
+      "confusable_with": [],
+      "examples": [],
+      "topics": [
+        {
+          "code": "GT1_C3_01_Multivariable_Basics",
+          "display_name": "Các khái niệm cơ bản",
+          "level": "topic",
+          "parent": "GT1_C3_Multivariable_Functions",
+          "description": "Các khái niệm cơ bản thuộc Chương 3: Hàm số nhiều biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C3_01_T01_Domain_Of_Multivariable_Function",
+              "display_name": "Miền xác định hàm nhiều biến",
+              "level": "problem_type",
+              "parent": "GT1_C3_01_Multivariable_Basics",
+              "description": "Miền xác định hàm nhiều biến trong chủ đề Các khái niệm cơ bản.",
+              "aliases": [
+                "Miền xác định hàm nhiều biến"
+              ],
+              "positive_signals": [
+                "z=f(x,y), \"tìm miền xác định\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "multivariable_domain"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_01_T02_Open_Closed_Bounded_Set",
+              "display_name": "Miền mở, đóng, bị chặn",
+              "level": "problem_type",
+              "parent": "GT1_C3_01_Multivariable_Basics",
+              "description": "Miền mở, đóng, bị chặn trong chủ đề Các khái niệm cơ bản.",
+              "aliases": [
+                "Miền mở, đóng, bị chặn"
+              ],
+              "positive_signals": [
+                "\"mở\", \"đóng\", \"bị chặn\", \"biên\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "multivariable_domain"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_01_T03_Multivariable_Limit",
+              "display_name": "Giới hạn hàm nhiều biến",
+              "level": "problem_type",
+              "parent": "GT1_C3_01_Multivariable_Basics",
+              "description": "Giới hạn hàm nhiều biến trong chủ đề Các khái niệm cơ bản.",
+              "aliases": [
+                "Giới hạn hàm nhiều biến",
+                "giới hạn hàm hai biến",
+                "giới hạn nhiều biến"
+              ],
+              "positive_signals": [
+                "(x,y)->(a,b), \"tìm giới hạn\"",
+                "(x",
+                "y)->(0",
+                "0)",
+                "f(x",
+                "y)"
+              ],
+              "negative_signals": [
+                "nếu cần chứng minh không tồn tại bằng đường đi thì chọn Path_Dependent_Limit"
+              ],
+              "skills": [
+                "multivariable_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_01_T04_Path_Dependent_Limit",
+              "display_name": "Chứng minh không tồn tại giới hạn bằng đường đi",
+              "level": "problem_type",
+              "parent": "GT1_C3_01_Multivariable_Basics",
+              "description": "Chứng minh không tồn tại giới hạn bằng đường đi trong chủ đề Các khái niệm cơ bản.",
+              "aliases": [
+                "Chứng minh không tồn tại giới hạn bằng đường đi"
+              ],
+              "positive_signals": [
+                "nhiều đường đi, kết quả khác nhau"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "path_limit_counterexample"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_01_T05_Multivariable_Continuity",
+              "display_name": "Liên tục hàm nhiều biến",
+              "level": "problem_type",
+              "parent": "GT1_C3_01_Multivariable_Basics",
+              "description": "Liên tục hàm nhiều biến trong chủ đề Các khái niệm cơ bản.",
+              "aliases": [
+                "Liên tục hàm nhiều biến"
+              ],
+              "positive_signals": [
+                "\"liên tục tại\", hàm từng phần hai biến"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "multivariable_continuity"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_01_T06_Parameter_For_Continuity",
+              "display_name": "Tham số để liên tục nhiều biến",
+              "level": "problem_type",
+              "parent": "GT1_C3_01_Multivariable_Basics",
+              "description": "Tham số để liên tục nhiều biến trong chủ đề Các khái niệm cơ bản.",
+              "aliases": [
+                "Tham số để liên tục nhiều biến"
+              ],
+              "positive_signals": [
+                "tham số trong hàm nhiều biến"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "parameter_analysis",
+                "multivariable_continuity"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_01_T07_Multivariable_Function_Composition",
+              "display_name": "Hàm hợp nhiều biến",
+              "level": "problem_type",
+              "parent": "GT1_C3_01_Multivariable_Basics",
+              "description": "Hàm hợp nhiều biến trong chủ đề Các khái niệm cơ bản.",
+              "aliases": [
+                "Hàm hợp nhiều biến"
+              ],
+              "positive_signals": [
+                "x(t), y(t), u(r,theta), v(r,theta)"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "multivariable_function_composition"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_01_T08_Iterated_And_Joint_Limit",
+              "display_name": "Giới hạn lặp và giới hạn hai biến",
+              "level": "problem_type",
+              "parent": "GT1_C3_01_Multivariable_Basics",
+              "description": "Giới hạn lặp và giới hạn hai biến trong chủ đề Các khái niệm cơ bản.",
+              "aliases": [
+                "Giới hạn lặp và giới hạn hai biến",
+                "giới hạn lặp",
+                "giới hạn riêng",
+                "giới hạn đồng thời"
+              ],
+              "positive_signals": [
+                "lim_x lim_y, lim_y lim_x, joint limit",
+                "lim_x lim_y",
+                "lim_y lim_x",
+                "so sánh với giới hạn hai biến"
+              ],
+              "negative_signals": [
+                "nếu chỉ có joint limit thì không chọn"
+              ],
+              "skills": [
+                "iterated_limit",
+                "multivariable_limit"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C3_02_Partial_Derivatives_Differentials",
+          "display_name": "Đạo hàm riêng và vi phân",
+          "level": "topic",
+          "parent": "GT1_C3_Multivariable_Functions",
+          "description": "Đạo hàm riêng và vi phân thuộc Chương 3: Hàm số nhiều biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C3_02_T01_First_Order_Partial_Derivative",
+              "display_name": "Đạo hàm riêng cấp một",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Đạo hàm riêng cấp một trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Đạo hàm riêng cấp một"
+              ],
+              "positive_signals": [
+                "z'_x, z'_y, partial derivative"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "partial_derivative"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T02_Total_Differential",
+              "display_name": "Vi phân toàn phần",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Vi phân toàn phần trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Vi phân toàn phần"
+              ],
+              "positive_signals": [
+                "\"vi phân toàn phần\", dz"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "total_differential"
+              ],
+              "default_difficulty": "easy",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T03_Approximation_By_Differential",
+              "display_name": "Vi phân tính gần đúng",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Vi phân tính gần đúng trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Vi phân tính gần đúng"
+              ],
+              "positive_signals": [
+                "\"ứng dụng vi phân, tính gần đúng\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "multivariable_approximation",
+                "total_differential"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T04_Multivariable_Chain_Rule",
+              "display_name": "Đạo hàm hàm hợp nhiều biến",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Đạo hàm hàm hợp nhiều biến trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Đạo hàm hàm hợp nhiều biến"
+              ],
+              "positive_signals": [
+                "hàm hợp nhiều biến"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "multivariable_chain_rule"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T05_Higher_Order_Partial_Derivative",
+              "display_name": "Đạo hàm riêng cấp cao",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Đạo hàm riêng cấp cao trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Đạo hàm riêng cấp cao"
+              ],
+              "positive_signals": [
+                "đạo hàm riêng cấp hai/cấp cao"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "higher_order_partial_derivative"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T06_Schwarz_Theorem",
+              "display_name": "Định lý Schwarz, đạo hàm hỗn hợp",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Định lý Schwarz, đạo hàm hỗn hợp trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Định lý Schwarz, đạo hàm hỗn hợp",
+                "Schwarz",
+                "đạo hàm hỗn hợp",
+                "f''xy",
+                "f''yx"
+              ],
+              "positive_signals": [
+                "f''xy, f''yx, tính liên tục",
+                "so sánh đạo hàm hỗn hợp",
+                "tính liên tục đạo hàm cấp hai"
+              ],
+              "negative_signals": [
+                "nếu chỉ tính đạo hàm cấp hai trực tiếp thì chọn higher order"
+              ],
+              "skills": [
+                "schwarz_theorem"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T07_Directional_Derivative_Gradient",
+              "display_name": "Đạo hàm theo hướng, gradient",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Đạo hàm theo hướng, gradient trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Đạo hàm theo hướng, gradient"
+              ],
+              "positive_signals": [
+                "\"gradient\", \"đạo hàm theo hướng\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "partial_derivative"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T08_Implicit_Function_Derivative",
+              "display_name": "Đạo hàm hàm ẩn",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Đạo hàm hàm ẩn trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Đạo hàm hàm ẩn",
+                "hàm ẩn",
+                "đạo hàm hàm ẩn",
+                "hệ hàm ẩn"
+              ],
+              "positive_signals": [
+                "phương trình ẩn, z=z(x,y), y(x)",
+                "phương trình xác định y(x) hoặc z(x",
+                "y)"
+              ],
+              "negative_signals": [
+                "nếu chỉ là đạo hàm riêng trực tiếp thì không chọn"
+              ],
+              "skills": [
+                "implicit_function_derivative"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T09_Multivariable_Taylor",
+              "display_name": "Taylor/Maclaurin nhiều biến",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Taylor/Maclaurin nhiều biến trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Taylor/Maclaurin nhiều biến"
+              ],
+              "positive_signals": [
+                "\"Taylor\", \"Maclaurin\" với f(x,y)"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "multivariable_taylor_expansion"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T10_Continuity_And_Partial_Derivative_Existence",
+              "display_name": "Liên tục và tồn tại đạo hàm riêng",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Liên tục và tồn tại đạo hàm riêng trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Liên tục và tồn tại đạo hàm riêng"
+              ],
+              "positive_signals": [
+                "\"khảo sát sự liên tục và sự tồn tại các đạo hàm riêng\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "multivariable_continuity",
+                "partial_derivative"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T11_Identity_With_Partial_Derivatives",
+              "display_name": "Chứng minh đẳng thức đạo hàm riêng",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Chứng minh đẳng thức đạo hàm riêng trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Chứng minh đẳng thức đạo hàm riêng"
+              ],
+              "positive_signals": [
+                "\"chứng minh rằng\", biểu thức chứa z'_x, z'_y"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "partial_derivative",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T12_Partial_Differential_Equation_Verification",
+              "display_name": "Kiểm tra phương trình đạo hàm riêng",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Kiểm tra phương trình đạo hàm riêng trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Kiểm tra phương trình đạo hàm riêng"
+              ],
+              "positive_signals": [
+                "\"thỏa mãn phương trình\", PDE"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "partial_differential_equation_verification",
+                "proof"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_02_T13_Second_Order_Differential",
+              "display_name": "Vi phân cấp hai",
+              "level": "problem_type",
+              "parent": "GT1_C3_02_Partial_Derivatives_Differentials",
+              "description": "Vi phân cấp hai trong chủ đề Đạo hàm riêng và vi phân.",
+              "aliases": [
+                "Vi phân cấp hai"
+              ],
+              "positive_signals": [
+                "\"vi phân cấp hai\""
+              ],
+              "negative_signals": [],
+              "skills": [
+                "second_order_differential"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        },
+        {
+          "code": "GT1_C3_03_Multivariable_Extrema",
+          "display_name": "Cực trị của hàm số nhiều biến số",
+          "level": "topic",
+          "parent": "GT1_C3_Multivariable_Functions",
+          "description": "Cực trị của hàm số nhiều biến số thuộc Chương 3: Hàm số nhiều biến số.",
+          "aliases": [],
+          "positive_signals": [],
+          "negative_signals": [],
+          "skills": [],
+          "default_difficulty": null,
+          "confusable_with": [],
+          "examples": [],
+          "problem_types": [
+            {
+              "code": "GT1_C3_03_T01_Critical_Point",
+              "display_name": "Tìm điểm dừng/điểm tới hạn",
+              "level": "problem_type",
+              "parent": "GT1_C3_03_Multivariable_Extrema",
+              "description": "Tìm điểm dừng/điểm tới hạn trong chủ đề Cực trị của hàm số nhiều biến số.",
+              "aliases": [
+                "Tìm điểm dừng/điểm tới hạn"
+              ],
+              "positive_signals": [
+                "hệ f'_x=0, f'_y=0"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "critical_point"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_03_T02_Unconstrained_Extrema",
+              "display_name": "Cực trị tự do",
+              "level": "problem_type",
+              "parent": "GT1_C3_03_Multivariable_Extrema",
+              "description": "Cực trị tự do trong chủ đề Cực trị của hàm số nhiều biến số.",
+              "aliases": [
+                "Cực trị tự do"
+              ],
+              "positive_signals": [
+                "\"tìm cực trị\" không ràng buộc"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "unconstrained_extrema"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_03_T03_Hessian_Test",
+              "display_name": "Phân loại cực trị bằng Hessian",
+              "level": "problem_type",
+              "parent": "GT1_C3_03_Multivariable_Extrema",
+              "description": "Phân loại cực trị bằng Hessian trong chủ đề Cực trị của hàm số nhiều biến số.",
+              "aliases": [
+                "Phân loại cực trị bằng Hessian"
+              ],
+              "positive_signals": [
+                "đạo hàm cấp hai, định thức Hessian"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "hessian_extrema_test"
+              ],
+              "default_difficulty": "medium",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_03_T04_Constrained_Extrema",
+              "display_name": "Cực trị có điều kiện",
+              "level": "problem_type",
+              "parent": "GT1_C3_03_Multivariable_Extrema",
+              "description": "Cực trị có điều kiện trong chủ đề Cực trị của hàm số nhiều biến số.",
+              "aliases": [
+                "Cực trị có điều kiện",
+                "cực trị có điều kiện",
+                "ràng buộc"
+              ],
+              "positive_signals": [
+                "ràng buộc như elip, đường cong, mặt",
+                "elip",
+                "đường cong",
+                "điều kiện g(x",
+                "y)=0"
+              ],
+              "negative_signals": [
+                "nếu đề nói rõ Lagrange thì chọn Lagrange_Multiplier"
+              ],
+              "skills": [
+                "constrained_extrema"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_03_T05_Lagrange_Multiplier",
+              "display_name": "Nhân tử Lagrange",
+              "level": "problem_type",
+              "parent": "GT1_C3_03_Multivariable_Extrema",
+              "description": "Nhân tử Lagrange trong chủ đề Cực trị của hàm số nhiều biến số.",
+              "aliases": [
+                "Nhân tử Lagrange"
+              ],
+              "positive_signals": [
+                "\"cực trị có điều kiện\", ràng buộc g(x,y)=0"
+              ],
+              "negative_signals": [],
+              "skills": [
+                "lagrange_multiplier"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            },
+            {
+              "code": "GT1_C3_03_T06_Global_Maximum_Minimum",
+              "display_name": "GTLN/GTNN trên miền",
+              "level": "problem_type",
+              "parent": "GT1_C3_03_Multivariable_Extrema",
+              "description": "GTLN/GTNN trên miền trong chủ đề Cực trị của hàm số nhiều biến số.",
+              "aliases": [
+                "GTLN/GTNN trên miền",
+                "GTLN",
+                "GTNN",
+                "max/min trên miền"
+              ],
+              "positive_signals": [
+                "\"giá trị lớn nhất\", \"giá trị nhỏ nhất\", miền đóng",
+                "miền tam giác",
+                "miền elip",
+                "miền đóng bị chặn"
+              ],
+              "negative_signals": [
+                "không nhầm với cực trị tự do trong toàn mặt phẳng"
+              ],
+              "skills": [
+                "global_maximum_minimum",
+                "case_analysis"
+              ],
+              "default_difficulty": "hard",
+              "confusable_with": [],
+              "examples": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

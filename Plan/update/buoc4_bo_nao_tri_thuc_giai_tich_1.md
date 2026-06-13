@@ -623,7 +623,7 @@ Dạng bài:
 | --- | --- | --- | --- | --- |
 | `GT1_C2_03_T01_Type_One_Infinite_Interval` | Tích phân suy rộng loại 1 | cận vô hạn | `improper_integral_convergence` | `medium` |
 | `GT1_C2_03_T02_Type_Two_Unbounded_Function` | Tích phân suy rộng loại 2 | hàm không bị chặn tại điểm/cận | `improper_integral_convergence` | `medium` |
-| `GT1_C2_03_T03_Compute_Improper_Integral` | Tính giá trị tích phân suy rộng | "tính trong trường hợp hội tụ" | `improper_integral_convergence`, `limit_computation` | `medium` |
+| `GT1_C2_03_T03_Compute_Improper_Integral` | Tính giá trị tích phân suy rộng | "tính trong trường hợp hội tụ" | `improper_integral_convergence` | `medium` |
 | `GT1_C2_03_T04_Convergence_Divergence` | Xét hội tụ/phân kỳ | "xét sự hội tụ" | `improper_integral_convergence` | `medium` |
 | `GT1_C2_03_T05_Comparison_Test` | Tiêu chuẩn so sánh | "so sánh", gần 0/vô cực | `comparison_test` | `hard` |
 | `GT1_C2_03_T06_Absolute_Convergence` | Hội tụ tuyệt đối | "hội tụ tuyệt đối" | `absolute_convergence` | `hard` |
