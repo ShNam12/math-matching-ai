@@ -23,6 +23,27 @@ class QuestionResponse(BaseModel):
     chapter: str | None = None
     difficulty: str | None = None
     skills: list[str] = Field(default_factory=list)
+
+    subject_code: str | None = None
+
+    chapter_code: str | None = None
+    chapter_name: str | None = None
+    topic_code: str | None = None
+    topic_name: str | None = None
+    problem_type_code: str | None = None
+    problem_type_name: str | None = None
+
+    taxonomy_id: str | None = None
+    taxonomy_version: str | None = None
+    taxonomy_confidence: float | None = None
+    taxonomy_reason: str | None = None
+    review_status: str | None = None
+
+    classification_status: str
+    classification_model: str | None = None
+    classification_error: str | None = None
+    classified_at: datetime | None = None
+
     embedding_status: str
     embedding_model: str | None = None
     embedding_dimension: int | None = None

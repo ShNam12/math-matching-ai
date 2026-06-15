@@ -6,6 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from infra.db.models import Question
 from modules.question_segmenter.schemas import SegmentedQuestion
 
+from modules.question_classification.schemas import (
+    QuestionClassificationResult,
+)
+
 
 class QuestionRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -38,6 +42,12 @@ class QuestionRepository:
                 chapter=None,
                 difficulty=None,
                 skills=[],
+
+                classification_status="pending",
+                classification_model=None,
+                classification_error=None,
+                classified_at=None,
+                
                 embedding_status="pending",
                 embedding_model=None,
                 embedding_dimension=None,
@@ -126,6 +136,12 @@ class QuestionRepository:
             chapter=chapter,
             difficulty=difficulty,
             skills=skills,
+
+            classification_status="pending",
+            classification_model=None,
+            classification_error=None,
+            classified_at=None,
+
             embedding_status="pending",
             embedding_model=None,
             embedding_dimension=None,
@@ -223,3 +239,135 @@ class QuestionRepository:
             )
 
         return counts
+    
+    async def update_classification(
+        self,
+        question: Question,
+        *,
+        result: QuestionClassificationResult,
+        classification_model: str,
+    ) -> Question:
+        question.subject = result.subject_name
+        question.subject_code = result.subject_code
+
+        # Giữ field chapter cũ để tương thích API hiện tại.
+        question.chapter = result.chapter_name
+        question.chapter_code = result.chapter_code
+        question.chapter_name = result.chapter_name
+
+        question.topic_code = result.topic_code
+        question.topic_name = result.topic_name
+        question.problem_type_code = result.problem_type_code
+        question.problem_type_name = result.problem_type_name
+
+        question.difficulty = result.difficulty
+        question.skills = result.skills
+
+        question.taxonomy_id = result.taxonomy_id
+        question.taxonomy_version = result.taxonomy_version
+        question.taxonomy_confidence = result.confidence
+        question.taxonomy_reason = result.reason
+        question.review_status = result.review_status
+
+        question.classification_status = "completed"
+        question.classification_model = classification_model
+        question.classification_error = None
+        question.classified_at = datetime.now(UTC)
+
+        await self.session.commit()
+        await self.session.refresh(question)
+
+        return question
+
+    async def mark_classification_failed(
+        self,
+        question: Question,
+        *,
+        error_message: str,
+        classification_model: str,
+    ) -> Question:
+        question.classification_status = "failed"
+        question.classification_model = classification_model
+        question.classification_error = error_message[:4000]
+
+        await self.session.commit()
+        await self.session.refresh(question)
+
+        return question
+
+    async def mark_classification_pending_for_document(
+        self,
+        document_id: str,
+    ) -> None:
+        await self.session.execute(
+            update(Question)
+            .where(Question.document_id == document_id)
+            .values(
+                classification_status="pending",
+                classification_error=None,
+                classified_at=None,
+            )
+        )
+        await self.session.commit()
+
+    async def list_unclassified_by_document(
+        self,
+        document_id: str,
+    ) -> list[Question]:
+        result = await self.session.execute(
+            select(Question)
+            .where(
+                Question.document_id == document_id,
+                Question.classification_status != "completed",
+            )
+            .order_by(Question.sequence_number)
+        )
+
+        return list(result.scalars().all())
+
+    async def count_by_taxonomy(
+        self,
+        *,
+        document_id: str | None = None,
+    ) -> list[dict[str, str | int | None]]:
+        statement = (
+            select(
+                Question.chapter_code,
+                Question.topic_code,
+                Question.problem_type_code,
+                func.count(Question.id).label("question_count"),
+            )
+            .where(Question.classification_status == "completed")
+            .group_by(
+                Question.chapter_code,
+                Question.topic_code,
+                Question.problem_type_code,
+            )
+            .order_by(
+                Question.chapter_code,
+                Question.topic_code,
+                Question.problem_type_code,
+            )
+        )
+
+        if document_id is not None:
+            statement = statement.where(
+                Question.document_id == document_id
+            )
+
+        result = await self.session.execute(statement)
+
+        return [
+            {
+                "chapter_code": chapter_code,
+                "topic_code": topic_code,
+                "problem_type_code": problem_type_code,
+                "question_count": int(question_count),
+            }
+            for (
+                chapter_code,
+                topic_code,
+                problem_type_code,
+                question_count,
+            ) in result.all()
+        ]

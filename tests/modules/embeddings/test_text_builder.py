@@ -38,3 +38,29 @@ def test_build_formula_embedding_text() -> None:
         "task: sentence similarity | query: "
         r"mathematical formula: \int_0^1 x dx"
     )
+
+def test_embedding_text_contains_taxonomy_metadata() -> None:
+    question = SimpleNamespace(
+        marker="Bài",
+        marker_number="1",
+        statement="Tính tích phân.",
+        solution=None,
+        answer=None,
+        formulas=[],
+        subject="Giải tích 1",
+        chapter="Chương 2",
+        chapter_name="Chương 2",
+        topic_name="Tích phân bất định",
+        problem_type_name="Tích phân từng phần",
+        difficulty="medium",
+        skills=["integration_by_parts"],
+    )
+
+    text = build_question_embedding_text(question)
+
+    assert "Subject: Giải tích 1" in text
+    assert "Chapter: Chương 2" in text
+    assert "Topic: Tích phân bất định" in text
+    assert "Problem type: Tích phân từng phần" in text
+    assert "Difficulty: medium" in text
+    assert "Skills: integration_by_parts" in text

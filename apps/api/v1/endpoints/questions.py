@@ -37,6 +37,27 @@ def to_question_response(question: Question) -> QuestionResponse:
         chapter=question.chapter,
         difficulty=question.difficulty,
         skills=question.skills,
+
+        subject_code=question.subject_code,
+
+        chapter_code=question.chapter_code,
+        chapter_name=question.chapter_name,
+        topic_code=question.topic_code,
+        topic_name=question.topic_name,
+        problem_type_code=question.problem_type_code,
+        problem_type_name=question.problem_type_name,
+
+        taxonomy_id=question.taxonomy_id,
+        taxonomy_version=question.taxonomy_version,
+        taxonomy_confidence=question.taxonomy_confidence,
+        taxonomy_reason=question.taxonomy_reason,
+        review_status=question.review_status,
+
+        classification_status=question.classification_status,
+        classification_model=question.classification_model,
+        classification_error=question.classification_error,
+        classified_at=question.classified_at,
+
         embedding_status=question.embedding_status,
         embedding_model=question.embedding_model,
         embedding_dimension=question.embedding_dimension,

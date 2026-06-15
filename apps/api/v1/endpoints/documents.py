@@ -9,6 +9,12 @@ from apps.api.v1.models.documents import (
     DocumentStoreResponse,
     DocumentUploadResponse,
 )
+
+from modules.question_classification import (
+    GeminiQuestionClassifier,
+    QuestionClassificationService,
+)
+
 from apps.api.v1.models.questions import QuestionResponse
 from apps.api.v1.endpoints.questions import to_question_response
 
@@ -174,6 +180,10 @@ async def store_document(
                 document_repository=document_repository,
                 question_repository=question_repository,
             ),
+            classification_service=QuestionClassificationService(
+                classifier=GeminiQuestionClassifier(),
+            ),
+            question_repository=question_repository,
             embedding_service=QuestionEmbeddingService(
                 question_repository=question_repository,
                 vector_repository=EmbeddingVectorRepository(
@@ -184,6 +194,7 @@ async def store_document(
                 ),
                 embedder=GeminiEmbedder(),
             ),
+            classification_model=settings.gemini_model,
         )
 
         result = await storage_service.store_document(document_id)

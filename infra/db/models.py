@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlalchemy import (
     BigInteger,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     JSON,
@@ -97,6 +98,82 @@ class Question(Base):
         JSON,
         nullable=False,
         default=list,
+    )
+
+    subject_code: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    chapter_code: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        index=True,
+    )
+    chapter_name: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    topic_code: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        index=True,
+    )
+    topic_name: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    problem_type_code: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        index=True,
+    )
+    problem_type_name: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    taxonomy_id: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    taxonomy_version: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    taxonomy_confidence: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+    taxonomy_reason: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    review_status: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    classification_status: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="pending",
+        index=True,
+    )
+    classification_model: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    classification_error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+    classified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     embedding_status: Mapped[str] = mapped_column(
