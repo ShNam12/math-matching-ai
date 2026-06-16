@@ -57,3 +57,9 @@ class QuestionUpdateRequest(BaseModel):
     chapter: str | None = None
     difficulty: str | None = None
     skills: list[str] | None = None
+
+class DocumentClassificationResponse(BaseModel):
+    document_id: str
+    question_count: int = Field(ge=0)
+    success_count: int = Field(ge=0)
+    failed_count: int = Field(ge=0)

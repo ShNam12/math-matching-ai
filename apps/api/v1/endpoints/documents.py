@@ -1,4 +1,5 @@
 from typing import Annotated
+import asyncio
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
 
@@ -15,7 +16,11 @@ from modules.question_classification import (
     QuestionClassificationService,
 )
 
-from apps.api.v1.models.questions import QuestionResponse
+from apps.api.v1.models.questions import (
+    DocumentClassificationResponse,
+    QuestionResponse,
+)
+
 from apps.api.v1.endpoints.questions import to_question_response
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -211,6 +216,70 @@ async def store_document(
         ) from exc
     finally:
         await client.close()
+
+@router.post(
+    "/{document_id}/classify",
+    response_model=DocumentClassificationResponse,
+)
+async def classify_document(
+    document_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> DocumentClassificationResponse:
+    document_repository = DocumentRepository(session)
+    document = await document_repository.get_document(document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    question_repository = QuestionRepository(session)
+    questions = await question_repository.list_by_document(document_id)
+
+    if not questions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No segmented questions were found: {document_id}",
+        )
+
+    classification_service = QuestionClassificationService(
+        classifier=GeminiQuestionClassifier(),
+    )
+
+    success_count = 0
+    failed_count = 0
+
+    await question_repository.mark_classification_pending_for_document(
+        document_id
+    )
+
+    for question in questions:
+        try:
+            result = await asyncio.to_thread(
+                classification_service.classify_question,
+                question,
+            )
+            await question_repository.update_classification(
+                question,
+                result=result,
+                classification_model=settings.gemini_model,
+            )
+            success_count += 1
+        except Exception as exc:
+            await question_repository.mark_classification_failed(
+                question,
+                error_message=str(exc),
+                classification_model=settings.gemini_model,
+            )
+            failed_count += 1
+
+    return DocumentClassificationResponse(
+        document_id=document_id,
+        question_count=len(questions),
+        success_count=success_count,
+        failed_count=failed_count,
+    )
 
 @router.get("/{document_id}/questions", response_model=list[QuestionResponse])
 async def list_document_questions(

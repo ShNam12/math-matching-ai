@@ -1,3 +1,11 @@
+import asyncio
+
+from core.config.settings import settings
+from modules.question_classification import (
+    GeminiQuestionClassifier,
+    QuestionClassificationService,
+)
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +22,10 @@ from infra.db.session import get_db_session
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
+def create_question_classification_service() -> QuestionClassificationService:
+    return QuestionClassificationService(
+        classifier=GeminiQuestionClassifier(),
+    )
 
 def to_question_response(question: Question) -> QuestionResponse:
     return QuestionResponse(
@@ -106,5 +118,44 @@ async def update_question(
         difficulty=payload.difficulty,
         skills=payload.skills,
     )
+
+    return to_question_response(updated_question)
+
+@router.post("/{question_id}/classify", response_model=QuestionResponse)
+async def classify_question(
+    question_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> QuestionResponse:
+    repository = QuestionRepository(session)
+    question = await repository.get_question(question_id)
+
+    if question is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question not found",
+        )
+
+    classification_service = create_question_classification_service()
+
+    try:
+        result = await asyncio.to_thread(
+            classification_service.classify_question,
+            question,
+        )
+        updated_question = await repository.update_classification(
+            question,
+            result=result,
+            classification_model=settings.gemini_model,
+        )
+    except Exception as exc:
+        await repository.mark_classification_failed(
+            question,
+            error_message=str(exc),
+            classification_model=settings.gemini_model,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
     return to_question_response(updated_question)

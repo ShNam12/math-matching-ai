@@ -12,6 +12,7 @@ from apps.api.v1.endpoints.generation import router as generation_router
 from apps.api.v1.endpoints.questions import router as questions_router
 from apps.api.v1.endpoints.search import router as search_router
 from apps.api.v1.endpoints.analytics import router as analytics_router
+from apps.api.v1.endpoints.taxonomy import router as taxonomy_router
 
 
 app = FastAPI(
@@ -66,3 +67,4 @@ app.include_router(search_router)
 app.include_router(generation_router)
 app.include_router(questions_router)
 app.include_router(analytics_router)
+app.include_router(taxonomy_router)
