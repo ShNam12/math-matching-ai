@@ -5,7 +5,11 @@ from dataclasses import dataclass
 class QuestionSearchFilters:
     subject: str | None = None
     chapter: str | None = None
+    chapter_code: str | None = None
+    topic_code: str | None = None
+    problem_type_code: str | None = None
     difficulty: str | None = None
+    skill: str | None = None
 
 
 @dataclass(frozen=True)
@@ -29,6 +33,17 @@ class QuestionSearchResult:
     chapter: str | None
     difficulty: str | None
     skills: list[str]
+
+    subject_code: str | None
+    chapter_code: str | None
+    chapter_name: str | None
+    topic_code: str | None
+    topic_name: str | None
+    problem_type_code: str | None
+    problem_type_name: str | None
+    taxonomy_confidence: float | None
+    review_status: str | None
+    classification_status: str
 
 @dataclass(frozen=True)
 class FormulaSearchFilters:

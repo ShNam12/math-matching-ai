@@ -79,6 +79,16 @@ def make_search_result(
         chapter="algebra",
         difficulty="medium",
         skills=["simplify"],
+        subject_code=None,
+        chapter_code=None,
+        chapter_name=None,
+        topic_code=None,
+        topic_name=None,
+        problem_type_code=None,
+        problem_type_name=None,
+        taxonomy_confidence=None,
+        review_status=None,
+        classification_status="pending",
     )
 
 

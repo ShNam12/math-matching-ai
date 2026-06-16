@@ -75,6 +75,16 @@ class QuestionEmbeddingService:
                         chapter=question.chapter,
                         difficulty=question.difficulty,
                         skills=question.skills,
+                        subject_code=question.subject_code,
+                        chapter_code=question.chapter_code,
+                        chapter_name=question.chapter_name,
+                        topic_code=question.topic_code,
+                        topic_name=question.topic_name,
+                        problem_type_code=question.problem_type_code,
+                        problem_type_name=question.problem_type_name,
+                        taxonomy_confidence=question.taxonomy_confidence,
+                        review_status=question.review_status,
+                        classification_status=question.classification_status,
                         vector=question_vector,
                     )
                 )

@@ -13,8 +13,19 @@ class QuestionVector:
     chapter: str | None
     difficulty: str | None
     skills: list[str]
-    vector: list[float]
 
+    subject_code: str | None
+    chapter_code: str | None
+    chapter_name: str | None
+    topic_code: str | None
+    topic_name: str | None
+    problem_type_code: str | None
+    problem_type_name: str | None
+    taxonomy_confidence: float | None
+    review_status: str | None
+    classification_status: str
+
+    vector: list[float]
 
 @dataclass(frozen=True)
 class FormulaVector:

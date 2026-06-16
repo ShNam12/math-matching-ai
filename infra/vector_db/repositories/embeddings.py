@@ -76,6 +76,16 @@ class EmbeddingVectorRepository:
                     "chapter": question.chapter,
                     "difficulty": question.difficulty,
                     "skills": question.skills,
+                    "subject_code": question.subject_code,
+                    "chapter_code": question.chapter_code,
+                    "chapter_name": question.chapter_name,
+                    "topic_code": question.topic_code,
+                    "topic_name": question.topic_name,
+                    "problem_type_code": question.problem_type_code,
+                    "problem_type_name": question.problem_type_name,
+                    "taxonomy_confidence": question.taxonomy_confidence,
+                    "review_status": question.review_status,
+                    "classification_status": question.classification_status,
                 },
             )
             for question in questions
@@ -185,6 +195,38 @@ class EmbeddingVectorRepository:
                 models.FieldCondition(
                     key="chapter",
                     match=models.MatchValue(value=filters.chapter),
+                )
+            )
+
+        if filters.chapter_code:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="chapter_code",
+                    match=models.MatchValue(value=filters.chapter_code),
+                )
+            )
+
+        if filters.topic_code:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="topic_code",
+                    match=models.MatchValue(value=filters.topic_code),
+                )
+            )
+
+        if filters.problem_type_code:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="problem_type_code",
+                    match=models.MatchValue(value=filters.problem_type_code),
+                )
+            )
+
+        if filters.skill:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="skills",
+                    match=models.MatchValue(value=filters.skill),
                 )
             )
 

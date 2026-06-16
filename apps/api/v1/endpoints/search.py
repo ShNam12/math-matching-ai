@@ -50,7 +50,11 @@ async def search_questions(
             filters=QuestionSearchFilters(
                 subject=request.subject,
                 chapter=request.chapter,
+                chapter_code=request.chapter_code,
+                topic_code=request.topic_code,
+                problem_type_code=request.problem_type_code,
                 difficulty=request.difficulty,
+                skill=request.skill,
             ),
         )
 
@@ -70,6 +74,16 @@ async def search_questions(
                     chapter=result.chapter,
                     difficulty=result.difficulty,
                     skills=result.skills,
+                    subject_code=result.subject_code,
+                    chapter_code=result.chapter_code,
+                    chapter_name=result.chapter_name,
+                    topic_code=result.topic_code,
+                    topic_name=result.topic_name,
+                    problem_type_code=result.problem_type_code,
+                    problem_type_name=result.problem_type_name,
+                    taxonomy_confidence=result.taxonomy_confidence,
+                    review_status=result.review_status,
+                    classification_status=result.classification_status,
                 )
                 for result in results
             ],

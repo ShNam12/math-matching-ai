@@ -75,7 +75,7 @@ class SemanticSearchService:
         hits = await self.vector_repository.search_questions(
             vector=query_vector,
             limit=limit * 3,
-            filters=QuestionSearchFilters(),
+            filters=filters,
         )
 
         if not hits:
@@ -105,6 +105,21 @@ class SemanticSearchService:
             if filters.chapter and question.chapter != filters.chapter:
                 continue
 
+            if filters.chapter_code and question.chapter_code != filters.chapter_code:
+                continue
+
+            if filters.topic_code and question.topic_code != filters.topic_code:
+                continue
+
+            if (
+                filters.problem_type_code
+                and question.problem_type_code != filters.problem_type_code
+            ):
+                continue
+
+            if filters.skill and filters.skill not in question.skills:
+                continue
+
             if filters.difficulty and question.difficulty != filters.difficulty:
                 continue
 
@@ -122,6 +137,16 @@ class SemanticSearchService:
                     chapter=question.chapter,
                     difficulty=question.difficulty,
                     skills=question.skills,
+                    subject_code=question.subject_code,
+                    chapter_code=question.chapter_code,
+                    chapter_name=question.chapter_name,
+                    topic_code=question.topic_code,
+                    topic_name=question.topic_name,
+                    problem_type_code=question.problem_type_code,
+                    problem_type_name=question.problem_type_name,
+                    taxonomy_confidence=question.taxonomy_confidence,
+                    review_status=question.review_status,
+                    classification_status=question.classification_status,
                 )
             )
 
