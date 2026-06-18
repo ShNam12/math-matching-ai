@@ -33,3 +33,17 @@ class QuestionQualityReport:
     @property
     def can_save(self) -> bool:
         return not self.blocking_issues
+    
+@dataclass(frozen=True)
+class TaxonomyQualityReport:
+    question_id: str
+    warnings: list[QualityIssue] = field(default_factory=list)
+    blocking_issues: list[QualityIssue] = field(default_factory=list)
+
+    @property
+    def can_accept(self) -> bool:
+        return not self.blocking_issues
+
+    @property
+    def issue_count(self) -> int:
+        return len(self.warnings) + len(self.blocking_issues)

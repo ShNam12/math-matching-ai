@@ -63,3 +63,16 @@ class DocumentClassificationResponse(BaseModel):
     question_count: int = Field(ge=0)
     success_count: int = Field(ge=0)
     failed_count: int = Field(ge=0)
+
+class TaxonomyQualityIssueResponse(BaseModel):
+    code: str
+    message: str
+    severity: str
+    field: str | None = None
+
+
+class TaxonomyQualityReportResponse(BaseModel):
+    question_id: str
+    can_accept: bool
+    warnings: list[TaxonomyQualityIssueResponse] = Field(default_factory=list)
+    blocking_issues: list[TaxonomyQualityIssueResponse] = Field(default_factory=list)

@@ -142,39 +142,65 @@ export default function QARules({
   const [running, setRunning] = useState(false);
 
   const hasQualityContext = Boolean(selectedQualityContext?.quality);
+  const isTaxonomyQualityContext = selectedQualityContext?.type === "taxonomy";
 
   const qualityResult = selectedQualityContext?.quality;
   const candidate = selectedQualityContext?.candidate;
+  const question = selectedQualityContext?.question;
+
   const warnings = qualityResult?.warnings || [];
   const blockingIssues = qualityResult?.blocking_issues || [];
   const semanticDuplicates = qualityResult?.semantic_duplicates || [];
 
   const qualityRules = hasQualityContext
     ? [
-        {
-          id: "QA-CANDIDATE",
-          title: "Kiểm định candidate sinh biến thể",
-          desc: selectedQualityContext.quality.can_save
-            ? "Candidate đạt điều kiện lưu vào corpus."
-            : "Candidate có vấn đề chặn lưu vào corpus.",
-          category: "Nội dung",
-          status: selectedQualityContext.quality.blocking_issues?.length
-            ? "error"
-            : selectedQualityContext.quality.warnings?.length
-              ? "warn"
-              : "ok",
-          passRate: selectedQualityContext.quality.blocking_issues?.length
-            ? 60
-            : selectedQualityContext.quality.warnings?.length
-              ? 85
-              : 100,
-          issues:
-            (selectedQualityContext.quality.warnings?.length || 0) +
-            (selectedQualityContext.quality.blocking_issues?.length || 0),
-          lastRun: "Vừa kiểm định",
-          icon: Shield,
-          affectedIds: [selectedQualityContext.variantId].filter(Boolean),
-        },
+        isTaxonomyQualityContext
+          ? {
+              id: "QA-TAXONOMY",
+              title: "Kiểm định AI Matching theo cây tri thức",
+              desc: qualityResult.can_accept
+                ? "Câu hỏi đạt kiểm định taxonomy."
+                : "Câu hỏi có vấn đề trong kết quả AI Matching.",
+              category: "Metadata",
+              status: blockingIssues.length
+                ? "error"
+                : warnings.length
+                  ? "warn"
+                  : "ok",
+              passRate: blockingIssues.length
+                ? 60
+                : warnings.length
+                  ? 85
+                  : 100,
+              issues: warnings.length + blockingIssues.length,
+              lastRun: "Vừa kiểm định",
+              icon: Shield,
+              affectedIds: [selectedQualityContext.questionId].filter(Boolean),
+            }
+          : {
+              id: "QA-CANDIDATE",
+              title: "Kiểm định candidate sinh biến thể",
+              desc: selectedQualityContext.quality.can_save
+                ? "Candidate đạt điều kiện lưu vào corpus."
+                : "Candidate có vấn đề chặn lưu vào corpus.",
+              category: "Nội dung",
+              status: selectedQualityContext.quality.blocking_issues?.length
+                ? "error"
+                : selectedQualityContext.quality.warnings?.length
+                  ? "warn"
+                  : "ok",
+              passRate: selectedQualityContext.quality.blocking_issues?.length
+                ? 60
+                : selectedQualityContext.quality.warnings?.length
+                  ? 85
+                  : 100,
+              issues:
+                (selectedQualityContext.quality.warnings?.length || 0) +
+                (selectedQualityContext.quality.blocking_issues?.length || 0),
+              lastRun: "Vừa kiểm định",
+              icon: Shield,
+              affectedIds: [selectedQualityContext.variantId].filter(Boolean),
+            },
       ]
     : RULES.map((rule) => ({
         ...rule,
@@ -379,6 +405,43 @@ export default function QARules({
                       </div>
                     )}
 
+                    {hasQualityContext && isTaxonomyQualityContext && question && (
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                        <p className="text-[11px] font-bold text-blue-700 mb-2">
+                          Câu hỏi đang kiểm định
+                        </p>
+
+                        <code className="block text-[10px] font-mono text-blue-800 bg-white/70 border border-blue-100 rounded-lg px-2 py-1 mb-2 break-all">
+                          {question.id}
+                        </code>
+
+                        <p className="text-[11px] text-slate-600 leading-relaxed mb-2">
+                          {question.statement}
+                        </p>
+
+                        <div className="space-y-1 text-[10px] text-slate-500">
+                          <p>
+                            Chương:{" "}
+                            <span className="font-semibold text-slate-700">
+                              {question.chapter_name || "Chưa có"}
+                            </span>
+                          </p>
+                          <p>
+                            Chủ đề:{" "}
+                            <span className="font-semibold text-slate-700">
+                              {question.topic_name || "Chưa có"}
+                            </span>
+                          </p>
+                          <p>
+                            Dạng bài:{" "}
+                            <span className="font-semibold text-slate-700">
+                              {question.problem_type_name || "Chưa có"}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="bg-slate-50 rounded-xl p-3 space-y-2">
                       <p className="text-[11px] font-bold text-slate-600 mb-2">Thông tin chi tiết</p>
                       {[
@@ -480,7 +543,9 @@ export default function QARules({
                             </p>
                           </div>
                           <p className="text-[10px] text-emerald-700 leading-relaxed">
-                            Candidate có thể được lưu vào corpus.
+                            {isTaxonomyQualityContext
+                              ? "Kết quả AI Matching của câu hỏi đạt các rule taxonomy."
+                              : "Candidate có thể được lưu vào corpus."}
                           </p>
                         </div>
                       )}

@@ -9,6 +9,7 @@ import {
 import {
   classifyQuestion,
   getQuestion,
+  getQuestionTaxonomyQuality,
   updateQuestion,
 } from "../services/questionApi";
 import { searchQuestions } from "../services/searchApi";
@@ -83,6 +84,7 @@ export default function ProblemDetail({
   selectedQuestionId = null,
   onOpenQuestionDetail = () => {},
   onOpenGeneration = () => {},
+  onOpenQualityContext = () => {},
 }) {
   const [starred, setStarred] = useState(true);
   const [copiedLatex, setCopiedLatex] = useState(false);
@@ -105,6 +107,8 @@ export default function ProblemDetail({
   const [classifying, setClassifying] = useState(false);
   const [classificationMessage, setClassificationMessage] = useState(null);
   const [classificationError, setClassificationError] = useState(null);
+  const [taxonomyChecking, setTaxonomyChecking] = useState(false);
+  const [taxonomyQualityError, setTaxonomyQualityError] = useState(null);
 
   const [similarQuestions, setSimilarQuestions] = useState([]);
   const [similarLoading, setSimilarLoading] = useState(false);
@@ -169,6 +173,28 @@ export default function ProblemDetail({
       setClassificationError(requestError.message);
     } finally {
       setClassifying(false);
+    }
+  };
+
+  const handleCheckTaxonomyQuality = async () => {
+    if (!question?.id || taxonomyChecking) return;
+
+    setTaxonomyChecking(true);
+    setTaxonomyQualityError(null);
+
+    try {
+      const quality = await getQuestionTaxonomyQuality(question.id);
+
+      onOpenQualityContext({
+        type: "taxonomy",
+        questionId: question.id,
+        question,
+        quality,
+      });
+    } catch (requestError) {
+      setTaxonomyQualityError(requestError.message);
+    } finally {
+      setTaxonomyChecking(false);
     }
   };
 
@@ -590,6 +616,22 @@ export default function ProblemDetail({
                   >
                     {classifying ? "Đang AI Matching..." : "AI Matching lại"}
                   </button>
+
+                  {taxonomyQualityError && (
+                    <p className="text-[10px] text-red-600">
+                      {taxonomyQualityError}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={taxonomyChecking || !question?.id}
+                    onClick={handleCheckTaxonomyQuality}
+                    className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+                  >
+                    {taxonomyChecking ? "Đang kiểm định..." : "Kiểm định taxonomy"}
+                  </button>
+
                 </div>
               )}
 

@@ -12,7 +12,10 @@ from modules.question_quality.schemas import (
     QualityIssue,
     QuestionQualityReport,
     SemanticDuplicateHit,
+    TaxonomyQualityReport,
 )
+
+from modules.taxonomy import TaxonomyDefinition, TaxonomyIndex
 from modules.question_segmenter.formula_extractor import extract_formulas
 from modules.semantic_search.schemas import QuestionSearchFilters
 
@@ -20,6 +23,212 @@ from modules.semantic_search.schemas import QuestionSearchFilters
 VALID_FORMULA_SOURCES = {"statement", "solution", "answer"}
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 
+class TaxonomyClassificationQualityService:
+    def __init__(
+        self,
+        *,
+        taxonomy: TaxonomyDefinition,
+        index: TaxonomyIndex,
+    ) -> None:
+        self.taxonomy = taxonomy
+        self.index = index
+
+    def assess_question(self, question: Question) -> TaxonomyQualityReport:
+        warnings: list[QualityIssue] = []
+        blocking_issues: list[QualityIssue] = []
+
+        if question.classification_status == "failed":
+            blocking_issues.append(
+                QualityIssue(
+                    code="classification_failed",
+                    message="Question classification failed",
+                    severity="error",
+                    field="classification_status",
+                )
+            )
+
+        if question.classification_status != "completed":
+            blocking_issues.append(
+                QualityIssue(
+                    code="missing_classification",
+                    message="Question has not been classified successfully",
+                    severity="error",
+                    field="classification_status",
+                )
+            )
+
+        self._validate_required_codes(question, blocking_issues)
+        self._validate_code_existence(question, blocking_issues)
+        self._validate_parent_relations(question, blocking_issues)
+        self._validate_confidence(question, warnings)
+        self._validate_skills(question, warnings)
+        self._validate_difficulty(question, blocking_issues)
+
+        return TaxonomyQualityReport(
+            question_id=question.id,
+            warnings=warnings,
+            blocking_issues=blocking_issues,
+        )
+
+    def _validate_required_codes(
+        self,
+        question: Question,
+        blocking_issues: list[QualityIssue],
+    ) -> None:
+        required_fields = {
+            "chapter_code": question.chapter_code,
+            "topic_code": question.topic_code,
+            "problem_type_code": question.problem_type_code,
+        }
+
+        for field_name, value in required_fields.items():
+            if not value:
+                blocking_issues.append(
+                    QualityIssue(
+                        code="missing_taxonomy_code",
+                        message=f"Missing {field_name}",
+                        severity="error",
+                        field=field_name,
+                    )
+                )
+
+    def _validate_code_existence(
+        self,
+        question: Question,
+        blocking_issues: list[QualityIssue],
+    ) -> None:
+        if question.chapter_code and question.chapter_code not in self.index.chapters:
+            blocking_issues.append(
+                QualityIssue(
+                    code="invalid_chapter_code",
+                    message="Chapter code does not exist in taxonomy",
+                    severity="error",
+                    field="chapter_code",
+                )
+            )
+
+        if question.topic_code and question.topic_code not in self.index.topics:
+            blocking_issues.append(
+                QualityIssue(
+                    code="invalid_topic_code",
+                    message="Topic code does not exist in taxonomy",
+                    severity="error",
+                    field="topic_code",
+                )
+            )
+
+        if (
+            question.problem_type_code
+            and question.problem_type_code not in self.index.problem_types
+        ):
+            blocking_issues.append(
+                QualityIssue(
+                    code="invalid_problem_type_code",
+                    message="Problem type code does not exist in taxonomy",
+                    severity="error",
+                    field="problem_type_code",
+                )
+            )
+
+    def _validate_parent_relations(
+        self,
+        question: Question,
+        blocking_issues: list[QualityIssue],
+    ) -> None:
+        topic = self.index.topics.get(question.topic_code or "")
+        problem_type = self.index.problem_types.get(
+            question.problem_type_code or ""
+        )
+
+        if topic and question.chapter_code and topic.parent != question.chapter_code:
+            blocking_issues.append(
+                QualityIssue(
+                    code="topic_chapter_mismatch",
+                    message="Topic does not belong to selected chapter",
+                    severity="error",
+                    field="topic_code",
+                )
+            )
+
+        if problem_type and question.topic_code and problem_type.parent != question.topic_code:
+            blocking_issues.append(
+                QualityIssue(
+                    code="problem_type_topic_mismatch",
+                    message="Problem type does not belong to selected topic",
+                    severity="error",
+                    field="problem_type_code",
+                )
+            )
+
+    def _validate_confidence(
+        self,
+        question: Question,
+        warnings: list[QualityIssue],
+    ) -> None:
+        if question.taxonomy_confidence is None:
+            warnings.append(
+                QualityIssue(
+                    code="missing_confidence",
+                    message="Classification confidence is missing",
+                    severity="warning",
+                    field="taxonomy_confidence",
+                )
+            )
+            return
+
+        if question.taxonomy_confidence < self.taxonomy.confidence_policy.auto_accept:
+            warnings.append(
+                QualityIssue(
+                    code="low_confidence",
+                    message="Classification confidence is below auto accept threshold",
+                    severity="warning",
+                    field="taxonomy_confidence",
+                )
+            )
+
+    def _validate_skills(
+        self,
+        question: Question,
+        warnings: list[QualityIssue],
+    ) -> None:
+        if not question.skills:
+            warnings.append(
+                QualityIssue(
+                    code="missing_skills",
+                    message="Question has no assigned skills",
+                    severity="warning",
+                    field="skills",
+                )
+            )
+            return
+
+        skill_vocabulary = set(self.taxonomy.skill_vocabulary)
+
+        for skill in question.skills:
+            if skill not in skill_vocabulary:
+                warnings.append(
+                    QualityIssue(
+                        code="unknown_skill",
+                        message=f"Skill is not in taxonomy vocabulary: {skill}",
+                        severity="warning",
+                        field="skills",
+                    )
+                )
+
+    def _validate_difficulty(
+        self,
+        question: Question,
+        blocking_issues: list[QualityIssue],
+    ) -> None:
+        if question.difficulty not in self.taxonomy.difficulty_levels:
+            blocking_issues.append(
+                QualityIssue(
+                    code="invalid_difficulty",
+                    message="Difficulty must be easy, medium or hard",
+                    severity="error",
+                    field="difficulty",
+                )
+            )
 
 class SemanticQuestionSearch(Protocol):
     async def search_questions(

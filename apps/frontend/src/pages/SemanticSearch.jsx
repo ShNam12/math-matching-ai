@@ -42,25 +42,25 @@ export default function SemanticSearch({
   const [skill, setSkill] = useState("");
   const [taxonomyFilters, setTaxonomyFilters] = useState(null);
 
-  useEffect(() => {
-    if (!initialSearchFilters) {
-      return;
-    }
+  // useEffect(() => {
+  //   if (!initialSearchFilters) {
+  //     return;
+  //   }
 
-    queueMicrotask(() => {
-      setTaxonomyFilters(initialSearchFilters);
-      setTopic(initialSearchFilters.label || "");
-      setQuery("");
-      handleListByTaxonomy(initialSearchFilters);
-    });
-  }, [initialSearchFilters]);
+  //   queueMicrotask(() => {
+  //     setTaxonomyFilters(initialSearchFilters);
+  //     setTopic(initialSearchFilters.label || "");
+  //     setQuery("");
+  //     handleListByTaxonomy(initialSearchFilters);
+  //   });
+  // }, [initialSearchFilters]);
 
-  const normalizeDifficultyFilter = (value) => {
-    const map = {
-      "Dễ": "easy",
-      "Vừa": "medium",
-      "Khó": "hard",
-    };
+  // const normalizeDifficultyFilter = (value) => {
+  //   const map = {
+  //     "Dễ": "easy",
+  //     "Vừa": "medium",
+  //     "Khó": "hard",
+  //   };
 
     return map[value] || value || null;
   };

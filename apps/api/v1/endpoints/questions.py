@@ -13,7 +13,12 @@ from apps.api.v1.models.questions import (
     QuestionFormulaItem,
     QuestionResponse,
     QuestionUpdateRequest,
+    TaxonomyQualityIssueResponse,
+    TaxonomyQualityReportResponse,
 )
+
+from modules.question_quality import TaxonomyClassificationQualityService
+from modules.taxonomy import load_validated_taxonomy
 
 from infra.db.models import Question
 from infra.db.repositories.questions import QuestionRepository
@@ -82,6 +87,56 @@ def to_question_response(question: Question) -> QuestionResponse:
         updated_at=question.updated_at,
     )
 
+def to_taxonomy_quality_response(report) -> TaxonomyQualityReportResponse:
+    return TaxonomyQualityReportResponse(
+        question_id=report.question_id,
+        can_accept=report.can_accept,
+        warnings=[
+            TaxonomyQualityIssueResponse(
+                code=issue.code,
+                message=issue.message,
+                severity=issue.severity,
+                field=issue.field,
+            )
+            for issue in report.warnings
+        ],
+        blocking_issues=[
+            TaxonomyQualityIssueResponse(
+                code=issue.code,
+                message=issue.message,
+                severity=issue.severity,
+                field=issue.field,
+            )
+            for issue in report.blocking_issues
+        ],
+    )
+
+@router.get(
+    "/{question_id}/taxonomy-quality",
+    response_model=TaxonomyQualityReportResponse,
+)
+async def get_question_taxonomy_quality(
+    question_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> TaxonomyQualityReportResponse:
+    repository = QuestionRepository(session)
+    question = await repository.get_question(question_id)
+
+    if question is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question not found",
+        )
+
+    taxonomy, index = load_validated_taxonomy()
+    service = TaxonomyClassificationQualityService(
+        taxonomy=taxonomy,
+        index=index,
+    )
+
+    report = service.assess_question(question)
+
+    return to_taxonomy_quality_response(report)
 
 @router.get("/{question_id}", response_model=QuestionResponse)
 async def get_question(

@@ -44,3 +44,7 @@ export function listQuestionsByTaxonomy({
 
   return apiRequest(`/questions?${params.toString()}`);
 }
+
+export function getQuestionTaxonomyQuality(questionId) {
+  return apiRequest(`/questions/${questionId}/taxonomy-quality`);
+}
