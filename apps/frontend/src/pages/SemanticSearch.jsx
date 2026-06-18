@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles, Filter,
-  TrendingUp, Eye, GitBranch, Zap, X, ChevronDown,
-  Cpu, SlidersHorizontal, ArrowRight, Star, Copy, Share2, LayoutDashboard
+  TrendingUp, Eye, GitBranch, Zap, X,
+  Cpu, ArrowRight, Star, Copy, Share2, LayoutDashboard
 } from "lucide-react";
 
 import { searchFormulas, searchQuestions } from "../services/searchApi";
+import { listQuestionsByTaxonomy } from "../services/questionApi";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -20,56 +21,6 @@ const NAV = [
   { icon: Settings, label: "Cài đặt", sub: "System", id: "settings" },
 ];
 
-const PROBLEMS = [
-  {
-    id: "BK-2023-M1-042",
-    topic: "Tích phân",
-    subtopic: "Tích phân từng phần",
-    difficulty: "Khó",
-    skill: "Tính toán",
-    match: 97,
-    latex: "\\int x^2 e^x \\, dx",
-    statement: "Tính tích phân ∫ x²·eˣ dx bằng phương pháp tích phân từng phần (integration by parts). Viết đầy đủ các bước trung gian và kiểm tra lại kết quả bằng cách lấy đạo hàm của kết quả tìm được.",
-    tags: ["Giải tích 1", "Đề thi HK2"],
-    starred: true,
-  },
-  {
-    id: "NEU-2024-C2-018",
-    topic: "Đạo hàm",
-    subtopic: "Đạo hàm hàm hợp",
-    difficulty: "Vừa",
-    skill: "Tính toán",
-    match: 93,
-    latex: "f(x) = \\ln(\\sin^2 x + 1)",
-    statement: "Cho hàm số f(x) = ln(sin²(x) + 1). Tính f'(x) và xác định tất cả các điểm cực trị của hàm số trên đoạn [0, 2π]. Biện luận tính đơn điệu.",
-    tags: ["Giải tích 1", "Cực trị"],
-    starred: false,
-  },
-  {
-    id: "VNU-2024-M2-067",
-    topic: "Chuỗi số",
-    subtopic: "Chuỗi lũy thừa",
-    difficulty: "Khó",
-    skill: "Chứng minh",
-    match: 89,
-    latex: "\\sum_{n=2}^{\\infty} \\frac{(-1)^n}{n \\ln n}",
-    statement: "Chứng minh rằng chuỗi số Σ (−1)ⁿ/(n·ln n) hội tụ bằng tiêu chuẩn Leibniz. Tìm miền hội tụ của chuỗi lũy thừa tương ứng Σ xⁿ/(n·ln n).",
-    tags: ["Giải tích 2", "Hội tụ"],
-    starred: false,
-  },
-  {
-    id: "HUST-2023-M3-091",
-    topic: "Tích phân",
-    subtopic: "Tích phân bội đôi",
-    difficulty: "Khó",
-    skill: "Tính toán",
-    match: 85,
-    latex: "\\iint_D x \\cdot y \\, dA",
-    statement: "Tính tích phân kép ∬_D x·y dA, trong đó D là miền giới hạn bởi parabol y = x² và đường thẳng y = x + 2. Đổi sang tọa độ cực nếu cần thiết để đơn giản hóa tính toán.",
-    tags: ["Giải tích 2", "Tích phân bội"],
-    starred: true,
-  },
-];
 
 const diffConfig = {
   Dễ: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", bar: "bg-emerald-500" },
@@ -82,12 +33,27 @@ export default function SemanticSearch({
   onNavigate = () => {},
   onOpenQuestionDetail = () => {},
   onOpenGeneration = () => {},
+  initialSearchFilters = null,
 }) {
   const [query, setQuery] = useState("");
   const [searchMode, setSearchMode] = useState("question");
   const [topic, setTopic] = useState("");
   const [diff, setDiff] = useState("");
   const [skill, setSkill] = useState("");
+  const [taxonomyFilters, setTaxonomyFilters] = useState(null);
+
+  useEffect(() => {
+    if (!initialSearchFilters) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      setTaxonomyFilters(initialSearchFilters);
+      setTopic(initialSearchFilters.label || "");
+      setQuery("");
+      handleListByTaxonomy(initialSearchFilters);
+    });
+  }, [initialSearchFilters]);
 
   const normalizeDifficultyFilter = (value) => {
     const map = {
@@ -123,8 +89,54 @@ export default function SemanticSearch({
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [taxonomyListMode, setTaxonomyListMode] = useState(false);
 
   const filtered = results;
+
+  const normalizeTopicCodeFilter = (value) => {
+    const map = {
+      "Đạo hàm": "GT1_C1_08_Derivatives_Differentials",
+      "Tích phân": "GT1_C2_01_Indefinite_Integrals",
+    };
+
+    return map[value] || null;
+  };
+
+  const normalizeChapterCodeFilter = (value) => {
+    const map = {
+      "Đạo hàm": "GT1_C1_Differential_Calculus_One_Variable",
+      "Tích phân": "GT1_C2_Integral_Calculus_One_Variable",
+    };
+
+    return map[value] || null;
+  };
+
+  function mapQuestionToResult(item, score = null) {
+    return {
+      id: item.question_id || item.id,
+      questionId: item.question_id || item.id,
+      documentId: item.document_id,
+      topic: item.topic_name || item.subject || "Chưa phân loại",
+      subtopic:
+        item.problem_type_name ||
+        item.chapter_name ||
+        item.chapter ||
+        "Chưa có dạng bài",
+      chapter: item.chapter_name,
+      confidence: item.taxonomy_confidence,
+      classificationStatus: item.classification_status,
+      reviewStatus: item.review_status,
+      difficulty: item.difficulty || "Chưa rõ",
+      skill: item.skills?.[0] || "Chưa gán kỹ năng",
+      match: score != null ? Math.round(score * 100) : null,
+      latex: item.answer || item.marker || "Question",
+      statement: item.statement,
+      solution: item.solution,
+      answer: item.answer,
+      tags: item.skills?.length ? item.skills : ["Backend"],
+      starred: false,
+    };
+  }
 
   async function handleSearch() {
     const trimmedQuery = query.trim();
@@ -134,6 +146,7 @@ export default function SemanticSearch({
     setSearching(true);
     setError(null);
     setHasSearched(true);
+    setTaxonomyListMode(false);
 
     try {
       const data =
@@ -143,44 +156,72 @@ export default function SemanticSearch({
               limit: 10,
             })
           : await searchQuestions({
-            query: trimmedQuery,
-            limit: 10,
-            subject: normalizeSubjectFilter(topic),
-            chapter: normalizeChapterFilter(topic),
-            difficulty: normalizeDifficultyFilter(diff),
-          });
+              query: trimmedQuery,
+              limit: 10,
+              subject: taxonomyFilters ? null : normalizeSubjectFilter(topic),
+              chapter: taxonomyFilters ? null : normalizeChapterFilter(topic),
+              chapter_code:
+                taxonomyFilters?.chapter_code || normalizeChapterCodeFilter(topic),
+              topic_code:
+                taxonomyFilters?.topic_code || normalizeTopicCodeFilter(topic),
+              problem_type_code: taxonomyFilters?.problem_type_code || null,
+              difficulty: normalizeDifficultyFilter(diff),
+              skill: skill || null,
+            });
+
+        if (searchMode === "formula") {
+          setResults(
+            data.results.map((item) => ({
+              id: `${item.question_id}-${item.formula_index}`,
+              questionId: item.question_id,
+              documentId: item.document_id,
+              topic: "Công thức",
+              subtopic: item.source || "unknown",
+              difficulty: "Chưa rõ",
+              skill: "Công thức",
+              match: Math.round(item.score * 100),
+              latex: item.latex || item.normalized_latex,
+              statement: item.normalized_latex,
+              formulaSource: item.source,
+              formulaIndex: item.formula_index,
+              normalizedLatex: item.normalized_latex,
+              tags: [item.source || "formula"],
+              starred: false,
+            })),
+          );
+        } else {
+          setResults(
+            data.results.map((item) =>
+              mapQuestionToResult(item, item.score),
+            ),
+          );
+        }
+    } catch (requestError) {
+      setError(requestError.message);
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function handleListByTaxonomy(filters = taxonomyFilters) {
+    if (!filters || searching) return;
+
+    setSearching(true);
+    setError(null);
+    setHasSearched(true);
+    setTaxonomyListMode(true);
+
+    try {
+      const data = await listQuestionsByTaxonomy({
+        chapter_code: filters.chapter_code,
+        topic_code: filters.topic_code,
+        problem_type_code: filters.problem_type_code,
+        limit: 50,
+      });
 
       setResults(
-        data.results.map((item) => ({
-          id:
-            searchMode === "formula"
-              ? `${item.question_id}-${item.formula_index}`
-              : item.question_id,
-          questionId: item.question_id,
-          documentId: item.document_id,
-          topic: item.subject || "Chưa phân loại",
-          subtopic: item.chapter || "Chưa có chương",
-          difficulty: item.difficulty || "Chưa rõ",
-          skill: item.skills?.[0] || "Chưa gán kỹ năng",
-          match: Math.round(item.score * 100),
-          latex:
-            searchMode === "formula"
-              ? item.latex || item.normalized_latex
-              : item.answer || item.marker || "Question",
-          statement: item.statement,
-          solution: item.solution,
-          answer: item.answer,
-          formulaSource: item.source,
-          formulaIndex: item.formula_index,
-          normalizedLatex: item.normalized_latex,
-          tags:
-            searchMode === "formula"
-              ? [item.source || "formula"]
-              : item.skills?.length
-                ? item.skills
-                : ["Backend"],
-          starred: false,
-        })),
+        data.map((item) => mapQuestionToResult(item, null)),
       );
     } catch (requestError) {
       setError(requestError.message);
@@ -324,7 +365,13 @@ export default function SemanticSearch({
                 <select
                   value={f.val}
                   disabled={searchMode === "formula"}
-                  onChange={(e) => f.setter(e.target.value)}
+                  onChange={(e) => {
+                    f.setter(e.target.value);
+
+                    if (f.label.includes("Chuy")) {
+                      setTaxonomyFilters(null);
+                    }
+                  }}
                   className={`appearance-none pl-2.5 pr-6 py-1.5 text-[11px] border rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all ${
                     f.val ? "bg-blue-50 border-blue-300 text-blue-700 font-semibold" : "bg-white border-slate-200 text-slate-500"
                   }`}
@@ -334,12 +381,35 @@ export default function SemanticSearch({
                 </select>
               </div>
             ))}
-            {(topic || diff || skill) && (
-              <button onClick={() => { setTopic(""); setDiff(""); setSkill(""); }}
+            {(topic || diff || skill || taxonomyFilters) && (
+              <button
+                onClick={() => {
+                  setTopic("");
+                  setDiff("");
+                  setSkill("");
+                  setTaxonomyFilters(null);
+
+                  setTaxonomyListMode(false);
+                  setResults([]);
+                  setHasSearched(false);
+                }}
                 className="flex items-center gap-1 text-[11px] text-red-500 hover:text-red-700 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-all font-medium">
                 <X size={10} /> Xóa lọc
               </button>
             )}
+
+            {taxonomyFilters && (
+              <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg">
+                Taxonomy: {taxonomyFilters.label}
+              </span>
+            )}
+
+            {taxonomyListMode && (
+              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
+                Danh sách bài theo taxonomy
+              </span>
+            )}
+
             <div className="ml-auto flex items-center gap-1.5 text-[11px] text-slate-400">
               <Cpu size={12} className="text-blue-500" />
               Model: <span className="font-semibold text-blue-600">BGE-M3</span>
@@ -377,7 +447,14 @@ export default function SemanticSearch({
                 };
                 const isExp = expanded === p.id;
                 const isStarred = starred[p.id];
-                const matchColor = p.match >= 95 ? "text-blue-700 bg-blue-50 border-blue-200" : p.match >= 88 ? "text-indigo-700 bg-indigo-50 border-indigo-200" : "text-slate-600 bg-slate-50 border-slate-200";
+                const hasSemanticScore = p.match != null;
+                const matchColor = hasSemanticScore
+                  ? p.match >= 95
+                    ? "text-blue-700 bg-blue-50 border-blue-200"
+                    : p.match >= 88
+                      ? "text-indigo-700 bg-indigo-50 border-indigo-200"
+                      : "text-slate-600 bg-slate-50 border-slate-200"
+                  : "text-emerald-700 bg-emerald-50 border-emerald-200";
 
                 return (
                   <div key={p.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden hover:border-blue-100 hover:shadow-md transition-all duration-200">
@@ -391,10 +468,20 @@ export default function SemanticSearch({
                       <div className="flex items-center gap-1.5">
                         <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${matchColor}`}>
                           <TrendingUp size={10} />
-                          {p.match}%
-                          <div className="ml-1 w-10 h-1 rounded-full bg-slate-200 overflow-hidden">
-                            <div className="h-full rounded-full bg-current opacity-60" style={{ width: `${p.match}%` }} />
-                          </div>
+
+                          {hasSemanticScore ? (
+                            <>
+                              {p.match}%
+                              <div className="ml-1 w-10 h-1 rounded-full bg-slate-200 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-current opacity-60"
+                                  style={{ width: `${p.match}%` }}
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <span>Đã phân loại</span>
+                          )}
                         </div>
                         <button onClick={() => setStarred((s) => ({ ...s, [p.id]: !s[p.id] }))}
                           className={`p-1 rounded transition-all ${isStarred ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}>
@@ -405,10 +492,22 @@ export default function SemanticSearch({
 
                     {/* Body */}
                     <div className="p-3.5">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{p.topic}</span>
+                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                          {p.topic}
+                        </span>
+
                         <ArrowRight size={9} className="text-slate-300" />
-                        <span className="text-[10px] text-slate-400">{p.subtopic}</span>
+
+                        <span className="text-[10px] text-slate-400">
+                          {p.subtopic}
+                        </span>
+
+                        {p.confidence != null && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
+                            AI {Math.round(p.confidence * 100)}%
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 mb-2.5">
                         <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center flex-shrink-0">
@@ -479,13 +578,13 @@ export default function SemanticSearch({
             </div>
           )}
 
-          {false && filtered.length > 0 && (
+          {/* {false && filtered.length > 0 && (
             <div className="mt-4 text-center">
               <button className="text-[11px] text-blue-500 hover:text-blue-700 font-medium px-4 py-2 rounded-lg border border-blue-200 hover:bg-blue-50 transition-all">
                 Tải thêm kết quả →
               </button>
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>

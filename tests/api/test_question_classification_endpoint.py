@@ -142,6 +142,11 @@ def test_classify_question_endpoint_returns_classified_question(
     fake_repository = FakeQuestionRepository(make_question())
     fake_service = FakeClassificationService()
 
+    synced_question_ids = []
+
+    async def fake_sync_question_payload(question):
+        synced_question_ids.append(question.id)
+
     monkeypatch.setattr(
         questions_endpoint,
         "QuestionRepository",
@@ -151,6 +156,12 @@ def test_classify_question_endpoint_returns_classified_question(
         questions_endpoint,
         "create_question_classification_service",
         lambda: fake_service,
+    )
+
+    monkeypatch.setattr(
+        questions_endpoint,
+        "try_sync_question_classification_payload",
+        fake_sync_question_payload,
     )
 
     client = TestClient(app)
@@ -172,6 +183,8 @@ def test_classify_question_endpoint_returns_classified_question(
 
     assert fake_service.question_ids == ["question-id"]
     assert fake_repository.updated_payload["classification_model"]
+
+    assert synced_question_ids == ["question-id"]
 
 
 def test_classify_question_endpoint_returns_404_for_missing_question(

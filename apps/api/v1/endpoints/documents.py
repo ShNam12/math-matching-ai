@@ -21,6 +21,10 @@ from apps.api.v1.models.questions import (
     QuestionResponse,
 )
 
+from apps.api.v1.services.question_vector_sync import (
+    try_sync_question_classification_payload,
+)
+
 from apps.api.v1.endpoints.questions import to_question_response
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -208,6 +212,8 @@ async def store_document(
             document_id=result.document_id,
             question_count=result.question_count,
             formula_count=result.formula_count,
+            classification_success_count=result.classification_success_count,
+            classification_failed_count=result.classification_failed_count,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -260,11 +266,14 @@ async def classify_document(
                 classification_service.classify_question,
                 question,
             )
-            await question_repository.update_classification(
+            updated_question = await question_repository.update_classification(
                 question,
                 result=result,
                 classification_model=settings.gemini_model,
             )
+
+            await try_sync_question_classification_payload(updated_question)
+
             success_count += 1
         except Exception as exc:
             await question_repository.mark_classification_failed(

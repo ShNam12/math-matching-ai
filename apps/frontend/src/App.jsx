@@ -27,6 +27,7 @@ function App() {
   const [selectedQuestionId, setSelectedQuestionId] = useState(null)
   const [sourceQuestionId, setSourceQuestionId] = useState(null)
   const [selectedQualityContext, setSelectedQualityContext] = useState(null)
+  const [initialSearchFilters, setInitialSearchFilters] = useState(null)
 
   const ActivePage = PAGES[activePage]
 
@@ -45,6 +46,11 @@ function App() {
     setActivePage("qa")
   }
 
+  function handleOpenSearchWithFilters(filters) {
+    setInitialSearchFilters(filters)
+    setActivePage("search")
+  }
+
   return (
     <ActivePage
       activePage={activePage}
@@ -52,9 +58,11 @@ function App() {
       selectedQuestionId={selectedQuestionId}
       sourceQuestionId={sourceQuestionId}
       selectedQualityContext={selectedQualityContext}
+      initialSearchFilters={initialSearchFilters}
       onOpenQuestionDetail={handleOpenQuestionDetail}
       onOpenGeneration={handleOpenGeneration}
       onOpenQualityContext={handleOpenQualityContext}
+      onOpenSearchWithFilters={handleOpenSearchWithFilters}
     />
   )
 }

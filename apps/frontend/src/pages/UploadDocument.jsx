@@ -536,7 +536,9 @@ export default function UploadDocument({ activePage = "upload", onNavigate = () 
 
                   {storeResults[doc.id] && (
                     <p className="mt-1 text-[10px] font-semibold text-emerald-600">
-                      Đã store: {storeResults[doc.id].question_count} câu hỏi ·{" "}
+                      Đã tách: {storeResults[doc.id].question_count} câu hỏi ·{" "}
+                      Match thành công: {storeResults[doc.id].classification_success_count ?? 0} ·{" "}
+                      Match lỗi: {storeResults[doc.id].classification_failed_count ?? 0} ·{" "}
                       {storeResults[doc.id].formula_count} công thức
                     </p>
                   )}

@@ -49,3 +49,5 @@ class DocumentStoreResponse(BaseModel):
     document_id: str
     question_count: int = Field(ge=0)
     formula_count: int = Field(ge=0)
+    classification_success_count: int = Field(default=0, ge=0)
+    classification_failed_count: int = Field(default=0, ge=0)

@@ -6,7 +6,7 @@ from modules.question_classification import (
     QuestionClassificationService,
 )
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.v1.models.questions import (
@@ -19,6 +19,9 @@ from infra.db.models import Question
 from infra.db.repositories.questions import QuestionRepository
 from infra.db.session import get_db_session
 
+from apps.api.v1.services.question_vector_sync import (
+    try_sync_question_classification_payload,
+)
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
@@ -96,6 +99,36 @@ async def get_question(
 
     return to_question_response(question)
 
+@router.get("", response_model=list[QuestionResponse])
+async def list_questions(
+    chapter_code: str | None = Query(default=None),
+    topic_code: str | None = Query(default=None),
+    problem_type_code: str | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[QuestionResponse]:
+    if not any([chapter_code, topic_code, problem_type_code]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one taxonomy filter is required",
+        )
+
+    repository = QuestionRepository(session)
+
+    questions = await repository.list_by_taxonomy(
+        chapter_code=chapter_code,
+        topic_code=topic_code,
+        problem_type_code=problem_type_code,
+        limit=limit,
+        offset=offset,
+    )
+
+    return [
+        to_question_response(question)
+        for question in questions
+    ]
+
 @router.patch("/{question_id}", response_model=QuestionResponse)
 async def update_question(
     question_id: str,
@@ -147,6 +180,8 @@ async def classify_question(
             result=result,
             classification_model=settings.gemini_model,
         )
+
+        await try_sync_question_classification_payload(updated_question)
     except Exception as exc:
         await repository.mark_classification_failed(
             question,

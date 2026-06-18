@@ -6,7 +6,11 @@ import {
   Zap, ChevronRight, CheckCircle, BookMarked,
   TrendingUp, Tag, Clock, User, Printer, Download, LayoutDashboard
 } from "lucide-react";
-import { getQuestion, updateQuestion } from "../services/questionApi";
+import {
+  classifyQuestion,
+  getQuestion,
+  updateQuestion,
+} from "../services/questionApi";
 import { searchQuestions } from "../services/searchApi";
 import { rememberRecentQuestion } from "../services/recentQuestions";
 
@@ -98,6 +102,10 @@ export default function ProblemDetail({
   const [metadataError, setMetadataError] = useState(null);
   const [metadataMessage, setMetadataMessage] = useState(null);
 
+  const [classifying, setClassifying] = useState(false);
+  const [classificationMessage, setClassificationMessage] = useState(null);
+  const [classificationError, setClassificationError] = useState(null);
+
   const [similarQuestions, setSimilarQuestions] = useState([]);
   const [similarLoading, setSimilarLoading] = useState(false);
   const [similarError, setSimilarError] = useState(null);
@@ -143,6 +151,24 @@ export default function ProblemDetail({
       setMetadataError(requestError.message);
     } finally {
       setMetadataSaving(false);
+    }
+  };
+
+  const handleClassifyQuestion = async () => {
+    if (!question?.id || classifying) return;
+
+    setClassifying(true);
+    setClassificationMessage(null);
+    setClassificationError(null);
+
+    try {
+      const updatedQuestion = await classifyQuestion(question.id);
+      setQuestion(updatedQuestion);
+      setClassificationMessage("Đã AI Matching lại câu hỏi.");
+    } catch (requestError) {
+      setClassificationError(requestError.message);
+    } finally {
+      setClassifying(false);
     }
   };
 
@@ -250,9 +276,9 @@ export default function ProblemDetail({
   const displayProblem = question
     ? {
         id: question.id,
-        topic: question.subject || "Chưa phân loại",
-        subtopic: question.chapter || "Chưa có chương",
-        chapter: `Câu ${question.sequence_number}`,
+        topic: question.topic_name || question.subject || "Chưa phân loại",
+        subtopic: question.problem_type_name || question.chapter_name || "Chưa có dạng bài",
+        chapter: question.chapter_name || `Câu ${question.sequence_number}`,
         difficulty: question.difficulty || "Chưa rõ",
         skill: question.skills?.[0] || "Chưa gán kỹ năng",
         source: question.document_id,
@@ -267,6 +293,15 @@ export default function ProblemDetail({
         answer: question.answer,
         formulas: question.formulas || [],
         embeddingStatus: question.embedding_status,
+
+        classificationStatus: question.classification_status,
+        confidence: question.taxonomy_confidence,
+        reason: question.taxonomy_reason,
+        reviewStatus: question.review_status,
+        chapterCode: question.chapter_code,
+        topicCode: question.topic_code,
+        problemTypeCode: question.problem_type_code,
+
       }
     : PROBLEM;
 
@@ -482,6 +517,81 @@ export default function ProblemDetail({
                   <span className="text-[11px] font-semibold text-slate-700 truncate">{row.val}</span>
                 </div>
               ))}
+
+              {question && (
+                <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                  <p className="text-[11px] font-bold text-slate-700">
+                    AI Matching
+                  </p>
+
+                  <div className="space-y-1.5 text-[11px]">
+                    <p className="text-slate-500">
+                      Chương:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {question.chapter_name || "Chưa phân loại"}
+                      </span>
+                    </p>
+
+                    <p className="text-slate-500">
+                      Chủ đề:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {question.topic_name || "Chưa phân loại"}
+                      </span>
+                    </p>
+
+                    <p className="text-slate-500">
+                      Dạng bài:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {question.problem_type_name || "Chưa phân loại"}
+                      </span>
+                    </p>
+
+                    <p className="text-slate-500">
+                      Độ tin cậy:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {question.taxonomy_confidence != null
+                          ? `${Math.round(question.taxonomy_confidence * 100)}%`
+                          : "Chưa có"}
+                      </span>
+                    </p>
+
+                    <p className="text-slate-500">
+                      Trạng thái:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {question.classification_status || "pending"}
+                      </span>
+                    </p>
+
+                    <p className="text-slate-500 leading-relaxed">
+                      Lý do:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {question.taxonomy_reason || "Chưa có lý do phân loại"}
+                      </span>
+                    </p>
+                  </div>
+
+                  {classificationError && (
+                    <p className="text-[10px] text-red-600">
+                      {classificationError}
+                    </p>
+                  )}
+
+                  {classificationMessage && (
+                    <p className="text-[10px] text-emerald-600">
+                      {classificationMessage}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={classifying || !question?.id}
+                    onClick={handleClassifyQuestion}
+                    className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {classifying ? "Đang AI Matching..." : "AI Matching lại"}
+                  </button>
+                </div>
+              )}
 
               {question && (
                 <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">

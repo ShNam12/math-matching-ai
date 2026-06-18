@@ -129,6 +129,35 @@ class EmbeddingVectorRepository:
                 wait=True,
             )
 
+    async def update_question_classification_payload(
+        self,
+        question,
+    ) -> None:
+        await self.ensure_collections()
+
+        await self.client.set_payload(
+            collection_name=self.question_collection,
+            payload={
+                "subject": question.subject,
+                "chapter": question.chapter,
+                "difficulty": question.difficulty,
+                "skills": question.skills,
+                "subject_code": question.subject_code,
+                "chapter_code": question.chapter_code,
+                "chapter_name": question.chapter_name,
+                "topic_code": question.topic_code,
+                "topic_name": question.topic_name,
+                "problem_type_code": question.problem_type_code,
+                "problem_type_name": question.problem_type_name,
+                "taxonomy_confidence": question.taxonomy_confidence,
+                "taxonomy_reason": question.taxonomy_reason,
+                "review_status": question.review_status,
+                "classification_status": question.classification_status,
+            },
+            points=[question.id],
+            wait=True,
+        )
+
     async def _delete_document_points(
         self,
         *,

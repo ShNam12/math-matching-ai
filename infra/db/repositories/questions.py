@@ -371,3 +371,39 @@ class QuestionRepository:
                 question_count,
             ) in result.all()
         ]
+    
+    async def list_by_taxonomy(
+        self,
+        *,
+        chapter_code: str | None = None,
+        topic_code: str | None = None,
+        problem_type_code: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Question]:
+        statement = (
+            select(Question)
+            .where(Question.classification_status == "completed")
+            .order_by(Question.updated_at.desc(), Question.sequence_number)
+            .limit(limit)
+            .offset(offset)
+        )
+
+        if chapter_code is not None:
+            statement = statement.where(
+                Question.chapter_code == chapter_code
+            )
+
+        if topic_code is not None:
+            statement = statement.where(
+                Question.topic_code == topic_code
+            )
+
+        if problem_type_code is not None:
+            statement = statement.where(
+                Question.problem_type_code == problem_type_code
+            )
+
+        result = await self.session.execute(statement)
+
+        return list(result.scalars().all())

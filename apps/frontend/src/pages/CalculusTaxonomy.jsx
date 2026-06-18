@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getTaxonomy, getTaxonomyStats } from "../services/taxonomyApi";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles, ChevronDown,
-  ChevronRight, Plus, Edit3, Trash2, MoreHorizontal,
+  ChevronRight, Plus, Edit3,
   TrendingUp, ArrowRight, Info, Tag, Database, LayoutDashboard
 } from "lucide-react";
 
@@ -18,7 +19,7 @@ const NAV = [
   { icon: Settings, label: "Cài đặt", sub: "System", id: "settings" },
 ];
 
-const CHAPTERS = [
+const FALLBACK_CHAPTERS = [
   {
     id: 1,
     title: "Chương 1: Giới hạn & Liên tục",
@@ -73,24 +74,163 @@ const CHAPTERS = [
   },
 ];
 
-const skillColor = {
-  "Tính toán": "bg-blue-50 text-blue-700 border-blue-200",
-  "Chứng minh": "bg-purple-50 text-purple-700 border-purple-200",
-  "Ứng dụng": "bg-teal-50 text-teal-700 border-teal-200",
-};
+// const skillColor = {
+//   "Tính toán": "bg-blue-50 text-blue-700 border-blue-200",
+//   "Chứng minh": "bg-purple-50 text-purple-700 border-purple-200",
+//   "Ứng dụng": "bg-teal-50 text-teal-700 border-teal-200",
+// };
 
-export default function CalculusTaxonomy({ activePage = "taxonomy", onNavigate = () => {} }) {
-  const [openChapters, setOpenChapters] = useState([1, 3]);
-  const [selectedTopic, setSelectedTopic] = useState({ chapterId: 3, topicIdx: 1 });
+export default function CalculusTaxonomy({
+  activePage = "taxonomy",
+  onNavigate = () => {},
+  onOpenSearchWithFilters = () => {},
+}) {
+  const [openChapters, setOpenChapters] = useState([]);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [taxonomy, setTaxonomy] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedProblemType, setSelectedProblemType] = useState(null);
+  const [taxonomyStats, setTaxonomyStats] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTaxonomyData() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [taxonomyData, statsData] = await Promise.all([
+          getTaxonomy(),
+          getTaxonomyStats(),
+        ]);
+
+        if (!cancelled) {
+          setTaxonomy(taxonomyData);
+          setTaxonomyStats(Array.isArray(statsData) ? statsData : []);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(requestError.message || "Không tải được cây tri thức.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadTaxonomyData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const statsByProblemType = useMemo(() => {
+    const map = new Map();
+
+    taxonomyStats.forEach((item) => {
+      if (item.problem_type_code) {
+        map.set(item.problem_type_code, item.question_count || 0);
+      }
+    });
+
+    return map;
+  }, [taxonomyStats]);
+
+  const chapters = (() => {
+    if (!taxonomy?.chapters) {
+      return FALLBACK_CHAPTERS;
+    }
+
+    return taxonomy.chapters.map((chapter) => {
+      const topics = chapter.topics.map((topic) => {
+        const problemTypes = topic.problem_types.map((problemType) => {
+          const questionCount = statsByProblemType.get(problemType.code) || 0;
+
+          return {
+            code: problemType.code,
+            name: problemType.display_name,
+            description: problemType.description,
+            aliases: problemType.aliases || [],
+            skills: problemType.skills || [],
+            defaultDifficulty: problemType.default_difficulty,
+            positiveSignals: problemType.positive_signals || [],
+            negativeSignals: problemType.negative_signals || [],
+            examples: problemType.examples || [],
+            questionCount,
+          };
+        });
+
+        const total = problemTypes.reduce(
+          (sum, problemType) => sum + problemType.questionCount,
+          0,
+        );
+
+        return {
+          code: topic.code,
+          name: topic.display_name,
+          description: topic.description,
+          aliases: topic.aliases || [],
+          skills: topic.skills || [],
+          positiveSignals: topic.positive_signals || [],
+          negativeSignals: topic.negative_signals || [],
+          problemTypes,
+          total,
+        };
+      });
+
+      const total = topics.reduce((sum, topic) => sum + topic.total, 0);
+
+      return {
+        id: chapter.code,
+        code: chapter.code,
+        title: chapter.display_name,
+        description: chapter.description,
+        aliases: chapter.aliases || [],
+        skills: chapter.skills || [],
+        topics,
+        total,
+      };
+    });
+  })();
+
+  useEffect(() => {
+    if (!taxonomy?.chapters || chapters.length === 0) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      const firstChapter = chapters[0];
+      const firstTopic = firstChapter.topics?.[0];
+
+      if (openChapters.length === 0) {
+        setOpenChapters([firstChapter.code]);
+      }
+
+      if (!selectedTopic && firstTopic) {
+        setSelectedTopic({
+          chapterCode: firstChapter.code,
+          topicCode: firstTopic.code,
+        });
+      }
+    });
+  }, [taxonomy, chapters, openChapters.length, selectedTopic]);
 
   const toggleChapter = (id) =>
     setOpenChapters((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);
 
-  const selTopic =
-    selectedTopic &&
-    CHAPTERS.find((c) => c.id === selectedTopic.chapterId)?.topics[selectedTopic.topicIdx];
+  const selectedChapter = selectedTopic
+    ? chapters.find((chapter) => chapter.code === selectedTopic.chapterCode)
+    : null;
 
-  const totalAll = CHAPTERS.reduce((a, b) => a + b.total, 0);
+  const selTopic = selectedChapter
+    ? selectedChapter.topics.find((topic) => topic.code === selectedTopic.topicCode)
+    : null;
+
+  const totalAll = chapters.reduce((sum, chapter) => sum + chapter.total, 0);
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -154,9 +294,22 @@ export default function CalculusTaxonomy({ activePage = "taxonomy", onNavigate =
         <div className="flex-1 overflow-y-auto p-4 flex gap-4">
           {/* Tree */}
           <div className="flex-1 min-w-0 space-y-2">
-            {CHAPTERS.map((chapter) => {
+            {loading && (
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] font-semibold text-blue-700">
+                Đang tải cây tri thức Giải tích 1...
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700">
+                {error}
+              </div>
+            )}
+
+            {chapters.map((chapter) => {
               const isOpen = openChapters.includes(chapter.id);
-              const chTotal = chapter.topics.reduce((a, t) => a + t.easy + t.med + t.hard, 0);
+              const chTotal = chapter.total;
+              const chapterPercent = totalAll > 0 ? Math.round((chTotal / totalAll) * 100) : 0;
               return (
                 <div key={chapter.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden">
                   <div
@@ -169,33 +322,97 @@ export default function CalculusTaxonomy({ activePage = "taxonomy", onNavigate =
                       {chTotal.toLocaleString()} bài
                     </span>
                     <div className="w-24 h-1.5 rounded-full bg-slate-200 overflow-hidden ml-2">
-                      <div className="h-full rounded-full bg-blue-500" style={{ width: `${(chTotal / totalAll) * 100}%` }} />
+                      <div className="h-full rounded-full bg-blue-500" style={{ width: `${chapterPercent}%` }} />
                     </div>
-                    <span className="text-[10px] text-slate-400 w-8 text-right">{Math.round((chTotal / totalAll) * 100)}%</span>
+                    <span className="text-[10px] text-slate-400 w-8 text-right">
+                      {chapterPercent}%
+                    </span>
                   </div>
                   {isOpen && (
                     <div className="divide-y divide-slate-50">
-                      {chapter.topics.map((topic, ti) => {
-                        const isSelected = selectedTopic?.chapterId === chapter.id && selectedTopic?.topicIdx === ti;
-                        const topTotal = topic.easy + topic.med + topic.hard;
+                      {chapter.topics.map((topic) => {
+                        const isSelected =
+                          selectedTopic?.chapterCode === chapter.code &&
+                          selectedTopic?.topicCode === topic.code;
+
+                        const topTotal = topic.total;
                         return (
-                          <div key={ti}
-                            onClick={() => setSelectedTopic({ chapterId: chapter.id, topicIdx: ti })}
-                            className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all ${isSelected ? "bg-blue-50" : "hover:bg-slate-50"}`}>
-                            <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-4 flex-shrink-0" />
-                            <span className={`text-[11px] font-medium flex-1 ${isSelected ? "text-blue-700" : "text-slate-600"}`}>{topic.name}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">D {topic.easy}</span>
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">V {topic.med}</span>
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">K {topic.hard}</span>
-                              <span className="text-[10px] text-slate-400 ml-1 w-10 text-right">{topTotal}</span>
-                            </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                          <div
+                            key={topic.code}
+                            onClick={() => {
+                              setSelectedTopic({
+                                chapterCode: chapter.code,
+                                topicCode: topic.code,
+                              });
+                              setSelectedProblemType(null);
+                            }}
+                            className={`cursor-pointer transition-all ${
+                              isSelected ? "bg-blue-50" : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 px-4 py-2.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-4 flex-shrink-0" />
+
+                              <div className="flex-1 min-w-0">
+                                <p
+                                  className={`text-[11px] font-medium truncate ${
+                                    isSelected ? "text-blue-700" : "text-slate-600"
+                                  }`}
+                                >
+                                  {topic.name}
+                                </p>
+
+                                {topic.code && (
+                                  <p className="mt-0.5 text-[9px] font-mono text-slate-400 truncate">
+                                    {topic.code}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                  {topic.problemTypes?.length || 0} dạng
+                                </span>
+
+                                <span className="text-[10px] text-slate-400 ml-1 w-10 text-right">
+                                  {topTotal}
+                                </span>
+                              </div>
+
                               <button className="p-1 text-slate-400 hover:text-blue-600 rounded transition-all">
                                 <Edit3 size={11} />
                               </button>
                             </div>
-                          </div>
+
+                            {isSelected && topic.problemTypes?.length > 0 && (
+                              <div className="ml-8 mr-3 mb-2 space-y-1">
+                                {topic.problemTypes.map((problemType) => (
+                                  <button
+                                    key={problemType.code}
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setSelectedTopic({
+                                        chapterCode: chapter.code,
+                                        topicCode: topic.code,
+                                      });
+                                      setSelectedProblemType(problemType);
+                                    }}
+                                    className={`w-full text-left rounded-lg px-2.5 py-1.5 text-[10px] transition-all ${
+                                      selectedProblemType?.code === problemType.code
+                                        ? "bg-blue-100 text-blue-700 font-semibold"
+                                        : "text-slate-500 hover:bg-slate-100"
+                                    }`}
+                                  >
+                                    <span>{problemType.name}</span>
+                                    <span className="ml-2 text-slate-400">
+                                      {problemType.questionCount} bài
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>                          
                         );
                       })}
                     </div>
@@ -212,63 +429,124 @@ export default function CalculusTaxonomy({ activePage = "taxonomy", onNavigate =
                 <div className="bg-blue-600 rounded-xl p-4 text-white">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Info size={12} className="opacity-70" />
-                    <span className="text-[10px] opacity-70 uppercase tracking-wider font-semibold">Chủ đề đang chọn</span>
+                    <span className="text-[10px] opacity-70 uppercase tracking-wider font-semibold">
+                      {selectedProblemType ? "Dạng bài đang chọn" : "Chủ đề đang chọn"}
+                    </span>
                   </div>
-                  <p className="text-[13px] font-bold leading-snug">{selTopic.name}</p>
+
+                  <p className="text-[13px] font-bold leading-snug">
+                    {selectedProblemType?.name || selTopic.name}
+                  </p>
+
+                  <p className="mt-2 text-[10px] font-mono text-white/70 break-all">
+                    {selectedProblemType?.code || selTopic.code}
+                  </p>
+
                   <div className="mt-3 flex items-center gap-1">
                     <span className="text-[11px] opacity-70">Chương</span>
                     <ArrowRight size={10} className="opacity-50" />
-                    <span className="text-[11px]">{CHAPTERS.find(c => c.id === selectedTopic.chapterId)?.title.split(":")[0]}</span>
+                    <span className="text-[11px]">
+                      {selectedChapter?.title?.split(":")[0] || "Chưa xác định"}
+                    </span>
                   </div>
                 </div>
 
-                {/* Stats */}
                 <div className="bg-white border border-slate-100 rounded-xl p-4">
-                  <p className="text-[11px] font-bold text-slate-700 mb-3">Phân bố độ khó</p>
-                  {[
-                    { label: "Dễ", val: selTopic.easy, color: "bg-emerald-500", total: selTopic.easy + selTopic.med + selTopic.hard },
-                    { label: "Vừa", val: selTopic.med, color: "bg-amber-500", total: selTopic.easy + selTopic.med + selTopic.hard },
-                    { label: "Khó", val: selTopic.hard, color: "bg-red-500", total: selTopic.easy + selTopic.med + selTopic.hard },
-                  ].map((d) => (
-                    <div key={d.label} className="mb-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] text-slate-500">{d.label}</span>
-                        <span className="text-[11px] font-bold text-slate-700">{d.val} <span className="text-slate-400 font-normal">({Math.round((d.val / d.total) * 100)}%)</span></span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div className={`h-full rounded-full ${d.color} transition-all`} style={{ width: `${(d.val / d.total) * 100}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                  <div className="pt-2 border-t border-slate-100 mt-2">
-                    <div className="flex justify-between">
-                      <span className="text-[11px] text-slate-500">Tổng cộng</span>
-                      <span className="text-[13px] font-bold text-blue-700">{selTopic.easy + selTopic.med + selTopic.hard}</span>
-                    </div>
-                  </div>
+                  <p className="text-[11px] font-bold text-slate-700 mb-2">Mô tả</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    {selectedProblemType?.description || selTopic.description || "Chưa có mô tả."}
+                  </p>
                 </div>
 
-                {/* Skills */}
                 <div className="bg-white border border-slate-100 rounded-xl p-4">
-                  <p className="text-[11px] font-bold text-slate-700 mb-2">Kỹ năng yêu cầu</p>
+                  <p className="text-[11px] font-bold text-slate-700 mb-2">
+                    Kỹ năng yêu cầu
+                  </p>
+
                   <div className="flex flex-wrap gap-1.5">
-                    {selTopic.skills.map((s) => (
-                      <span key={s} className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${skillColor[s]}`}>{s}</span>
-                    ))}
+                    {(selectedProblemType?.skills || selTopic.skills || []).length > 0 ? (
+                      (selectedProblemType?.skills || selTopic.skills || []).map((skill) => (
+                        <span
+                          key={skill}
+                          className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border bg-blue-50 text-blue-700 border-blue-200"
+                        >
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-slate-400">
+                        Chưa khai báo kỹ năng.
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Actions */}
+                <div className="bg-white border border-slate-100 rounded-xl p-4">
+                  <p className="text-[11px] font-bold text-slate-700 mb-2">
+                    Dấu hiệu nhận diện
+                  </p>
+
+                  <div className="space-y-1">
+                    {(selectedProblemType?.positiveSignals || selTopic.positiveSignals || []).length > 0 ? (
+                      (selectedProblemType?.positiveSignals || selTopic.positiveSignals || [])
+                        .slice(0, 5)
+                        .map((signal) => (
+                          <p key={signal} className="text-[10px] text-slate-500 leading-relaxed">
+                            • {signal}
+                          </p>
+                        ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400">
+                        Chưa có dấu hiệu nhận diện.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {selectedProblemType && (
+                  <div className="bg-white border border-slate-100 rounded-xl p-4">
+                    <p className="text-[11px] font-bold text-slate-700 mb-2">
+                      Thông tin dạng bài
+                    </p>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-[11px] text-slate-500">Độ khó mặc định</span>
+                        <span className="text-[11px] font-bold text-slate-700">
+                          {selectedProblemType.defaultDifficulty || "Chưa có"}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between gap-3">
+                        <span className="text-[11px] text-slate-500">Số câu đã match</span>
+                        <span className="text-[11px] font-bold text-blue-700">
+                          {selectedProblemType.questionCount || 0}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-white border border-slate-100 rounded-xl p-4 space-y-2">
                   <p className="text-[11px] font-bold text-slate-700 mb-2">Thao tác</p>
-                  <button className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all">
-                    <Search size={12} /> Xem bài tập trong chủ đề
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenSearchWithFilters({
+                        chapter_code: selectedTopic?.chapterCode || null,
+                        topic_code: selectedTopic?.topicCode || null,
+                        problem_type_code: selectedProblemType?.code || null,
+                        label: selectedProblemType?.name || selTopic?.name || "Bộ lọc taxonomy",
+                      });
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all"
+                  >
+                    <Search size={12} /> Xem bài tập trong mục này
                   </button>
+
                   <button className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-all">
                     <Edit3 size={12} /> Chỉnh sửa thông tin
-                  </button>
-                  <button className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-all">
-                    <Trash2 size={12} /> Xoá chủ đề
                   </button>
                 </div>
               </>
@@ -277,11 +555,39 @@ export default function CalculusTaxonomy({ activePage = "taxonomy", onNavigate =
             {/* Global stats */}
             <div className="bg-white border border-slate-100 rounded-xl p-4">
               <p className="text-[11px] font-bold text-slate-700 mb-3">Tổng quan corpus</p>
-              {[
-                { label: "Tổng bài tập", val: totalAll.toLocaleString(), icon: Database },
-                { label: "Số chủ đề", val: CHAPTERS.reduce((a, c) => a + c.topics.length, 0), icon: Tag },
-                { label: "Cập nhật", val: "07/05/2026", icon: TrendingUp },
-              ].map((s) => (
+                {[
+                  {
+                    label: "Tổng bài tập",
+                    val: totalAll.toLocaleString(),
+                    icon: Database,
+                  },
+                  {
+                    label: "Số chủ đề",
+                    val: chapters.reduce(
+                      (sum, chapter) => sum + chapter.topics.length,
+                      0,
+                    ),
+                    icon: Tag,
+                  },
+                  {
+                    label: "Số dạng bài",
+                    val: chapters.reduce(
+                      (sum, chapter) =>
+                        sum +
+                        chapter.topics.reduce(
+                          (topicSum, topic) => topicSum + (topic.problemTypes?.length || 0),
+                          0,
+                        ),
+                      0,
+                    ),
+                    icon: Tag,
+                  },
+                  {
+                    label: "Cập nhật",
+                    val: taxonomy?.version || "1.0.0",
+                    icon: TrendingUp,
+                  },
+                ].map((s) => (
                 <div key={s.label} className="flex items-center gap-2 py-1.5 border-b border-slate-50 last:border-0">
                   <s.icon size={12} className="text-slate-400" />
                   <span className="text-[11px] text-slate-500 flex-1">{s.label}</span>

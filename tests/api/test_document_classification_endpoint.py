@@ -54,6 +54,10 @@ class FakeQuestionRepository:
                 "classification_model": classification_model,
             }
         )
+        question.classification_status = "completed"
+        question.embedding_status = "completed"
+
+        return question
 
     async def mark_classification_failed(
         self,
@@ -88,6 +92,12 @@ class FakeClassificationService:
 def test_classify_document_endpoint_returns_success_and_failed_counts(
     monkeypatch,
 ) -> None:
+
+    synced_question_ids = []
+
+    async def fake_sync_question_payload(question):
+        synced_question_ids.append(question.id)    
+
     fake_document_repository = FakeDocumentRepository(
         SimpleNamespace(id="document-id")
     )
@@ -122,6 +132,12 @@ def test_classify_document_endpoint_returns_success_and_failed_counts(
         lambda *, classifier: fake_classification_service,
     )
 
+    monkeypatch.setattr(
+        documents_endpoint,
+        "try_sync_question_classification_payload",
+        fake_sync_question_payload,
+    )
+
     client = TestClient(app)
     response = client.post("/documents/document-id/classify")
 
@@ -149,6 +165,7 @@ def test_classify_document_endpoint_returns_success_and_failed_counts(
         fake_question_repository.failed[0]["error_message"]
     )
 
+    assert synced_question_ids == ["q1"]
 
 def test_classify_document_endpoint_returns_404_for_missing_document(
     monkeypatch,

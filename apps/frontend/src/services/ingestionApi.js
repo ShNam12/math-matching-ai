@@ -31,3 +31,9 @@ export function storeDocument(documentId) {
     method: "POST",
   });
 }
+
+export function classifyDocument(documentId) {
+  return apiRequest(`/documents/${documentId}/classify`, {
+    method: "POST",
+  });
+}

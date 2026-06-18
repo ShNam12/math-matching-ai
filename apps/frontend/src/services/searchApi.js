@@ -5,7 +5,11 @@ export function searchQuestions({
   limit = 10,
   subject = null,
   chapter = null,
+  chapter_code = null,
+  topic_code = null,
+  problem_type_code = null,
   difficulty = null,
+  skill = null,
 }) {
   return apiRequest("/search/questions", {
     method: "POST",
@@ -17,7 +21,11 @@ export function searchQuestions({
       limit,
       subject,
       chapter,
+      chapter_code,
+      topic_code,
+      problem_type_code,
       difficulty,
+      skill
     }),
   });
 }
