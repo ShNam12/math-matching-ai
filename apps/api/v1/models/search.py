@@ -16,6 +16,11 @@ class QuestionSearchItem(BaseModel):
     question_id: str
     document_id: str
     score: float
+    semantic_score: float
+    taxonomy_score: float
+    formula_score: float
+    difficulty_score: float
+    skill_score: float
     marker: str
     marker_number: str
     statement: str

@@ -13,6 +13,11 @@ from modules.semantic_search.schemas import (
     QuestionSearchVectorHit,
 )
 
+from modules.semantic_search.hybrid_matching import (
+    HybridMatchingCandidate,
+    HybridMatchingContext,
+    calculate_hybrid_score,
+)
 
 class TextEmbedder(Protocol):
     def embed_text(self, text: str) -> list[float]:
@@ -67,6 +72,18 @@ class SemanticSearchService:
 
         filters = filters or QuestionSearchFilters()
 
+        hybrid_context = HybridMatchingContext(
+            chapter_code=filters.chapter_code,
+            topic_code=filters.topic_code,
+            problem_type_code=filters.problem_type_code,
+            difficulty=filters.difficulty,
+            skills=[filters.skill] if filters.skill else [],
+        )
+        vector_filters = QuestionSearchFilters(
+            subject=filters.subject,
+            chapter=filters.chapter,
+        )
+
         query_vector = await asyncio.to_thread(
             self.embedder.embed_text,
             normalized_query,
@@ -75,7 +92,7 @@ class SemanticSearchService:
         hits = await self.vector_repository.search_questions(
             vector=query_vector,
             limit=limit * 3,
-            filters=filters,
+            filters=vector_filters,
         )
 
         if not hits:
@@ -105,29 +122,46 @@ class SemanticSearchService:
             if filters.chapter and question.chapter != filters.chapter:
                 continue
 
-            if filters.chapter_code and question.chapter_code != filters.chapter_code:
-                continue
+            # if filters.chapter_code and question.chapter_code != filters.chapter_code:
+            #     continue
 
-            if filters.topic_code and question.topic_code != filters.topic_code:
-                continue
+            # if filters.topic_code and question.topic_code != filters.topic_code:
+            #     continue
 
-            if (
-                filters.problem_type_code
-                and question.problem_type_code != filters.problem_type_code
-            ):
-                continue
+            # if (
+            #     filters.problem_type_code
+            #     and question.problem_type_code != filters.problem_type_code
+            # ):
+            #     continue
 
-            if filters.skill and filters.skill not in question.skills:
-                continue
+            # if filters.skill and filters.skill not in question.skills:
+            #     continue
 
-            if filters.difficulty and question.difficulty != filters.difficulty:
-                continue
+            # if filters.difficulty and question.difficulty != filters.difficulty:
+            #     continue
+
+            hybrid_score = calculate_hybrid_score(
+                context=hybrid_context,
+                candidate=HybridMatchingCandidate(
+                    semantic_score=hit.score,
+                    chapter_code=question.chapter_code,
+                    topic_code=question.topic_code,
+                    problem_type_code=question.problem_type_code,
+                    difficulty=question.difficulty,
+                    skills=question.skills,
+                ),
+            )            
 
             results.append(
                 QuestionSearchResult(
                     question_id=question.id,
                     document_id=question.document_id,
-                    score=hit.score,
+                    score=hybrid_score.final_score,
+                    semantic_score=hybrid_score.semantic_score,
+                    taxonomy_score=hybrid_score.taxonomy_score,
+                    formula_score=hybrid_score.formula_score,
+                    difficulty_score=hybrid_score.difficulty_score,
+                    skill_score=hybrid_score.skill_score,
                     marker=question.marker,
                     marker_number=question.marker_number,
                     statement=question.statement,
@@ -149,6 +183,8 @@ class SemanticSearchService:
                     classification_status=question.classification_status,
                 )
             )
+
+        results.sort(key=lambda result: result.score, reverse=True)
 
         return results[:limit]
 

@@ -28,6 +28,10 @@ const diffConfig = {
   Khó: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", bar: "bg-red-500" },
 };
 
+const toPercent = (value) => (
+  value == null ? null : Math.round(value * 100)
+);
+
 export default function SemanticSearch({
   activePage = "search",
   onNavigate = () => {},
@@ -119,6 +123,11 @@ export default function SemanticSearch({
       difficulty: item.difficulty || "Chưa rõ",
       skill: item.skills?.[0] || "Chưa gán kỹ năng",
       match: score != null ? Math.round(score * 100) : null,
+      semanticScore: toPercent(item.semantic_score),
+      taxonomyScore: toPercent(item.taxonomy_score),
+      formulaScore: toPercent(item.formula_score),
+      difficultyScore: toPercent(item.difficulty_score),
+      skillScore: toPercent(item.skill_score),
       latex: item.answer || item.marker || "Question",
       statement: item.statement,
       solution: item.solution,
@@ -516,6 +525,19 @@ export default function SemanticSearch({
                           </span>
                         )}
                       </div>
+                      {p.semanticScore != null && (
+                        <div className="mb-2 flex flex-wrap items-center gap-1">
+                          <span className="text-[10px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                            Sem {p.semanticScore}%
+                          </span>
+                          <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded">
+                            Tax {p.taxonomyScore ?? 0}%
+                          </span>
+                          <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded">
+                            Skill {p.skillScore ?? 0}%
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mb-2.5">
                         <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center flex-shrink-0">
                           <span className="text-white font-bold" style={{ fontSize: 9 }}>∫</span>

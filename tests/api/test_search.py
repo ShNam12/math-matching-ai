@@ -38,6 +38,11 @@ class FakeSemanticSearchService:
                 question_id="question-id",
                 document_id="document-id",
                 score=0.95,
+                semantic_score=0.90,
+                taxonomy_score=1.0,
+                formula_score=0.0,
+                difficulty_score=1.0,
+                skill_score=1.0,
                 marker="Bai",
                 marker_number="1",
                 statement="Tinh tich phan tung phan.",
@@ -115,6 +120,12 @@ def test_search_questions_accepts_taxonomy_filters(monkeypatch) -> None:
     assert result["skills"] == ["integration_by_parts"]
     assert result["taxonomy_confidence"] == 0.95
     assert result["classification_status"] == "completed"
+
+    assert result["semantic_score"] == 0.90
+    assert result["taxonomy_score"] == 1.0
+    assert result["formula_score"] == 0.0
+    assert result["difficulty_score"] == 1.0
+    assert result["skill_score"] == 1.0
 
     assert fake_service.calls[0]["query"] == "tich phan tung phan"
     assert fake_service.calls[0]["limit"] == 5

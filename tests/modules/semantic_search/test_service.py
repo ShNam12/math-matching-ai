@@ -135,13 +135,18 @@ def test_search_questions_returns_enriched_results_in_score_order() -> None:
     assert vector_repository.filters == QuestionSearchFilters(
         subject="calculus",
         chapter="derivative",
-        difficulty="easy",
     )
     assert question_repository.question_ids == ["q2", "q1"]
 
     assert [result.question_id for result in results] == ["q2", "q1"]
-    assert results[0].score == 0.95
+    assert results[0].semantic_score == 0.95
+    assert 0.0 <= results[0].score <= 1.0
     assert results[0].statement == "Tinh dao ham cua ham so."
+
+    assert results[0].taxonomy_score >= 0.0
+    assert results[0].formula_score == 0.0
+    assert results[0].difficulty_score >= 0.0
+    assert results[0].skill_score >= 0.0    
 
     assert results[0].subject_code == "CALCULUS_1"
     assert results[0].chapter_code == (
@@ -203,7 +208,7 @@ def test_search_questions_skips_non_completed_questions() -> None:
 
     assert results == []
 
-def test_search_questions_filters_by_taxonomy_metadata() -> None:
+def test_search_questions_uses_taxonomy_metadata_for_hybrid_context() -> None:
     question = make_question(question_id="q1")
 
     vector_repository = FakeVectorRepository(
@@ -236,14 +241,7 @@ def test_search_questions_filters_by_taxonomy_metadata() -> None:
         )
     )
 
-    assert vector_repository.filters == QuestionSearchFilters(
-        chapter_code=(
-            "GT1_C1_Differential_Calculus_One_Variable"
-        ),
-        topic_code="GT1_C1_08_Derivatives_Differentials",
-        problem_type_code="GT1_C1_08_T01_Basic_Derivative",
-        skill="derivative",
-    )
+    assert vector_repository.filters == QuestionSearchFilters()
 
     assert len(results) == 1
     assert results[0].question_id == "q1"
@@ -256,3 +254,56 @@ def test_search_questions_filters_by_taxonomy_metadata() -> None:
     assert results[0].problem_type_code == (
         "GT1_C1_08_T01_Basic_Derivative"
     )
+
+def test_search_questions_reranks_by_hybrid_score() -> None:
+    matching_question = make_question(question_id="matching")
+    weak_taxonomy_question = make_question(question_id="semantic-only")
+    weak_taxonomy_question.topic_code = "other_topic"
+    weak_taxonomy_question.problem_type_code = "other_problem_type"
+
+    vector_repository = FakeVectorRepository(
+        [
+            QuestionSearchVectorHit(
+                question_id="semantic-only",
+                document_id="document-id",
+                score=0.95,
+            ),
+            QuestionSearchVectorHit(
+                question_id="matching",
+                document_id="document-id",
+                score=0.90,
+            ),
+        ]
+    )
+
+    service = SemanticSearchService(
+        question_repository=FakeQuestionRepository([
+            matching_question,
+            weak_taxonomy_question,
+        ]),
+        vector_repository=vector_repository,
+        embedder=FakeEmbedder(),
+    )
+
+    results = asyncio.run(
+        service.search_questions(
+            query="dao ham co ban",
+            limit=2,
+            filters=QuestionSearchFilters(
+                chapter_code=(
+                    "GT1_C1_Differential_Calculus_One_Variable"
+                ),
+                topic_code="GT1_C1_08_Derivatives_Differentials",
+                problem_type_code="GT1_C1_08_T01_Basic_Derivative",
+                difficulty="easy",
+                skill="derivative",
+            ),
+        )
+    )
+
+    assert [result.question_id for result in results] == [
+        "matching",
+        "semantic-only",
+    ]
+    assert results[0].score > results[1].score
+    assert results[0].taxonomy_score == 1.0
