@@ -30,6 +30,15 @@ from modules.question_classification.service import (
     QuestionClassifier,
 )
 
+from modules.question_classification.evaluator import (
+    ClassificationEvalItem,
+    ClassificationEvalPrediction,
+    ClassificationEvalReport,
+    evaluate_classification_predictions,
+    failed_prediction,
+    prediction_from_result,
+)
+
 __all__ = [
     "ClassificationCandidate",
     "ClassificationIssue",
@@ -48,4 +57,10 @@ __all__ = [
     "validate_classification",
     "QuestionClassificationService",
     "QuestionClassifier",
+    "ClassificationEvalItem",
+    "ClassificationEvalPrediction",
+    "ClassificationEvalReport",
+    "evaluate_classification_predictions",
+    "failed_prediction",
+    "prediction_from_result",
 ]

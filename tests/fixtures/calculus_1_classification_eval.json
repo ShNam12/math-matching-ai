@@ -1,0 +1,172 @@
+[
+  {
+    "id": "eval_001",
+    "statement": "Tinh dao ham cua ham so y = 5x^3.",
+    "solution": null,
+    "answer": "15x^2",
+    "formulas": [
+      {
+        "latex": "y = 5x^3",
+        "normalized_latex": "y=5x^3",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_08_Derivatives_Differentials",
+    "expected_problem_type_code": "GT1_C1_08_T01_Basic_Derivative",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_002",
+    "statement": "Tinh dao ham cua ham so y = sin(3x^2 + 1).",
+    "solution": null,
+    "answer": "6x cos(3x^2 + 1)",
+    "formulas": [
+      {
+        "latex": "y = \\sin(3x^2 + 1)",
+        "normalized_latex": "y=\\sin(3x^2+1)",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_08_Derivatives_Differentials",
+    "expected_problem_type_code": "GT1_C1_08_T04_Chain_Rule",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_003",
+    "statement": "Dung cong thuc dao ham cua ham nguoc de tinh dao ham cua y = arctan x, biet arctan x la ham nguoc cua tan x tren khoang (-pi/2, pi/2).",
+    "solution": null,
+    "answer": "1/(1+x^2)",
+    "formulas": [
+      {
+        "latex": "y = \\arctan x",
+        "normalized_latex": "y=\\arctan x",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_08_Derivatives_Differentials",
+    "expected_problem_type_code": "GT1_C1_08_T05_Inverse_Function_Derivative",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_004",
+    "statement": "Tinh vi phan cua ham so y = x^2 sin x.",
+    "solution": null,
+    "answer": "dy = (2x sin x + x^2 cos x) dx",
+    "formulas": [
+      {
+        "latex": "y = x^2 \\sin x",
+        "normalized_latex": "y=x^2\\sin x",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_08_Derivatives_Differentials",
+    "expected_problem_type_code": "GT1_C1_08_T06_Differential",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_005",
+    "statement": "Tinh gioi han lim x tien toi 2 cua (x^2 - 4)/(x - 2).",
+    "solution": null,
+    "answer": "4",
+    "formulas": [
+      {
+        "latex": "\\lim_{x\\to 2} \\frac{x^2 - 4}{x - 2}",
+        "normalized_latex": "\\lim_{x\\to2}\\frac{x^2-4}{x-2}",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_05_Function_Limits",
+    "expected_problem_type_code": "GT1_C1_05_T02_Algebraic_Transformation_Limit",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_006",
+    "statement": "Tim a de ham so f(x) = x^2 khi x < 1 va f(x) = ax + 1 khi x >= 1 lien tuc tai x = 1.",
+    "solution": null,
+    "answer": "a = 0",
+    "formulas": [
+      {
+        "latex": "f(x)=\\begin{cases}x^2,&x<1\\\\ ax+1,&x\\ge 1\\end{cases}",
+        "normalized_latex": "f(x)=piecewise(x^2,x<1;ax+1,x\\ge1)",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_07_Continuity",
+    "expected_problem_type_code": "GT1_C1_07_T04_Find_Parameter_For_Continuity",
+    "expected_difficulty": "hard"
+  },
+  {
+    "id": "eval_007",
+    "statement": "Tinh nguyen ham int 3x^2 dx.",
+    "solution": null,
+    "answer": "x^3 + C",
+    "formulas": [
+      {
+        "latex": "\\int 3x^2\\,dx",
+        "normalized_latex": "\\int3x^2dx",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_01_Indefinite_Integrals",
+    "expected_problem_type_code": "GT1_C2_01_T01_Basic_Antiderivative",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_008",
+    "statement": "Tinh tich phan bat dinh int x e^x dx bang phuong phap tich phan tung phan.",
+    "solution": null,
+    "answer": "e^x(x - 1) + C",
+    "formulas": [
+      {
+        "latex": "\\int x e^x\\,dx",
+        "normalized_latex": "\\int xe^xdx",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_01_Indefinite_Integrals",
+    "expected_problem_type_code": "GT1_C2_01_T03_Integration_By_Parts",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_009",
+    "statement": "Tinh tich phan xac dinh tu 0 den 1 cua 2x dx.",
+    "solution": null,
+    "answer": "1",
+    "formulas": [
+      {
+        "latex": "\\int_0^1 2x\\,dx",
+        "normalized_latex": "\\int_0^1 2xdx",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_02_Definite_Integrals",
+    "expected_problem_type_code": "GT1_C2_02_T04_Newton_Leibniz",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_010",
+    "statement": "Cho ham so z = x^2 y + sin y. Tinh cac dao ham rieng cap mot theo x va y.",
+    "solution": null,
+    "answer": "z_x = 2xy, z_y = x^2 + cos y",
+    "formulas": [
+      {
+        "latex": "z = x^2y + \\sin y",
+        "normalized_latex": "z=x^2y+\\sin y",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_02_Partial_Derivatives_Differentials",
+    "expected_problem_type_code": "GT1_C3_02_T01_First_Order_Partial_Derivative",
+    "expected_difficulty": "easy"
+  }
+]

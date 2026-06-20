@@ -3,7 +3,7 @@ import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
   CheckCircle, XCircle, AlertTriangle, RefreshCw,
-  ChevronDown, Filter, Play, Download, Clock, Info,
+  Play, Download, Clock, Info,
   Shield, Code2, Copy, Layers, AlertCircle, Eye, LayoutDashboard
 } from "lucide-react";
 

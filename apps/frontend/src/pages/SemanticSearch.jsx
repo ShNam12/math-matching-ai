@@ -42,25 +42,15 @@ export default function SemanticSearch({
   const [skill, setSkill] = useState("");
   const [taxonomyFilters, setTaxonomyFilters] = useState(null);
 
-  // useEffect(() => {
-  //   if (!initialSearchFilters) {
-  //     return;
-  //   }
-
-  //   queueMicrotask(() => {
-  //     setTaxonomyFilters(initialSearchFilters);
-  //     setTopic(initialSearchFilters.label || "");
-  //     setQuery("");
-  //     handleListByTaxonomy(initialSearchFilters);
-  //   });
-  // }, [initialSearchFilters]);
-
-  // const normalizeDifficultyFilter = (value) => {
-  //   const map = {
-  //     "Dễ": "easy",
-  //     "Vừa": "medium",
-  //     "Khó": "hard",
-  //   };
+  const normalizeDifficultyFilter = (value) => {
+    const map = {
+      "Dễ": "easy",
+      "Vừa": "medium",
+      "Khó": "hard",
+      "Dá»…": "easy",
+      "Vá»«a": "medium",
+      "KhÃ³": "hard",
+    };
 
     return map[value] || value || null;
   };
@@ -138,6 +128,50 @@ export default function SemanticSearch({
     };
   }
 
+  useEffect(() => {
+    if (!initialSearchFilters) {
+      return;
+    }
+
+    let cancelled = false;
+
+    queueMicrotask(async () => {
+      setTaxonomyFilters(initialSearchFilters);
+      setTopic(initialSearchFilters.label || "");
+      setQuery("");
+      setSearching(true);
+      setError(null);
+      setHasSearched(true);
+      setTaxonomyListMode(true);
+
+      try {
+        const data = await listQuestionsByTaxonomy({
+          chapter_code: initialSearchFilters.chapter_code,
+          topic_code: initialSearchFilters.topic_code,
+          problem_type_code: initialSearchFilters.problem_type_code,
+          limit: 50,
+        });
+
+        if (!cancelled) {
+          setResults(data.map((item) => mapQuestionToResult(item, null)));
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(requestError.message);
+          setResults([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setSearching(false);
+        }
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialSearchFilters]);
+
   async function handleSearch() {
     const trimmedQuery = query.trim();
 
@@ -196,33 +230,6 @@ export default function SemanticSearch({
             ),
           );
         }
-    } catch (requestError) {
-      setError(requestError.message);
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }
-
-  async function handleListByTaxonomy(filters = taxonomyFilters) {
-    if (!filters || searching) return;
-
-    setSearching(true);
-    setError(null);
-    setHasSearched(true);
-    setTaxonomyListMode(true);
-
-    try {
-      const data = await listQuestionsByTaxonomy({
-        chapter_code: filters.chapter_code,
-        topic_code: filters.topic_code,
-        problem_type_code: filters.problem_type_code,
-        limit: 50,
-      });
-
-      setResults(
-        data.map((item) => mapQuestionToResult(item, null)),
-      );
     } catch (requestError) {
       setError(requestError.message);
       setResults([]);

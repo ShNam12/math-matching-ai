@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
-  ArrowLeft, Copy, Share2, Star, Eye, GitBranch,
+  ArrowLeft, Copy, Share2, Star, GitBranch,
   Zap, ChevronRight, CheckCircle, BookMarked,
   TrendingUp, Tag, Clock, User, Printer, Download, LayoutDashboard
 } from "lucide-react";
@@ -70,12 +70,6 @@ const STEPS = [
     content: "Lấy đạo hàm của F(x) = eˣ(x²−2x+2) theo quy tắc tích số:",
     latex: "F'(x) = e^x(x^2 - 2x + 2) + e^x(2x - 2) = e^x \\cdot x^2 = x^2 e^x \\checkmark",
   },
-];
-
-const SIMILAR = [
-  { id: "BK-2023-M1-038", latex: "\\int x^3 e^x \\, dx", match: 94 },
-  { id: "NEU-2024-C2-011", latex: "\\int x^2 \\sin x \\, dx", match: 88 },
-  { id: "VNU-2024-M2-029", latex: "\\int x e^{2x} \\, dx", match: 82 },
 ];
 
 export default function ProblemDetail({
@@ -200,7 +194,9 @@ export default function ProblemDetail({
 
   useEffect(() => {
     if (!selectedQuestionId) {
-      setQuestion(null);
+      queueMicrotask(() => {
+        setQuestion(null);
+      });
       return;
     }
 
@@ -237,27 +233,31 @@ export default function ProblemDetail({
   }, [selectedQuestionId]);
 
   useEffect(() => {
-    if (!question) {
-      setMetadataForm({
-        subject: "",
-        chapter: "",
-        difficulty: "",
-        skillsText: "",
-      });
-      return;
-    }
+    queueMicrotask(() => {
+      if (!question) {
+        setMetadataForm({
+          subject: "",
+          chapter: "",
+          difficulty: "",
+          skillsText: "",
+        });
+        return;
+      }
 
-    setMetadataForm({
-      subject: question.subject || "",
-      chapter: question.chapter || "",
-      difficulty: question.difficulty || "",
-      skillsText: Array.isArray(question.skills) ? question.skills.join(", ") : "",
+      setMetadataForm({
+        subject: question.subject || "",
+        chapter: question.chapter || "",
+        difficulty: question.difficulty || "",
+        skillsText: Array.isArray(question.skills) ? question.skills.join(", ") : "",
+      });
     });
   }, [question]);
 
   useEffect(() => {
     if (!question?.statement) {
-      setSimilarQuestions([]);
+      queueMicrotask(() => {
+        setSimilarQuestions([]);
+      });
       return;
     }
 
