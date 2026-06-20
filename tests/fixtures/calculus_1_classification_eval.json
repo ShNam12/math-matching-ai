@@ -168,5 +168,345 @@
     "expected_topic_code": "GT1_C3_02_Partial_Derivatives_Differentials",
     "expected_problem_type_code": "GT1_C3_02_T01_First_Order_Partial_Derivative",
     "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_011",
+    "statement": "Tim tap xac dinh cua ham so f(x) = sqrt(x - 1) + ln(3 - x).",
+    "solution": null,
+    "answer": "[1, 3)",
+    "formulas": [
+      {
+        "latex": "f(x)=\\sqrt{x-1}+\\ln(3-x)",
+        "normalized_latex": "f(x)=\\sqrt{x-1}+\\ln(3-x)",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_02_Function_Basics",
+    "expected_problem_type_code": "GT1_C1_02_T01_Domain_And_Range",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_012",
+    "statement": "Tinh gioi han day so u_n = (3n^2 + 1)/(2n^2 - n) khi n tien toi vo cung.",
+    "solution": null,
+    "answer": "3/2",
+    "formulas": [
+      {
+        "latex": "u_n=\\frac{3n^2+1}{2n^2-n}",
+        "normalized_latex": "u_n=\\frac{3n^2+1}{2n^2-n}",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_04_Sequences",
+    "expected_problem_type_code": "GT1_C1_04_T01_Compute_Sequence_Limit",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_013",
+    "statement": "Tinh gioi han lim x tien toi 0 cua (e^x - 1 - x)/x^2 bang khai trien Taylor.",
+    "solution": null,
+    "answer": "1/2",
+    "formulas": [
+      {
+        "latex": "\\lim_{x\\to 0}\\frac{e^x-1-x}{x^2}",
+        "normalized_latex": "\\lim_{x\\to0}\\frac{e^x-1-x}{x^2}",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_09_Theorems_Applications_Differentiable_Functions",
+    "expected_problem_type_code": "GT1_C1_09_T04_Limit_By_Taylor",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_014",
+    "statement": "Khao sat su bien thien va ve do thi ham so y = x^3 - 3x.",
+    "solution": null,
+    "answer": null,
+    "formulas": [
+      {
+        "latex": "y=x^3-3x",
+        "normalized_latex": "y=x^3-3x",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C1_Differential_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C1_10_Curve_Function_Graph_Survey",
+    "expected_problem_type_code": "GT1_C1_10_T01_Function_Graph_Survey",
+    "expected_difficulty": "hard"
+  },
+  {
+    "id": "eval_015",
+    "statement": "Tinh tich phan bat dinh int 2x cos(x^2) dx bang phuong phap doi bien.",
+    "solution": null,
+    "answer": "sin(x^2) + C",
+    "formulas": [
+      {
+        "latex": "\\int 2x\\cos(x^2)\\,dx",
+        "normalized_latex": "\\int2x\\cos(x^2)dx",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_01_Indefinite_Integrals",
+    "expected_problem_type_code": "GT1_C2_01_T02_Substitution_Method",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_016",
+    "statement": "Tinh tich phan bat dinh int 1/(x^2 - 1) dx.",
+    "solution": null,
+    "answer": "1/2 ln |(x-1)/(x+1)| + C",
+    "formulas": [
+      {
+        "latex": "\\int \\frac{1}{x^2-1}\\,dx",
+        "normalized_latex": "\\int\\frac{1}{x^2-1}dx",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_01_Indefinite_Integrals",
+    "expected_problem_type_code": "GT1_C2_01_T04_Rational_Function_Integral",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_017",
+    "statement": "Tinh tich phan xac dinh tu 0 den 1 cua 2x e^{x^2} dx bang doi bien.",
+    "solution": null,
+    "answer": "e - 1",
+    "formulas": [
+      {
+        "latex": "\\int_0^1 2x e^{x^2}\\,dx",
+        "normalized_latex": "\\int_0^12xe^{x^2}dx",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_02_Definite_Integrals",
+    "expected_problem_type_code": "GT1_C2_02_T05_Substitution_Definite_Integral",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_018",
+    "statement": "Xet su hoi tu cua tich phan suy rong int_1^infty 1/x^p dx voi tham so p.",
+    "solution": null,
+    "answer": "Hoi tu khi p > 1, phan ky khi p <= 1",
+    "formulas": [
+      {
+        "latex": "\\int_1^{\\infty}\\frac{1}{x^p}\\,dx",
+        "normalized_latex": "\\int_1^\\infty\\frac{1}{x^p}dx",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_03_Improper_Integrals",
+    "expected_problem_type_code": "GT1_C2_03_T04_Convergence_Divergence",
+    "expected_difficulty": "hard"
+  },
+  {
+    "id": "eval_019",
+    "statement": "Dung tieu chuan so sanh de xet hoi tu cua tich phan int_1^infty 1/(x^2 + sin^2 x) dx.",
+    "solution": null,
+    "answer": "Hoi tu",
+    "formulas": [
+      {
+        "latex": "\\int_1^{\\infty}\\frac{1}{x^2+\\sin^2 x}\\,dx",
+        "normalized_latex": "\\int_1^\\infty\\frac{1}{x^2+\\sin^2x}dx",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_03_Improper_Integrals",
+    "expected_problem_type_code": "GT1_C2_03_T05_Comparison_Test",
+    "expected_difficulty": "hard"
+  },
+  {
+    "id": "eval_020",
+    "statement": "Tinh dien tich mien phang gioi han boi y = x va y = x^2 tren doan [0,1].",
+    "solution": null,
+    "answer": "1/6",
+    "formulas": [
+      {
+        "latex": "y=x,\\quad y=x^2",
+        "normalized_latex": "y=x,y=x^2",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_04_Applications_Definite_Integrals",
+    "expected_problem_type_code": "GT1_C2_04_T01_Area_Plane_Region",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_021",
+    "statement": "Tinh the tich vat the tron xoay tao boi mien duoi do thi y = x tren [0,1] khi quay quanh truc Ox.",
+    "solution": null,
+    "answer": "pi/3",
+    "formulas": [
+      {
+        "latex": "y=x,\\quad 0\\le x\\le 1",
+        "normalized_latex": "y=x,0\\le x\\le1",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_04_Applications_Definite_Integrals",
+    "expected_problem_type_code": "GT1_C2_04_T04_Volume_Of_Revolution",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_022",
+    "statement": "Tinh chieu dai cung cua duong cong y = x^{3/2} tren doan [0,1].",
+    "solution": null,
+    "answer": null,
+    "formulas": [
+      {
+        "latex": "y=x^{3/2},\\quad 0\\le x\\le 1",
+        "normalized_latex": "y=x^{3/2},0\\le x\\le1",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C2_Integral_Calculus_One_Variable",
+    "expected_topic_code": "GT1_C2_04_Applications_Definite_Integrals",
+    "expected_problem_type_code": "GT1_C2_04_T02_Arc_Length",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_023",
+    "statement": "Tim mien xac dinh cua ham hai bien f(x,y) = ln(1 - x^2 - y^2).",
+    "solution": null,
+    "answer": "x^2 + y^2 < 1",
+    "formulas": [
+      {
+        "latex": "f(x,y)=\\ln(1-x^2-y^2)",
+        "normalized_latex": "f(x,y)=\\ln(1-x^2-y^2)",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_01_Multivariable_Basics",
+    "expected_problem_type_code": "GT1_C3_01_T01_Domain_Of_Multivariable_Function",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_024",
+    "statement": "Tinh gioi han lim (x,y) tien toi (0,0) cua (x^2 y)/(x^2 + y^2).",
+    "solution": null,
+    "answer": "0",
+    "formulas": [
+      {
+        "latex": "\\lim_{(x,y)\\to(0,0)}\\frac{x^2y}{x^2+y^2}",
+        "normalized_latex": "\\lim_{(x,y)\\to(0,0)}\\frac{x^2y}{x^2+y^2}",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_01_Multivariable_Basics",
+    "expected_problem_type_code": "GT1_C3_01_T03_Multivariable_Limit",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_025",
+    "statement": "Chung minh gioi han cua f(x,y) = xy/(x^2 + y^2) khi (x,y) tien toi (0,0) khong ton tai bang cach xet hai duong di.",
+    "solution": null,
+    "answer": "Khong ton tai",
+    "formulas": [
+      {
+        "latex": "f(x,y)=\\frac{xy}{x^2+y^2}",
+        "normalized_latex": "f(x,y)=\\frac{xy}{x^2+y^2}",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_01_Multivariable_Basics",
+    "expected_problem_type_code": "GT1_C3_01_T04_Path_Dependent_Limit",
+    "expected_difficulty": "hard"
+  },
+  {
+    "id": "eval_026",
+    "statement": "Xet tinh lien tuc cua ham f(x,y) = (x^2 + y^2)/(1 + x^2 + y^2) tren R^2.",
+    "solution": null,
+    "answer": "Lien tuc tren R^2",
+    "formulas": [
+      {
+        "latex": "f(x,y)=\\frac{x^2+y^2}{1+x^2+y^2}",
+        "normalized_latex": "f(x,y)=\\frac{x^2+y^2}{1+x^2+y^2}",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_01_Multivariable_Basics",
+    "expected_problem_type_code": "GT1_C3_01_T05_Multivariable_Continuity",
+    "expected_difficulty": "easy"
+  },
+  {
+    "id": "eval_027",
+    "statement": "Tinh vi phan toan phan cua ham z = x^2 y + e^y.",
+    "solution": null,
+    "answer": "dz = 2xy dx + (x^2 + e^y) dy",
+    "formulas": [
+      {
+        "latex": "z=x^2y+e^y",
+        "normalized_latex": "z=x^2y+e^y",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_02_Partial_Derivatives_Differentials",
+    "expected_problem_type_code": "GT1_C3_02_T02_Total_Differential",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_028",
+    "statement": "Cho z = u^2 + v, u = x + y, v = xy. Tinh dao ham rieng cua z theo x bang quy tac ham hop.",
+    "solution": null,
+    "answer": "z_x = 2u u_x + v_x = 2(x+y) + y",
+    "formulas": [
+      {
+        "latex": "z=u^2+v,\\quad u=x+y,\\quad v=xy",
+        "normalized_latex": "z=u^2+v,u=x+y,v=xy",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_02_Partial_Derivatives_Differentials",
+    "expected_problem_type_code": "GT1_C3_02_T04_Multivariable_Chain_Rule",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_029",
+    "statement": "Tim cac dao ham rieng cap hai cua ham z = x^2 y^3.",
+    "solution": null,
+    "answer": "z_xx = 2y^3, z_xy = 6xy^2, z_yy = 6x^2y",
+    "formulas": [
+      {
+        "latex": "z=x^2y^3",
+        "normalized_latex": "z=x^2y^3",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_02_Partial_Derivatives_Differentials",
+    "expected_problem_type_code": "GT1_C3_02_T05_Higher_Order_Partial_Derivative",
+    "expected_difficulty": "medium"
+  },
+  {
+    "id": "eval_030",
+    "statement": "Tim cuc tri cua ham f(x,y) = x^2 + y^2 - 2x - 4y.",
+    "solution": null,
+    "answer": "Cuc tieu tai (1,2)",
+    "formulas": [
+      {
+        "latex": "f(x,y)=x^2+y^2-2x-4y",
+        "normalized_latex": "f(x,y)=x^2+y^2-2x-4y",
+        "source": "statement"
+      }
+    ],
+    "expected_chapter_code": "GT1_C3_Multivariable_Functions",
+    "expected_topic_code": "GT1_C3_03_Multivariable_Extrema",
+    "expected_problem_type_code": "GT1_C3_03_T02_Unconstrained_Extrema",
+    "expected_difficulty": "medium"
   }
 ]
