@@ -3,8 +3,8 @@ import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles, LayoutDashboard,
   Zap, Clock, Activity, AlertTriangle, Loader,
-  HelpCircle, ChevronRight, TrendingUp, ArrowUpRight,
-  Star, Bookmark, Filter
+  HelpCircle, ChevronRight, TrendingUp,
+  Star, Filter
 } from "lucide-react";
 
 import { getHealth, getReadiness } from "../services/healthApi";
@@ -23,93 +23,6 @@ const NAV = [
   { icon: Sparkles, label: "Sinh biến thể", sub: "Gen AI", id: "gen" },
   { icon: BarChart2, label: "Analytics", sub: "Thống kê", id: "analytics" },
   { icon: Settings, label: "Cài đặt", sub: "System", id: "settings" },
-];
-
-const HEALTH = [
-  {
-    label: "Tổng bài tập",
-    value: "12,847",
-    delta: "↑ 234 tuần này",
-    trend: "up",
-    icon: FileText,
-    iconBg: "#E6F1FB",
-    iconColor: "#185FA5",
-  },
-  {
-    label: "Đang xử lý",
-    value: "2 files",
-    delta: "67% · 23% tiến độ",
-    trend: "warn",
-    icon: Loader,
-    iconBg: "#FAEEDA",
-    iconColor: "#854F0B",
-  },
-  {
-    label: "Lỗi QA cần xử lý",
-    value: "36",
-    delta: "3 rule bị lỗi",
-    trend: "error",
-    icon: AlertTriangle,
-    iconBg: "#FCEBEB",
-    iconColor: "#A32D2D",
-  },
-  {
-    label: "Truy vấn hôm nay",
-    value: "3,891",
-    delta: "↑ 18% vs hôm qua",
-    trend: "up",
-    icon: Activity,
-    iconBg: "#EAF3DE",
-    iconColor: "#3B6D11",
-  },
-];
-
-const RECENT_PROBLEMS = [
-  {
-    symbol: "∫",
-    latex: "\\int x^2 e^x \\, dx",
-    statement: "Tính tích phân bất định bằng phương pháp tích phân từng phần, viết đầy đủ các bước...",
-    topic: "Tích phân", topicColor: "blue",
-    diff: "Khó", diffColor: "red",
-    source: "BK-2023-M1",
-    match: 97,
-  },
-  {
-    symbol: "∂",
-    latex: "f(x) = \\ln(\\sin^2 x + 1)",
-    statement: "Tính f'(x) và xác định các điểm cực trị của hàm số trên đoạn [0, 2π]...",
-    topic: "Đạo hàm", topicColor: "blue",
-    diff: "Vừa", diffColor: "amber",
-    source: "NEU-2024-C2",
-    match: 93,
-  },
-  {
-    symbol: "Σ",
-    latex: "\\sum_{n=2}^{\\infty} \\frac{(-1)^n}{n\\ln n}",
-    statement: "Chứng minh chuỗi hội tụ bằng tiêu chuẩn Leibniz, tìm miền hội tụ chuỗi lũy thừa...",
-    topic: "Chuỗi số", topicColor: "blue",
-    diff: "Khó", diffColor: "red",
-    source: "VNU-2024-M2",
-    match: 89,
-  },
-  {
-    symbol: "∬",
-    latex: "\\iint_D x \\cdot y \\, dA",
-    statement: "Tính tích phân kép trên miền giới hạn bởi parabol y = x² và đường thẳng y = x + 2...",
-    topic: "Tích phân bội", topicColor: "blue",
-    diff: "Khó", diffColor: "red",
-    source: "HUST-2023-M3",
-    match: 85,
-  },
-  {
-    symbol: "lim",
-    latex: "\\lim_{x\\to 0} \\frac{\\sin x - x}{x^3}",
-    statement: "Tính giới hạn bằng khai triển Taylor hoặc quy tắc L'Hôpital, so sánh kết quả...",
-    topic: "Giới hạn", topicColor: "blue",
-    diff: "Vừa", diffColor: "amber",
-    source: "BK-2023-M1",
-    match: 81,
-  },
 ];
 
 const ACTIVITIES = [

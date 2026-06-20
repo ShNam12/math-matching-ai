@@ -2,7 +2,7 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 
 export default function LatexInline({ value, className = "" }) {
-  let html = "";
+  let html;
 
   try {
     html = katex.renderToString(value || "", {

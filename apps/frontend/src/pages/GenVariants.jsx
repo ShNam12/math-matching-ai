@@ -4,9 +4,9 @@ import MathText from "../components/MathText";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
-  ArrowLeft, ChevronRight, Zap, Download, DatabaseZap,
+  ArrowLeft, ChevronRight, Download, DatabaseZap,
   RefreshCw, Copy, CheckCircle, Sliders, ArrowUpRight,
-  ArrowDownRight, Minus, Eye, Plus, LayoutDashboard
+  ArrowDownRight, Minus, Eye, LayoutDashboard
 } from "lucide-react";
 import { getQuestion } from "../services/questionApi";
 import {
@@ -33,64 +33,6 @@ const ORIGINAL = {
   topic: "Tích phân từng phần",
   difficulty: "Khó",
 };
-
-const VARIANTS_DATA = [
-  {
-    id: "VAR-001",
-    latex: "\\int x^3 e^x \\, dx",
-    statement: "Tính tích phân bất định ∫ x³·eˣ dx bằng phương pháp tích phân từng phần. Cần áp dụng công thức 3 lần liên tiếp.",
-    difficulty: "Khó hơn",
-    diffIcon: ArrowUpRight,
-    diffColor: "text-red-600 bg-red-50 border-red-200",
-    strategy: "Tăng bậc đa thức: n=2 → n=3",
-    qaScore: 98,
-    selected: true,
-  },
-  {
-    id: "VAR-002",
-    latex: "\\int x^2 \\sin x \\, dx",
-    statement: "Tính tích phân bất định ∫ x²·sin(x) dx. Thay hàm mũ bằng hàm lượng giác, cấu trúc lời giải tương tự.",
-    difficulty: "Tương đương",
-    diffIcon: Minus,
-    diffColor: "text-amber-600 bg-amber-50 border-amber-200",
-    strategy: "Thay eˣ bằng sin(x)",
-    qaScore: 96,
-    selected: true,
-  },
-  {
-    id: "VAR-003",
-    latex: "\\int x e^{2x} \\, dx",
-    statement: "Tính tích phân ∫ x·e²ˣ dx. Giảm bậc đa thức và thay đổi tham số mũ — đơn giản hơn bài gốc một bước.",
-    difficulty: "Dễ hơn",
-    diffIcon: ArrowDownRight,
-    diffColor: "text-emerald-600 bg-emerald-50 border-emerald-200",
-    strategy: "Giảm bậc n=2 → n=1, đổi hệ số mũ",
-    qaScore: 99,
-    selected: false,
-  },
-  {
-    id: "VAR-004",
-    latex: "\\int x^2 \\cos(2x) \\, dx",
-    statement: "Tính tích phân ∫ x²·cos(2x) dx. Kết hợp tăng tần số hàm lượng giác với giữ nguyên bậc đa thức.",
-    difficulty: "Tương đương",
-    diffIcon: Minus,
-    diffColor: "text-amber-600 bg-amber-50 border-amber-200",
-    strategy: "Thay eˣ bằng cos(2x)",
-    qaScore: 94,
-    selected: false,
-  },
-  {
-    id: "VAR-005",
-    latex: "\\int x^4 e^{-x} \\, dx",
-    statement: "Tính tích phân ∫ x⁴·e⁻ˣ dx. Tăng bậc và đổi dấu mũ — yêu cầu áp dụng công thức tích phân từng phần 4 lần.",
-    difficulty: "Khó hơn",
-    diffIcon: ArrowUpRight,
-    diffColor: "text-red-600 bg-red-50 border-red-200",
-    strategy: "Tăng bậc n=2→4, thêm e⁻ˣ",
-    qaScore: 91,
-    selected: true,
-  },
-];
 
 export default function GenVariants({
   activePage = "gen",
@@ -314,7 +256,9 @@ export default function GenVariants({
 
   useEffect(() => {
     if (!sourceQuestionId) {
-      setSourceQuestion(null);
+      queueMicrotask(() => {
+        setSourceQuestion(null);
+      });
       return;
     }
 

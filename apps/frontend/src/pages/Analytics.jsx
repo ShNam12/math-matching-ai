@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles,
-  TrendingUp, TrendingDown, Database, Activity,
+  Database, Activity,
   FileText as FT, Zap, Users, Clock, Download,
-  ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LayoutDashboard
+  ArrowUpRight, ArrowDownRight, Minus, LayoutDashboard
 } from "lucide-react";
 
 import { getAnalyticsSummary } from "../services/analyticsApi";
@@ -68,26 +68,40 @@ const LOGS = [
 
 // Simple Donut SVG
 function Donut({ data, totalLabel = "12,847" }) {
-  let offset = 0;
   const r = 34;
   const circ = 2 * Math.PI * r;
+
   return (
     <svg viewBox="0 0 80 80" className="w-20 h-20">
       {data.map((d, i) => {
         const dash = (d.pct / 100) * circ;
         const gap = circ - dash;
-        const el = (
-          <circle key={i} cx="40" cy="40" r={r}
-            fill="none" stroke={d.color} strokeWidth="12"
+        const offset = data
+          .slice(0, i)
+          .reduce((sum, item) => sum + (item.pct / 100) * circ, 0);
+
+        return (
+          <circle
+            key={i}
+            cx="40"
+            cy="40"
+            r={r}
+            fill="none"
+            stroke={d.color}
+            strokeWidth="12"
             strokeDasharray={`${dash} ${gap}`}
             strokeDashoffset={-offset}
-            transform="rotate(-90 40 40)" />
+            transform="rotate(-90 40 40)"
+          />
         );
-        offset += dash;
-        return el;
       })}
-      <text x="40" y="37" textAnchor="middle" fontSize="9" fill="#1e293b" fontWeight="700">{totalLabel}</text>
-      <text x="40" y="47" textAnchor="middle" fontSize="6.5" fill="#94a3b8">bài tập</text>
+
+      <text x="40" y="37" textAnchor="middle" fontSize="9" fill="#1e293b" fontWeight="700">
+        {totalLabel}
+      </text>
+      <text x="40" y="47" textAnchor="middle" fontSize="6.5" fill="#94a3b8">
+        bài tập
+      </text>
     </svg>
   );
 }
@@ -98,7 +112,7 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState(null);
 
-  const loadAnalyticsSummary = async () => {
+  const loadAnalyticsSummary = useCallback(async () => {
     setSummaryLoading(true);
     setSummaryError(null);
 
@@ -111,7 +125,7 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
     } finally {
       setSummaryLoading(false);
     }
-  };
+  }, []);
 
   // useEffect(() => {
   //   let cancelled = false;
@@ -146,8 +160,10 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
   // }, []);
 
   useEffect(() => {
-    loadAnalyticsSummary();
-  }, []);
+    queueMicrotask(() => {
+      loadAnalyticsSummary();
+    });
+  }, [loadAnalyticsSummary]);
 
   const formatNumber = (value) => {
     if (value === null || value === undefined) {
