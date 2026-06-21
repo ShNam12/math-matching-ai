@@ -11,8 +11,13 @@ import {
 import { getQuestion } from "../services/questionApi";
 import {
   previewGeneratedQuestions,
+  previewConvertToMCQ,
+  previewSymbolicMCQ,
   assessGeneratedQuestionQuality,
   saveGeneratedQuestion,
+  saveConvertToMCQ,
+  saveSymbolicMCQ,
+  listSymbolicMCQSolvers,
 } from "../services/generationApi";
 
 const NAV = [
@@ -34,6 +39,39 @@ const ORIGINAL = {
   difficulty: "Khó",
 };
 
+const GENERATION_MODES = [
+  { id: "ai", label: "AI MCQ" },
+  { id: "symbolic", label: "Symbolic MCQ" },
+  { id: "convert", label: "Convert from source" },
+];
+
+function getValidationReport(candidate) {
+  return candidate?.validation_report || {
+    can_save: true,
+    warnings: [],
+    blocking_issues: [],
+    symbolic_checks: [],
+  };
+}
+
+function getIssueCode(issue) {
+  return issue?.code || issue?.message || String(issue || "");
+}
+
+function getChoiceValue(choice, field) {
+  if (!choice || typeof choice !== "object") return null;
+  return choice[field] ?? null;
+}
+
+function getChoiceDisplayText(choice) {
+  const text = getChoiceValue(choice, "text");
+  const latex = getChoiceValue(choice, "latex");
+
+  if (text) return String(text);
+  if (latex) return `$${latex}$`;
+  return "";
+}
+
 export default function GenVariants({
   activePage = "gen",
   onNavigate = () => {},
@@ -41,6 +79,10 @@ export default function GenVariants({
   onOpenQualityContext = () => {},
 }) {
   const [variants, setVariants] = useState([]);
+  const [generationMode, setGenerationMode] = useState("ai");
+  const [solvers, setSolvers] = useState([]);
+  const [selectedSolverCode, setSelectedSolverCode] = useState("");
+  const [solverError, setSolverError] = useState(null);
   const [strategy, setStrategy] = useState("Đổi tham số");
   const [count, setCount] = useState("1");
   const [targetDiff, setTargetDiff] = useState("Tương đương");
@@ -121,6 +163,12 @@ export default function GenVariants({
       statement: candidate.statement,
       solution: candidate.solution,
       answer: candidate.answer,
+      questionType: candidate.question_type || "free_response",
+      choices: Array.isArray(candidate.choices) ? candidate.choices : [],
+      correctChoice: candidate.correct_choice || null,
+      validationReport: getValidationReport(candidate),
+      generationMethod: candidate.generation_method || generationMode,
+      solverCode: candidate.solver_code || null,
       formulas: candidate.formulas || [],
       difficulty: difficultyMeta.label,
       diffIcon: difficultyMeta.diffIcon,
@@ -130,6 +178,7 @@ export default function GenVariants({
         : "Sinh từ backend",
       qaScore: candidate.quality_warnings?.length ? 85 : 100,
       selected: false,
+      mode: generationMode,
       candidate,
     };
   };
@@ -145,6 +194,12 @@ export default function GenVariants({
       ...variant,
       quality: qualityResult,
       canSave: qualityResult.can_save,
+      validationReport: {
+        can_save: qualityResult.can_save,
+        warnings: qualityResult.warnings || [],
+        blocking_issues: qualityResult.blocking_issues || [],
+        symbolic_checks: qualityResult.symbolic_checks || [],
+      },
       qaScore: getQualityScore(qualityResult),
       strategy: qualityResult.quality_warnings?.length
         ? qualityResult.quality_warnings.join(", ")
@@ -161,21 +216,50 @@ export default function GenVariants({
     setGenerationError(null);
 
     try {
-      const payload = {
-        source_question_id: sourceQuestionId,
-        generation_count: Number(count),
-        constraints: {
-          subject: sourceQuestion?.subject || null,
-          chapter: sourceQuestion?.chapter || null,
-          difficulty: getRequestedDifficulty(),
-          skills: sourceQuestion?.skills || [],
-          note: note.trim() || null,
-          preserve_formula_style: true,
-          avoid_duplicate: true,
-        },
+      const constraints = {
+        subject: sourceQuestion?.subject || null,
+        chapter: sourceQuestion?.chapter || null,
+        difficulty: getRequestedDifficulty(),
+        skills: sourceQuestion?.skills || [],
+        note: note.trim() || null,
+        preserve_formula_style: true,
+        avoid_duplicate: true,
       };
 
-      const data = await previewGeneratedQuestions(payload);
+      let data;
+
+      if (generationMode === "convert") {
+        data = await previewConvertToMCQ(sourceQuestionId, {
+          generation_count: Number(count),
+          constraints,
+        });
+      } else if (generationMode === "symbolic") {
+        if (!selectedSolverCode) {
+          throw new Error("Chua co solver symbolic kha dung");
+        }
+
+        data = await previewSymbolicMCQ({
+          solver_code: selectedSolverCode,
+          generation_count: Number(count),
+          difficulty: getRequestedDifficulty(),
+          subject: sourceQuestion?.subject || null,
+          chapter: sourceQuestion?.chapter || null,
+          skills: sourceQuestion?.skills || [],
+          taxonomy: {
+            chapter_code: sourceQuestion?.chapter_code || null,
+            topic_code: sourceQuestion?.topic_code || null,
+            problem_type_code: sourceQuestion?.problem_type_code || null,
+          },
+        });
+      } else {
+        const payload = {
+          source_question_id: sourceQuestionId,
+          generation_count: Number(count),
+          constraints,
+        };
+
+        data = await previewGeneratedQuestions(payload);
+      }
       const previewVariants = data.candidates.map(mapCandidateToVariant);
       setVariants(previewVariants);
 
@@ -212,10 +296,23 @@ export default function GenVariants({
           throw new Error(`Biến thể ${variant.id} chưa đạt chất lượng để lưu`);
         }
 
-        const saved = await saveGeneratedQuestion({
-          source_question_id: sourceQuestionId,
-          candidate: variant.candidate,
-        });
+        let saved;
+
+        if (variant.mode === "convert") {
+          saved = await saveConvertToMCQ(sourceQuestionId, {
+            candidate: variant.candidate,
+          });
+        } else if (variant.mode === "symbolic") {
+          saved = await saveSymbolicMCQ({
+            source_question_id: sourceQuestionId,
+            candidate: variant.candidate,
+          });
+        } else {
+          saved = await saveGeneratedQuestion({
+            source_question_id: sourceQuestionId,
+            candidate: variant.candidate,
+          });
+        }
 
         savedResults.push({ variantId: variant.id, saved });
       }
@@ -253,6 +350,36 @@ export default function GenVariants({
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSolvers() {
+      setSolverError(null);
+
+      try {
+        const data = await listSymbolicMCQSolvers();
+        const nextSolvers = Array.isArray(data.solvers) ? data.solvers : [];
+
+        if (!cancelled) {
+          setSolvers(nextSolvers);
+          setSelectedSolverCode((current) =>
+            current || nextSolvers[0]?.code || ""
+          );
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setSolverError(requestError.message);
+        }
+      }
+    }
+
+    loadSolvers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!sourceQuestionId) {
@@ -418,6 +545,59 @@ export default function GenVariants({
               {/* Form fields */}
               <div className="space-y-3">
                 <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+                    Che do sinh trac nghiem
+                  </label>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {GENERATION_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setGenerationMode(mode.id)}
+                        className={`flex items-center justify-between px-2.5 py-2 text-[11px] font-semibold rounded-lg border transition-all ${
+                          generationMode === mode.id
+                            ? "border-blue-300 bg-blue-50 text-blue-700"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-blue-200"
+                        }`}
+                      >
+                        <span>{mode.label}</span>
+                        {generationMode === mode.id && (
+                          <CheckCircle size={12} className="text-blue-600" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {generationMode === "symbolic" && (
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+                      Symbolic solver
+                    </label>
+                    <select
+                      value={selectedSolverCode}
+                      onChange={(e) => setSelectedSolverCode(e.target.value)}
+                      className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-[11px] bg-slate-50 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    >
+                      {solvers.length === 0 ? (
+                        <option value="">Chua co solver</option>
+                      ) : (
+                        solvers.map((solver) => (
+                          <option key={solver.code} value={solver.code}>
+                            {solver.code}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    {solverError && (
+                      <p className="mt-1 text-[10px] text-red-600">
+                        {solverError}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">Chiến lược biến thể</label>
                   <select value={strategy} onChange={(e) => setStrategy(e.target.value)}
                     className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-[11px] bg-slate-50 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400">
@@ -559,6 +739,12 @@ export default function GenVariants({
                 {variants.map((v) => {
                 const DiffIcon = v.diffIcon;
                 const isSelected = v.selected;
+                const validationReport = v.validationReport || {};
+                const warnings = validationReport.warnings || [];
+                const blockingIssues = validationReport.blocking_issues || [];
+                const symbolicChecks = validationReport.symbolic_checks || [];
+                const validationCanSave =
+                  validationReport.can_save !== false && v.canSave !== false;
                 return (
                   <div key={v.id}
                     className={`bg-white border rounded-xl overflow-hidden transition-all ${isSelected ? "border-blue-300 ring-1 ring-blue-200" : "border-slate-100 hover:border-blue-100"}`}>
@@ -569,6 +755,9 @@ export default function GenVariants({
                         <span className="text-[10px] font-bold text-slate-400 font-mono">{v.id}</span>
                         <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${v.diffColor}`}>
                           <DiffIcon size={10} /> {v.difficulty}
+                        </span>
+                        <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                          {v.generationMethod || v.mode}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -623,6 +812,102 @@ export default function GenVariants({
                       <p className="text-[11px] text-slate-600 leading-relaxed mb-2">
                         <MathText value={v.statement} />
                       </p>
+
+                      {v.choices?.length > 0 && (
+                        <div className="mb-2 grid grid-cols-1 gap-1.5">
+                          {v.choices.map((choice, choiceIndex) => {
+                            const choiceKey =
+                              getChoiceValue(choice, "key") ||
+                              String.fromCharCode(65 + choiceIndex);
+                            const isCorrect =
+                              choiceKey === v.correctChoice ||
+                              getChoiceValue(choice, "is_correct") === true;
+
+                            return (
+                              <div
+                                key={`${v.id}-${choiceKey}`}
+                                className={`flex items-start gap-2 rounded-lg border px-2.5 py-1.5 ${
+                                  isCorrect
+                                    ? "border-emerald-200 bg-emerald-50"
+                                    : "border-slate-100 bg-slate-50"
+                                }`}
+                              >
+                                <span
+                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                                    isCorrect
+                                      ? "bg-emerald-600 text-white"
+                                      : "bg-white text-slate-500 border border-slate-200"
+                                  }`}
+                                >
+                                  {choiceKey}
+                                </span>
+                                <span className="min-w-0 text-[11px] leading-relaxed text-slate-700">
+                                  <MathText value={getChoiceDisplayText(choice)} />
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                        {v.correctChoice && (
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
+                            Correct: {v.correctChoice}
+                          </span>
+                        )}
+                        <span
+                          className={`text-[10px] font-semibold border px-2 py-0.5 rounded ${
+                            validationCanSave
+                              ? "text-emerald-700 bg-emerald-50 border-emerald-100"
+                              : "text-red-700 bg-red-50 border-red-100"
+                          }`}
+                        >
+                          Validation: {validationCanSave ? "pass" : "blocked"}
+                        </span>
+                        {v.solverCode && (
+                          <span className="text-[10px] font-semibold text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded">
+                            Solver: {v.solverCode}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                          Method: {v.generationMethod || v.mode || "ai"}
+                        </span>
+                      </div>
+
+                      {(blockingIssues.length > 0 || warnings.length > 0) && (
+                        <div className="mb-2 space-y-1">
+                          {blockingIssues.map((issue, issueIndex) => (
+                            <div
+                              key={`block-${v.id}-${issueIndex}`}
+                              className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-[10px] text-red-700"
+                            >
+                              Block: {getIssueCode(issue)}
+                            </div>
+                          ))}
+                          {warnings.map((issue, issueIndex) => (
+                            <div
+                              key={`warn-${v.id}-${issueIndex}`}
+                              className="rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] text-amber-700"
+                            >
+                              Warning: {getIssueCode(issue)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {symbolicChecks.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-1">
+                          {symbolicChecks.map((check, checkIndex) => (
+                            <span
+                              key={`symbolic-${v.id}-${checkIndex}`}
+                              className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded"
+                            >
+                              {getIssueCode(check)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       {v.savedQuestionId && (
                         <div className="mb-2 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-[10px] text-emerald-700">

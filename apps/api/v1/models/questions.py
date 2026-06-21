@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -7,6 +8,30 @@ class QuestionFormulaItem(BaseModel):
     latex: str
     normalized_latex: str
     source: str
+
+
+class MultipleChoiceOptionItem(BaseModel):
+    key: str
+    text: str
+    latex: str | None = None
+    is_correct: bool = False
+    distractor_type: str | None = None
+    rationale: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SymbolicCheckResultItem(BaseModel):
+    code: str
+    message: str
+    passed: bool
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class QuestionValidationReportItem(BaseModel):
+    can_save: bool = True
+    warnings: list[dict[str, Any]] = Field(default_factory=list)
+    blocking_issues: list[dict[str, Any]] = Field(default_factory=list)
+    symbolic_checks: list[SymbolicCheckResultItem] = Field(default_factory=list)
 
 
 class QuestionResponse(BaseModel):
@@ -18,6 +43,14 @@ class QuestionResponse(BaseModel):
     statement: str
     solution: str | None = None
     answer: str | None = None
+    question_type: str = "free_response"
+    choices: list[MultipleChoiceOptionItem] = Field(default_factory=list)
+    correct_choice: str | None = None
+    validation_report: QuestionValidationReportItem = Field(
+        default_factory=QuestionValidationReportItem
+    )
+    generation_method: str | None = None
+    solver_code: str | None = None
     formulas: list[QuestionFormulaItem] = Field(default_factory=list)
     subject: str | None = None
     chapter: str | None = None
@@ -57,6 +90,11 @@ class QuestionUpdateRequest(BaseModel):
     chapter: str | None = None
     difficulty: str | None = None
     skills: list[str] | None = None
+
+
+class QuestionReviewStatusUpdateRequest(BaseModel):
+    review_status: str = Field(min_length=1)
+
 
 class DocumentClassificationResponse(BaseModel):
     document_id: str

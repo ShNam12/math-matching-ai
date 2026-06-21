@@ -72,6 +72,7 @@ class EmbeddingVectorRepository:
                     "marker": question.marker,
                     "marker_number": question.marker_number,
                     "statement": question.statement,
+                    "question_type": question.question_type,
                     "subject": question.subject,
                     "chapter": question.chapter,
                     "difficulty": question.difficulty,
@@ -224,6 +225,14 @@ class EmbeddingVectorRepository:
                 models.FieldCondition(
                     key="chapter",
                     match=models.MatchValue(value=filters.chapter),
+                )
+            )
+
+        if filters.question_type:
+            must_conditions.append(
+                models.FieldCondition(
+                    key="question_type",
+                    match=models.MatchValue(value=filters.question_type),
                 )
             )
 

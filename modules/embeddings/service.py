@@ -11,6 +11,10 @@ from modules.embeddings.text_builder import (
     build_formula_embedding_text,
     build_question_embedding_text,
 )
+from modules.question_segmenter.formula_extractor import (
+    extract_formulas,
+    normalize_formula,
+)
 
 
 class TextEmbedder(Protocol):
@@ -27,6 +31,84 @@ class VectorRepository(Protocol):
         formulas: list[FormulaVector],
     ) -> None:
         ...
+
+
+def _choice_value(choice: object, field: str):
+    if isinstance(choice, dict):
+        return choice.get(field)
+
+    return getattr(choice, field, None)
+
+
+def _question_formulas(question) -> list[dict[str, str]]:
+    formulas: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for formula in getattr(question, "formulas", []):
+        normalized_latex = str(formula.get("normalized_latex") or "").strip()
+        source = str(formula.get("source") or "statement").strip()
+
+        if not normalized_latex:
+            continue
+
+        key = (source, normalized_latex)
+        if key in seen:
+            continue
+
+        seen.add(key)
+        formulas.append(
+            {
+                "latex": str(formula.get("latex") or normalized_latex),
+                "normalized_latex": normalized_latex,
+                "source": source,
+            }
+        )
+
+    for choice in getattr(question, "choices", []) or []:
+        text = _choice_value(choice, "text")
+        latex = _choice_value(choice, "latex")
+
+        for extracted in extract_formulas(str(text or ""), source="choice"):
+            key = ("choice", extracted.normalized_latex)
+            if key in seen:
+                continue
+
+            seen.add(key)
+            formulas.append(extracted.model_dump())
+
+        if latex is None:
+            continue
+
+        latex_text = str(latex).strip()
+        if not latex_text:
+            continue
+
+        extracted_formulas = extract_formulas(latex_text, source="choice")
+
+        if extracted_formulas:
+            candidates = [
+                extracted.model_dump()
+                for extracted in extracted_formulas
+            ]
+        else:
+            candidates = [
+                {
+                    "latex": latex_text,
+                    "normalized_latex": normalize_formula(latex_text),
+                    "source": "choice",
+                }
+            ]
+
+        for formula in candidates:
+            normalized_latex = formula["normalized_latex"]
+            key = ("choice", normalized_latex)
+            if key in seen:
+                continue
+
+            seen.add(key)
+            formulas.append(formula)
+
+    return formulas
 
 
 class QuestionEmbeddingService:
@@ -71,6 +153,11 @@ class QuestionEmbeddingService:
                         marker=question.marker,
                         marker_number=question.marker_number,
                         statement=question.statement,
+                        question_type=getattr(
+                            question,
+                            "question_type",
+                            "free_response",
+                        ),
                         subject=question.subject,
                         chapter=question.chapter,
                         difficulty=question.difficulty,
@@ -89,7 +176,9 @@ class QuestionEmbeddingService:
                     )
                 )
 
-                for formula_index, formula in enumerate(question.formulas):
+                for formula_index, formula in enumerate(
+                    _question_formulas(question)
+                ):
                     normalized_latex = formula.get(
                         "normalized_latex",
                         "",

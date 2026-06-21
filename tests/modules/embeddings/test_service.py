@@ -138,6 +138,122 @@ def test_embed_document() -> None:
     assert question_repository.failed_document_id is None
 
 
+def test_embed_document_includes_mcq_choices_in_question_text() -> None:
+    question = SimpleNamespace(
+        id="question-id",
+        document_id="document-id",
+        sequence_number=1,
+        marker="Generated",
+        marker_number="3",
+        statement="Tinh $1+1$.",
+        solution="$1+1=2$.",
+        answer="2",
+        question_type="multiple_choice",
+        choices=[
+            {"key": "A", "text": "1"},
+            {"key": "B", "text": "2", "is_correct": True},
+            {"key": "C", "text": "3"},
+            {"key": "D", "text": "4"},
+        ],
+        correct_choice="B",
+        formulas=[],
+        subject=None,
+        chapter=None,
+        difficulty=None,
+        skills=[],
+        subject_code=None,
+        chapter_code=None,
+        chapter_name=None,
+        topic_code=None,
+        topic_name=None,
+        problem_type_code=None,
+        problem_type_name=None,
+        taxonomy_confidence=None,
+        review_status=None,
+        classification_status="pending",
+    )
+    question_repository = FakeQuestionRepository([question])
+    vector_repository = FakeVectorRepository()
+    embedder = FakeEmbedder()
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=vector_repository,
+        embedder=embedder,
+    )
+
+    result = asyncio.run(service.embed_document("document-id"))
+
+    assert result.question_count == 1
+    assert result.formula_count == 0
+    assert len(embedder.texts) == 1
+    assert "Statement:\nTinh $1+1$." in embedder.texts[0]
+    assert "Question type: multiple_choice" in embedder.texts[0]
+    assert "Choices:\n- A: 1" in embedder.texts[0]
+    assert "- B: 2 (correct)" in embedder.texts[0]
+    assert "Correct choice: B" in embedder.texts[0]
+
+
+def test_embed_document_indexes_formulas_from_mcq_choices() -> None:
+    question = SimpleNamespace(
+        id="question-id",
+        document_id="document-id",
+        sequence_number=1,
+        marker="Generated",
+        marker_number="4",
+        statement="Tinh tich phan.",
+        solution=None,
+        answer="1/2",
+        question_type="multiple_choice",
+        choices=[
+            {"key": "A", "text": "$0$", "latex": "0"},
+            {
+                "key": "B",
+                "text": r"$\frac{1}{2}$",
+                "latex": r"\frac{1}{2}",
+                "is_correct": True,
+            },
+            {"key": "C", "text": "$1$", "latex": "1"},
+            {"key": "D", "text": "$2$", "latex": "2"},
+        ],
+        correct_choice="B",
+        formulas=[],
+        subject=None,
+        chapter=None,
+        difficulty=None,
+        skills=[],
+        subject_code=None,
+        chapter_code=None,
+        chapter_name=None,
+        topic_code=None,
+        topic_name=None,
+        problem_type_code=None,
+        problem_type_name=None,
+        taxonomy_confidence=None,
+        review_status=None,
+        classification_status="pending",
+    )
+    question_repository = FakeQuestionRepository([question])
+    vector_repository = FakeVectorRepository()
+    embedder = FakeEmbedder()
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=vector_repository,
+        embedder=embedder,
+    )
+
+    result = asyncio.run(service.embed_document("document-id"))
+
+    assert result.formula_count == 4
+    assert [
+        formula.normalized_latex
+        for formula in vector_repository.formulas
+    ] == ["0", r"\frac{1}{2}", "1", "2"]
+    assert all(
+        formula.source == "choice"
+        for formula in vector_repository.formulas
+    )
+
+
 def test_reject_document_without_segmented_questions() -> None:
     service = QuestionEmbeddingService(
         question_repository=FakeQuestionRepository([]),

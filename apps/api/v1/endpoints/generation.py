@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.v1.models.generation import (
+    ConvertToMCQPreviewRequest,
+    ConvertToMCQSaveRequest,
     GeneratedFormulaItem,
     GeneratedQuestionCandidateItem,
     GenerationConstraintsRequest,
@@ -13,6 +15,14 @@ from apps.api.v1.models.generation import (
     QuestionGenerationSaveRequest,
     QuestionGenerationSaveResponse,
     SemanticDuplicateItem,
+    SymbolicMCQPreviewRequest,
+    SymbolicMCQPreviewResponse,
+    SymbolicMCQSolverItem,
+    SymbolicMCQSolversResponse,
+)
+from apps.api.v1.endpoints.questions import (
+    to_choice_items,
+    to_validation_report_item,
 )
 
 from core.config.settings import settings
@@ -25,10 +35,13 @@ from modules.question_generation import (
     GeneratedQuestionCandidate,
     GeminiQuestionGenerator,
     GenerationConstraints,
+    MultipleChoiceOption,
     QuestionGenerationService,
+    SymbolicMCQGenerator,
 )
 
-from modules.question_quality import QuestionQualityService
+from modules.neuro_symbolic import SolverRegistry
+from modules.question_quality import QuestionQualityService, QuestionValidationReport
 from modules.semantic_search import SemanticSearchService
 
 router = APIRouter(prefix="/generation", tags=["generation"])
@@ -40,6 +53,14 @@ def create_question_generation_service(
         question_repository=QuestionRepository(session),
         generator=GeminiQuestionGenerator(),
     )
+
+
+def create_symbolic_mcq_generator() -> SymbolicMCQGenerator:
+    return SymbolicMCQGenerator()
+
+
+def create_solver_registry() -> SolverRegistry:
+    return SolverRegistry()
 
 
 def create_question_embedding_service(
@@ -99,6 +120,16 @@ def _to_candidate_response(
         statement=candidate.statement,
         solution=candidate.solution,
         answer=candidate.answer,
+        question_type=candidate.question_type,
+        choices=[
+            choice.to_dict()
+            for choice in candidate.choices
+        ],
+        correct_choice=candidate.correct_choice,
+        symbolic_answer=candidate.symbolic_answer,
+        generation_method=candidate.generation_method,
+        solver_code=candidate.solver_code,
+        validation_report=candidate.validation_report.to_dict(),
         subject=candidate.subject,
         chapter=candidate.chapter,
         difficulty=candidate.difficulty,
@@ -122,6 +153,18 @@ def _to_generated_candidate(
         statement=candidate.statement,
         solution=candidate.solution,
         answer=candidate.answer,
+        question_type=candidate.question_type,
+        choices=[
+            MultipleChoiceOption.from_dict(choice.model_dump())
+            for choice in candidate.choices
+        ],
+        correct_choice=candidate.correct_choice,
+        symbolic_answer=candidate.symbolic_answer,
+        generation_method=candidate.generation_method,
+        solver_code=candidate.solver_code,
+        validation_report=QuestionValidationReport.from_dict(
+            candidate.validation_report.model_dump()
+        ),
         subject=candidate.subject,
         chapter=candidate.chapter,
         difficulty=candidate.difficulty,
@@ -131,6 +174,49 @@ def _to_generated_candidate(
             for formula in candidate.formulas
         ],
         quality_warnings=candidate.quality_warnings,
+    )
+
+
+def _to_save_response(saved_question) -> QuestionGenerationSaveResponse:
+    return QuestionGenerationSaveResponse(
+        question_id=saved_question.id,
+        document_id=saved_question.document_id,
+        sequence_number=saved_question.sequence_number,
+        marker=saved_question.marker,
+        marker_number=saved_question.marker_number,
+        statement=saved_question.statement,
+        solution=saved_question.solution,
+        answer=saved_question.answer,
+        question_type=getattr(
+            saved_question,
+            "question_type",
+            "free_response",
+        ),
+        choices=to_choice_items(getattr(saved_question, "choices", [])),
+        correct_choice=getattr(saved_question, "correct_choice", None),
+        validation_report=to_validation_report_item(
+            getattr(saved_question, "validation_report", {})
+        ),
+        generation_method=getattr(
+            saved_question,
+            "generation_method",
+            None,
+        ),
+        solver_code=getattr(saved_question, "solver_code", None),
+        review_status=getattr(saved_question, "review_status", None),
+        subject=saved_question.subject,
+        chapter=saved_question.chapter,
+        difficulty=saved_question.difficulty,
+        skills=saved_question.skills,
+        formulas=[
+            GeneratedFormulaItem(
+                latex=formula["latex"],
+                normalized_latex=formula["normalized_latex"],
+                source=formula["source"],
+            )
+            for formula in saved_question.formulas
+        ],
+        embedding_status=saved_question.embedding_status,
     )
 
 
@@ -158,6 +244,96 @@ async def preview_generated_questions(
                 for candidate in preview.candidates
             ],
         )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/mcq/solvers",
+    response_model=SymbolicMCQSolversResponse,
+)
+async def list_symbolic_mcq_solvers() -> SymbolicMCQSolversResponse:
+    registry = create_solver_registry()
+
+    return SymbolicMCQSolversResponse(
+        solvers=[
+            SymbolicMCQSolverItem(
+                code=solver.code,
+                name=solver.name,
+                taxonomy_hint=solver.taxonomy_hint,
+                param_schema=solver.param_schema,
+            )
+            for solver in registry.list_solvers()
+        ]
+    )
+
+
+@router.post(
+    "/mcq/symbolic/preview",
+    response_model=SymbolicMCQPreviewResponse,
+)
+async def preview_symbolic_mcq(
+    request: SymbolicMCQPreviewRequest,
+) -> SymbolicMCQPreviewResponse:
+    try:
+        generator = create_symbolic_mcq_generator()
+        candidates = await generator.generate(
+            solver_code=request.solver_code,
+            generation_count=request.generation_count,
+            difficulty=request.difficulty,
+            subject=request.subject,
+            chapter=request.chapter,
+            skills=request.skills,
+            taxonomy_metadata=request.taxonomy,
+            seed=request.seed,
+        )
+
+        return SymbolicMCQPreviewResponse(
+            solver_code=request.solver_code.strip().upper(),
+            candidates=[
+                _to_candidate_response(candidate)
+                for candidate in candidates
+            ],
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/questions/{question_id}/convert-to-mcq/preview",
+    response_model=QuestionGenerationPreviewResponse,
+)
+async def preview_convert_to_mcq(
+    question_id: str,
+    request: ConvertToMCQPreviewRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> QuestionGenerationPreviewResponse:
+    try:
+        service = create_question_generation_service(session)
+        preview = await service.preview_convert_to_mcq(
+            source_question_id=question_id,
+            generation_count=request.generation_count,
+            constraints=_to_generation_constraints(request.constraints),
+        )
+
+        return QuestionGenerationPreviewResponse(
+            source_question_id=preview.source_question_id,
+            candidates=[
+                _to_candidate_response(candidate)
+                for candidate in preview.candidates
+            ],
+        )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -220,6 +396,12 @@ async def assess_generated_question_quality(
                 _to_quality_issue_item(issue)
                 for issue in report.blocking_issues
             ],
+            symbolic_checks=[
+                to_validation_report_item(
+                    {"symbolic_checks": [check.to_dict()]}
+                ).symbolic_checks[0]
+                for check in report.symbolic_checks
+            ],
             semantic_duplicates=[
                 SemanticDuplicateItem(
                     question_id=duplicate.question_id,
@@ -265,29 +447,83 @@ async def save_generated_question(
         await embedding_service.embed_document(saved_question.document_id)
         await session.refresh(saved_question)
 
-        return QuestionGenerationSaveResponse(
-            question_id=saved_question.id,
-            document_id=saved_question.document_id,
-            sequence_number=saved_question.sequence_number,
-            marker=saved_question.marker,
-            marker_number=saved_question.marker_number,
-            statement=saved_question.statement,
-            solution=saved_question.solution,
-            answer=saved_question.answer,
-            subject=saved_question.subject,
-            chapter=saved_question.chapter,
-            difficulty=saved_question.difficulty,
-            skills=saved_question.skills,
-            formulas=[
-                GeneratedFormulaItem(
-                    latex=formula["latex"],
-                    normalized_latex=formula["normalized_latex"],
-                    source=formula["source"],
-                )
-                for formula in saved_question.formulas
-            ],
-            embedding_status=saved_question.embedding_status,
+        return _to_save_response(saved_question)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    finally:
+        await client.close()
+
+
+@router.post(
+    "/mcq/symbolic/save",
+    response_model=QuestionGenerationSaveResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def save_symbolic_mcq(
+    request: QuestionGenerationSaveRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> QuestionGenerationSaveResponse:
+    client = create_qdrant_client()
+
+    try:
+        generation_service = create_question_generation_service(session)
+        saved_question = await generation_service.save_generated_question(
+            source_question_id=request.source_question_id,
+            candidate=_to_generated_candidate(request.candidate),
         )
+        embedding_service = create_question_embedding_service(
+            session=session,
+            client=client,
+        )
+
+        await embedding_service.embed_document(saved_question.document_id)
+        await session.refresh(saved_question)
+
+        return _to_save_response(saved_question)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    finally:
+        await client.close()
+
+
+@router.post(
+    "/questions/{question_id}/convert-to-mcq/save",
+    response_model=QuestionGenerationSaveResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def save_convert_to_mcq(
+    question_id: str,
+    request: ConvertToMCQSaveRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> QuestionGenerationSaveResponse:
+    client = create_qdrant_client()
+
+    try:
+        generation_service = create_question_generation_service(session)
+        saved_question = await generation_service.save_convert_to_mcq(
+            source_question_id=question_id,
+            candidate=_to_generated_candidate(request.candidate),
+        )
+        embedding_service = create_question_embedding_service(
+            session=session,
+            client=client,
+        )
+
+        await embedding_service.embed_document(saved_question.document_id)
+        await session.refresh(saved_question)
+
+        return _to_save_response(saved_question)
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

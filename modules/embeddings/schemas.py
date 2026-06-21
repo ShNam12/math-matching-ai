@@ -9,6 +9,7 @@ class QuestionVector:
     marker: str
     marker_number: str
     statement: str
+    question_type: str
     subject: str | None
     chapter: str | None
     difficulty: str | None

@@ -40,6 +40,15 @@ class FakeGenerationService:
             statement=candidate.statement,
             solution=candidate.solution,
             answer=candidate.answer,
+            question_type=candidate.question_type,
+            choices=[
+                choice.to_dict()
+                for choice in candidate.choices
+            ],
+            correct_choice=candidate.correct_choice,
+            validation_report=candidate.validation_report.to_dict(),
+            generation_method=candidate.generation_method,
+            solver_code=candidate.solver_code,
             subject=candidate.subject,
             chapter=candidate.chapter,
             difficulty=candidate.difficulty,
@@ -129,6 +138,73 @@ def test_generation_save_endpoint_saves_candidate_and_embeds_document(
     assert fake_client.closed is True
 
 
+def test_generation_save_endpoint_returns_mcq_fields(monkeypatch) -> None:
+    fake_client = FakeQdrantClient()
+    fake_generation_service = FakeGenerationService()
+    fake_embedding_service = FakeEmbeddingService()
+
+    async def fake_refresh(question):
+        question.embedding_status = "completed"
+
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_qdrant_client",
+        lambda: fake_client,
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_question_generation_service",
+        lambda session: fake_generation_service,
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_question_embedding_service",
+        lambda *, session, client: fake_embedding_service,
+    )
+    monkeypatch.setattr(
+        generation_endpoint.AsyncSession,
+        "refresh",
+        lambda self, question: fake_refresh(question),
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/generation/questions/save",
+        json={
+            "source_question_id": "source-id",
+            "candidate": {
+                "statement": "Tinh $1+1$.",
+                "solution": "$1+1=2$.",
+                "answer": "2",
+                "question_type": "multiple_choice",
+                "choices": [
+                    {"key": "A", "text": "1"},
+                    {"key": "B", "text": "2", "is_correct": True},
+                    {"key": "C", "text": "3"},
+                    {"key": "D", "text": "4"},
+                ],
+                "correct_choice": "B",
+                "generation_method": "ai_symbolic",
+                "solver_code": "ADD_INT",
+            },
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["question_type"] == "multiple_choice"
+    assert payload["choices"][1]["key"] == "B"
+    assert payload["choices"][1]["is_correct"] is True
+    assert payload["correct_choice"] == "B"
+    assert payload["generation_method"] == "ai_symbolic"
+    assert payload["solver_code"] == "ADD_INT"
+    assert fake_generation_service.calls[0]["candidate"].question_type == (
+        "multiple_choice"
+    )
+    assert fake_embedding_service.document_ids == ["document-id"]
+
+
 def test_generation_save_endpoint_returns_400_for_service_error(
     monkeypatch,
 ) -> None:
@@ -180,5 +256,112 @@ def test_generation_save_endpoint_returns_400_for_service_error(
     assert response.status_code == 400
     assert response.json()["detail"] == (
         "Generated question failed quality checks: exact_duplicate_statement"
+    )
+    assert fake_client.closed is True
+
+
+def test_generation_save_endpoint_returns_400_for_duplicate_mcq_choice(
+    monkeypatch,
+) -> None:
+    fake_client = FakeQdrantClient()
+
+    class ErrorGenerationService:
+        async def save_generated_question(self, **kwargs):
+            raise ValueError(
+                "Generated question failed quality checks: "
+                "mcq_duplicate_choice_content"
+            )
+
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_qdrant_client",
+        lambda: fake_client,
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_question_generation_service",
+        lambda session: ErrorGenerationService(),
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/generation/questions/save",
+        json={
+            "source_question_id": "source-id",
+            "candidate": {
+                "statement": "Tinh $1+1$.",
+                "solution": "$1+1=2$.",
+                "answer": "2",
+                "question_type": "multiple_choice",
+                "choices": [
+                    {"key": "A", "text": "2"},
+                    {"key": "B", "text": "2", "is_correct": True},
+                    {"key": "C", "text": "3"},
+                    {"key": "D", "text": "4"},
+                ],
+                "correct_choice": "B",
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Generated question failed quality checks: "
+        "mcq_duplicate_choice_content"
+    )
+    assert fake_client.closed is True
+
+
+def test_generation_save_endpoint_returns_400_for_symbolic_mismatch(
+    monkeypatch,
+) -> None:
+    fake_client = FakeQdrantClient()
+
+    class ErrorGenerationService:
+        async def save_generated_question(self, **kwargs):
+            raise ValueError(
+                "Generated question failed quality checks: "
+                "symbolic_correct_answer_mismatch"
+            )
+
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_qdrant_client",
+        lambda: fake_client,
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_question_generation_service",
+        lambda session: ErrorGenerationService(),
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/generation/questions/save",
+        json={
+            "source_question_id": "source-id",
+            "candidate": {
+                "statement": "Tinh dao ham cua $y=x$.",
+                "solution": "$(x)'=1$.",
+                "answer": "2",
+                "question_type": "multiple_choice",
+                "choices": [
+                    {"key": "A", "text": "0"},
+                    {"key": "B", "text": "2", "is_correct": True},
+                    {"key": "C", "text": "1"},
+                    {"key": "D", "text": "-1"},
+                ],
+                "correct_choice": "B",
+                "solver_code": "DERIV_MONOMIAL",
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Generated question failed quality checks: "
+        "symbolic_correct_answer_mismatch"
     )
     assert fake_client.closed is True

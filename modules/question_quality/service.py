@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 from typing import TYPE_CHECKING, Protocol
 
@@ -11,17 +12,24 @@ if TYPE_CHECKING:
 from modules.question_quality.schemas import (
     QualityIssue,
     QuestionQualityReport,
+    QuestionValidationReport,
     SemanticDuplicateHit,
+    SymbolicCheckResult,
     TaxonomyQualityReport,
 )
 
 from modules.taxonomy import TaxonomyDefinition, TaxonomyIndex
-from modules.question_segmenter.formula_extractor import extract_formulas
+from modules.question_segmenter.formula_extractor import (
+    extract_formulas,
+    normalize_formula,
+)
 from modules.semantic_search.schemas import QuestionSearchFilters
+from modules.neuro_symbolic.symbolic_validator import SymbolicMCQValidator
 
 
-VALID_FORMULA_SOURCES = {"statement", "solution", "answer"}
+VALID_FORMULA_SOURCES = {"statement", "solution", "answer", "choice"}
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+VALID_MCQ_KEYS = {"A", "B", "C", "D"}
 
 class TaxonomyClassificationQualityService:
     def __init__(
@@ -245,15 +253,195 @@ def normalize_statement(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
+def normalize_choice_text(text: str) -> str:
+    return normalize_statement(text)
+
+
+def normalize_choice_latex(latex: str | None) -> str:
+    if not latex:
+        return ""
+
+    return re.sub(r"\s+", "", normalize_formula(latex)).lower()
+
+
+def _numeric_key(value: int | float) -> tuple[str, str]:
+    if isinstance(value, int) or value.is_integer():
+        return ("num", str(int(value)))
+
+    return ("num", str(value))
+
+
+def _flatten_ast_key(
+    op_name: str,
+    left,
+    right,
+) -> list[tuple]:
+    items = []
+
+    for item in [left, right]:
+        if isinstance(item, tuple) and item and item[0] == op_name:
+            items.extend(item[1])
+        else:
+            items.append(item)
+
+    return items
+
+
+def _numeric_value(item: tuple) -> float | None:
+    if item[0] != "num":
+        return None
+
+    try:
+        return float(item[1])
+    except ValueError:
+        return None
+
+
+def _fold_numeric_add(items: list[tuple]) -> tuple | None:
+    values = [_numeric_value(item) for item in items]
+
+    if any(value is None for value in values):
+        return None
+
+    return _numeric_key(sum(value for value in values if value is not None))
+
+
+def _fold_numeric_mul(items: list[tuple]) -> tuple | None:
+    values = [_numeric_value(item) for item in items]
+
+    if any(value is None for value in values):
+        return None
+
+    product = 1.0
+
+    for value in values:
+        if value is not None:
+            product *= value
+
+    return _numeric_key(product)
+
+
+def _canonical_ast_key(node) -> tuple | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return _numeric_key(node.value)
+
+    if isinstance(node, ast.Name):
+        return ("var", node.id)
+
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        operand = _canonical_ast_key(node.operand)
+        if operand is None:
+            return None
+
+        if operand[0] == "num":
+            value = float(operand[1]) * -1
+            return _numeric_key(value)
+
+        return ("neg", operand)
+
+    if isinstance(node, ast.BinOp):
+        left = _canonical_ast_key(node.left)
+        right = _canonical_ast_key(node.right)
+
+        if left is None or right is None:
+            return None
+
+        if isinstance(node.op, ast.Add):
+            items = _flatten_ast_key("add", left, right)
+            folded = _fold_numeric_add(items)
+
+            if folded is not None:
+                return folded
+
+            return ("add", tuple(sorted(items, key=repr)))
+
+        if isinstance(node.op, ast.Sub):
+            right_value = _numeric_value(right)
+            negated_right = (
+                _numeric_key(right_value * -1)
+                if right_value is not None
+                else ("neg", right)
+            )
+            items = _flatten_ast_key("add", left, negated_right)
+            folded = _fold_numeric_add(items)
+
+            if folded is not None:
+                return folded
+
+            return ("add", tuple(sorted(items, key=repr)))
+
+        if isinstance(node.op, ast.Mult):
+            items = _flatten_ast_key("mul", left, right)
+            folded = _fold_numeric_mul(items)
+
+            if folded is not None:
+                return folded
+
+            return ("mul", tuple(sorted(items, key=repr)))
+
+        if isinstance(node.op, ast.Div):
+            left_value = _numeric_value(left)
+            right_value = _numeric_value(right)
+
+            if left_value is not None and right_value not in {None, 0.0}:
+                return _numeric_key(left_value / right_value)
+
+            return ("div", left, right)
+
+        if isinstance(node.op, ast.Pow):
+            left_value = _numeric_value(left)
+            right_value = _numeric_value(right)
+
+            if left_value is not None and right_value is not None:
+                return _numeric_key(left_value ** right_value)
+
+            return ("pow", left, right)
+
+    return None
+
+
+def symbolic_choice_key(value: str | None) -> str | None:
+    if not value:
+        return None
+
+    expression = value.strip()
+    expression = expression.strip("$")
+    expression = expression.replace(r"\(", "").replace(r"\)", "")
+    expression = expression.replace(r"\[", "").replace(r"\]", "")
+    expression = expression.replace("{", "(").replace("}", ")")
+    expression = expression.replace("^", "**")
+    expression = re.sub(r"\s+", "", expression)
+
+    if not expression:
+        return None
+
+    if "\\" in expression:
+        return None
+
+    if not re.fullmatch(r"[A-Za-z0-9_+\-*/().]+", expression):
+        return None
+
+    try:
+        parsed = ast.parse(expression, mode="eval")
+    except SyntaxError:
+        return None
+
+    key = _canonical_ast_key(parsed.body)
+
+    return repr(key) if key is not None else None
+
+
 class QuestionQualityService:
     def __init__(
         self,
         *,
         semantic_search_service: SemanticQuestionSearch | None = None,
         semantic_duplicate_threshold: float = 0.92,
+        symbolic_validator: SymbolicMCQValidator | None = None,
     ) -> None:
         self.semantic_search_service = semantic_search_service
         self.semantic_duplicate_threshold = semantic_duplicate_threshold
+        self.symbolic_validator = symbolic_validator or SymbolicMCQValidator()
 
     async def assess_candidate(
         self,
@@ -293,6 +481,13 @@ class QuestionQualityService:
                 )
             )
 
+        blocking_issues.extend(self._validate_mcq_structure(candidate))
+        blocking_issues.extend(self._validate_mcq_distractors(candidate))
+        symbolic_checks: list[SymbolicCheckResult] = []
+        symbolic_report = self._validate_mcq_symbolically(candidate)
+        warnings.extend(symbolic_report.warnings)
+        blocking_issues.extend(symbolic_report.blocking_issues)
+        symbolic_checks.extend(symbolic_report.symbolic_checks)
         warnings.extend(self._validate_formula_payload(candidate))
         blocking_issues.extend(self._validate_formula_payload_blocking(candidate))
         warnings.extend(self._validate_extracted_formulas(candidate))
@@ -324,7 +519,31 @@ class QuestionQualityService:
             warnings=warnings,
             blocking_issues=blocking_issues,
             semantic_duplicates=semantic_duplicates,
+            symbolic_checks=symbolic_checks,
         )
+
+    def _validate_mcq_symbolically(
+        self,
+        candidate: GeneratedQuestionCandidate,
+    ) -> QuestionValidationReport:
+        if candidate.question_type != "multiple_choice":
+            return QuestionValidationReport()
+
+        return self.symbolic_validator.validate_candidate(
+            candidate,
+            params=self._extract_solver_params(candidate),
+        )
+
+    def _extract_solver_params(
+        self,
+        candidate: GeneratedQuestionCandidate,
+    ) -> dict[str, object] | None:
+        for choice in candidate.choices:
+            params = choice.metadata.get("solver_params")
+            if isinstance(params, dict):
+                return params
+
+        return None
 
     def _validate_formula_payload(
         self,
@@ -341,6 +560,298 @@ class QuestionQualityService:
                 field="formulas",
             )
         ]
+
+    def _validate_mcq_structure(
+        self,
+        candidate: GeneratedQuestionCandidate,
+    ) -> list[QualityIssue]:
+        if candidate.question_type != "multiple_choice":
+            return []
+
+        blocking_issues: list[QualityIssue] = []
+        choices = candidate.choices
+
+        if not choices:
+            return [
+                QualityIssue(
+                    code="mcq_missing_choices",
+                    message="Multiple-choice questions must include choices",
+                    severity="error",
+                    field="choices",
+                )
+            ]
+
+        if len(choices) != 4:
+            blocking_issues.append(
+                QualityIssue(
+                    code="mcq_invalid_choice_count",
+                    message="Multiple-choice questions must have exactly 4 choices",
+                    severity="error",
+                    field="choices",
+                )
+            )
+
+        seen_keys: set[str] = set()
+        duplicate_keys: set[str] = set()
+        correct_keys: list[str] = []
+
+        for index, choice in enumerate(choices):
+            key = choice.key.strip().upper()
+
+            if key not in VALID_MCQ_KEYS:
+                blocking_issues.append(
+                    QualityIssue(
+                        code="mcq_invalid_choice_key",
+                        message="Choice key must be one of A, B, C or D",
+                        severity="error",
+                        field=f"choices[{index}].key",
+                    )
+                )
+
+            if key in seen_keys:
+                duplicate_keys.add(key)
+            else:
+                seen_keys.add(key)
+
+            if not choice.text.strip():
+                blocking_issues.append(
+                    QualityIssue(
+                        code="mcq_empty_choice_text",
+                        message="Choice text must not be empty",
+                        severity="error",
+                        field=f"choices[{index}].text",
+                    )
+                )
+
+            if choice.is_correct:
+                correct_keys.append(key)
+
+        for key in sorted(duplicate_keys):
+            blocking_issues.append(
+                QualityIssue(
+                    code="mcq_duplicate_choice_key",
+                    message=f"Choice key is duplicated: {key}",
+                    severity="error",
+                    field="choices",
+                )
+            )
+
+        correct_choice = (
+            candidate.correct_choice.strip().upper()
+            if candidate.correct_choice
+            else None
+        )
+
+        if correct_choice is None:
+            blocking_issues.append(
+                QualityIssue(
+                    code="mcq_missing_correct_choice",
+                    message="Multiple-choice questions must include correct_choice",
+                    severity="error",
+                    field="correct_choice",
+                )
+            )
+        elif correct_choice not in seen_keys:
+            blocking_issues.append(
+                QualityIssue(
+                    code="mcq_correct_choice_not_found",
+                    message="correct_choice must match one of the choice keys",
+                    severity="error",
+                    field="correct_choice",
+                )
+            )
+
+        if len(correct_keys) > 1:
+            blocking_issues.append(
+                QualityIssue(
+                    code="mcq_multiple_correct_choices",
+                    message="Only one choice may be marked as correct",
+                    severity="error",
+                    field="choices",
+                )
+            )
+        elif len(correct_keys) == 0:
+            blocking_issues.append(
+                QualityIssue(
+                    code="mcq_no_correct_choice_flagged",
+                    message="Exactly one choice must be marked as correct",
+                    severity="error",
+                    field="choices",
+                )
+            )
+        elif (
+            correct_choice is not None
+            and correct_choice in seen_keys
+            and correct_keys[0] != correct_choice
+        ):
+            blocking_issues.append(
+                QualityIssue(
+                    code="mcq_correct_choice_not_found",
+                    message="correct_choice must match the choice marked as correct",
+                    severity="error",
+                    field="correct_choice",
+                )
+            )
+
+        return blocking_issues
+
+    def _validate_mcq_distractors(
+        self,
+        candidate: GeneratedQuestionCandidate,
+    ) -> list[QualityIssue]:
+        if candidate.question_type != "multiple_choice" or not candidate.choices:
+            return []
+
+        blocking_issues: list[QualityIssue] = []
+        issue_codes: set[str] = set()
+
+        def add_issue(code: str, message: str, field: str) -> None:
+            if code in issue_codes:
+                return
+
+            issue_codes.add(code)
+            blocking_issues.append(
+                QualityIssue(
+                    code=code,
+                    message=message,
+                    severity="error",
+                    field=field,
+                )
+            )
+
+        correct_choice_key = (
+            candidate.correct_choice.strip().upper()
+            if candidate.correct_choice
+            else None
+        )
+        correct_choice = None
+
+        for choice in candidate.choices:
+            key = choice.key.strip().upper()
+
+            if correct_choice_key and key == correct_choice_key:
+                correct_choice = choice
+                break
+
+        if correct_choice is None:
+            flagged_correct = [
+                choice
+                for choice in candidate.choices
+                if choice.is_correct
+            ]
+
+            if len(flagged_correct) == 1:
+                correct_choice = flagged_correct[0]
+
+        correct_text_key = (
+            normalize_choice_text(correct_choice.text)
+            if correct_choice is not None
+            else ""
+        )
+        correct_latex_key = (
+            normalize_choice_latex(correct_choice.latex)
+            if correct_choice is not None
+            else ""
+        )
+        correct_symbolic_key = (
+            symbolic_choice_key(correct_choice.latex)
+            or symbolic_choice_key(correct_choice.text)
+            if correct_choice is not None
+            else None
+        )
+
+        seen_text: dict[str, str] = {}
+        seen_latex: dict[str, str] = {}
+        seen_symbolic: dict[str, str] = {}
+        unique_content_keys: set[str] = set()
+
+        for choice in candidate.choices:
+            key = choice.key.strip().upper()
+            text_key = normalize_choice_text(choice.text)
+            latex_key = normalize_choice_latex(choice.latex)
+            symbolic_key = (
+                symbolic_choice_key(choice.latex)
+                or symbolic_choice_key(choice.text)
+            )
+            primary_key = latex_key or text_key
+
+            if primary_key:
+                unique_content_keys.add(primary_key)
+
+            if text_key:
+                if text_key in seen_text:
+                    add_issue(
+                        "mcq_duplicate_choice_content",
+                        "Choice content must be distinct",
+                        "choices",
+                    )
+                else:
+                    seen_text[text_key] = key
+
+            if latex_key:
+                if latex_key in seen_latex:
+                    add_issue(
+                        "mcq_duplicate_choice_content",
+                        "Choice LaTeX content must be distinct",
+                        "choices",
+                    )
+                else:
+                    seen_latex[latex_key] = key
+
+            if symbolic_key:
+                if symbolic_key in seen_symbolic:
+                    add_issue(
+                        "mcq_duplicate_choice_content",
+                        "Choice symbolic content must be distinct",
+                        "choices",
+                    )
+                else:
+                    seen_symbolic[symbolic_key] = key
+
+            if correct_choice is None or choice == correct_choice:
+                continue
+
+            if (
+                text_key
+                and correct_text_key
+                and text_key == correct_text_key
+            ):
+                add_issue(
+                    "mcq_distractor_equals_correct_answer",
+                    "Distractors must not equal the correct answer",
+                    "choices",
+                )
+
+            if (
+                latex_key
+                and correct_latex_key
+                and latex_key == correct_latex_key
+            ):
+                add_issue(
+                    "mcq_distractor_equals_correct_answer",
+                    "Distractor LaTeX must not equal the correct answer",
+                    "choices",
+                )
+
+            if (
+                symbolic_key
+                and correct_symbolic_key
+                and symbolic_key == correct_symbolic_key
+            ):
+                add_issue(
+                    "mcq_distractor_equals_correct_answer",
+                    "Distractor symbolic value must not equal the correct answer",
+                    "choices",
+                )
+
+        if len(candidate.choices) > 1 and len(unique_content_keys) == 1:
+            add_issue(
+                "mcq_all_choices_too_similar",
+                "All choices are too similar",
+                "choices",
+            )
+
+        return blocking_issues
 
     def _validate_formula_payload_blocking(
         self,

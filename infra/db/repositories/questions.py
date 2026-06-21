@@ -11,6 +11,42 @@ from modules.question_classification.schemas import (
 )
 
 
+MCQ_REVIEW_STATUSES = {
+    "draft",
+    "generated",
+    "validated",
+    "needs_review",
+    "approved",
+    "rejected",
+}
+
+
+def infer_mcq_review_status(
+    *,
+    question_type: str | None,
+    validation_report: dict[str, object] | None,
+) -> str | None:
+    if question_type != "multiple_choice":
+        return None
+
+    if not validation_report:
+        return "generated"
+
+    blocking_issues = validation_report.get("blocking_issues")
+    warnings = validation_report.get("warnings")
+
+    if isinstance(blocking_issues, list) and blocking_issues:
+        return "needs_review"
+
+    if isinstance(warnings, list) and warnings:
+        return "needs_review"
+
+    if validation_report.get("can_save") is False:
+        return "needs_review"
+
+    return "validated"
+
+
 class QuestionRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -34,6 +70,21 @@ class QuestionRepository:
                 statement=question.statement,
                 solution=question.solution,
                 answer=question.answer,
+                question_type=question.question_type,
+                choices=[
+                    choice.model_dump()
+                    for choice in question.choices
+                ],
+                correct_choice=question.correct_choice,
+                validation_report={},
+                generation_method=None,
+                solver_code=None,
+                distractor_metadata={},
+                review_status=(
+                    "draft"
+                    if question.question_type == "multiple_choice"
+                    else None
+                ),
                 formulas=[
                     formula.model_dump()
                     for formula in question.formulas
@@ -114,6 +165,14 @@ class QuestionRepository:
         chapter: str | None,
         difficulty: str | None,
         skills: list[str],
+        question_type: str = "free_response",
+        choices: list[dict[str, object]] | None = None,
+        correct_choice: str | None = None,
+        validation_report: dict[str, object] | None = None,
+        generation_method: str | None = None,
+        solver_code: str | None = None,
+        distractor_metadata: dict[str, object] | None = None,
+        review_status: str | None = None,
     ) -> Question:
         result = await self.session.execute(
             select(func.max(Question.sequence_number)).where(
@@ -131,6 +190,18 @@ class QuestionRepository:
             statement=statement,
             solution=solution,
             answer=answer,
+            question_type=question_type,
+            choices=choices or [],
+            correct_choice=correct_choice,
+            validation_report=validation_report or {},
+            generation_method=generation_method,
+            solver_code=solver_code,
+            distractor_metadata=distractor_metadata or {},
+            review_status=review_status
+            or infer_mcq_review_status(
+                question_type=question_type,
+                validation_report=validation_report,
+            ),
             formulas=formulas,
             subject=subject,
             chapter=chapter,
@@ -150,6 +221,25 @@ class QuestionRepository:
         )
 
         self.session.add(question)
+        await self.session.commit()
+        await self.session.refresh(question)
+
+        return question
+
+    async def update_review_status(
+        self,
+        question: Question,
+        *,
+        review_status: str,
+    ) -> Question:
+        normalized_status = review_status.strip().lower()
+
+        if normalized_status not in MCQ_REVIEW_STATUSES:
+            allowed = ", ".join(sorted(MCQ_REVIEW_STATUSES))
+            raise ValueError(f"Invalid review_status. Allowed: {allowed}")
+
+        question.review_status = normalized_status
+
         await self.session.commit()
         await self.session.refresh(question)
 

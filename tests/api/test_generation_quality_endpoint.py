@@ -4,7 +4,11 @@ from fastapi.testclient import TestClient
 
 from apps.api.main import app
 from apps.api.v1.endpoints import generation as generation_endpoint
-from modules.question_quality.schemas import QualityIssue, QuestionQualityReport
+from modules.question_quality.schemas import (
+    QualityIssue,
+    QuestionQualityReport,
+    SymbolicCheckResult,
+)
 
 
 class FakeQdrantClient:
@@ -53,6 +57,33 @@ class FakeQualityService:
                 )
             ],
             blocking_issues=[],
+            semantic_duplicates=[],
+        )
+
+
+class FakeMcqBlockingQualityService:
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+
+    async def assess_candidate(self, **kwargs):
+        return QuestionQualityReport(
+            warnings=[],
+            blocking_issues=[
+                QualityIssue(
+                    code="mcq_duplicate_choice_content",
+                    message="Multiple choice options must be distinct",
+                    severity="error",
+                    field="choices",
+                )
+            ],
+            symbolic_checks=[
+                SymbolicCheckResult(
+                    code="symbolic_correct_answer_mismatch",
+                    message="Correct choice does not match solver result",
+                    passed=False,
+                    details={"choice_key": "B"},
+                )
+            ],
             semantic_duplicates=[],
         )
 
@@ -108,6 +139,61 @@ def test_generation_quality_endpoint_returns_report(monkeypatch) -> None:
     assert payload["warnings"][0]["field"] == "solution"
     assert payload["blocking_issues"] == []
     assert payload["semantic_duplicates"] == []
+
+
+def test_generation_quality_endpoint_returns_mcq_field_errors(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_qdrant_client",
+        lambda: FakeQdrantClient(),
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "QuestionRepository",
+        FakeQuestionRepository,
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "QuestionQualityService",
+        FakeMcqBlockingQualityService,
+    )
+
+    client = TestClient(app)
+
+    response = client.post(
+        "/generation/questions/quality",
+        json={
+            "source_question_id": "source-id",
+            "candidate": {
+                "statement": "Tinh $1+1$.",
+                "solution": "$1+1=2$.",
+                "answer": "2",
+                "question_type": "multiple_choice",
+                "choices": [
+                    {"key": "A", "text": "2"},
+                    {"key": "B", "text": "2", "is_correct": True},
+                    {"key": "C", "text": "3"},
+                    {"key": "D", "text": "4"},
+                ],
+                "correct_choice": "B",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["can_save"] is False
+    assert payload["quality_warnings"] == ["mcq_duplicate_choice_content"]
+    assert payload["blocking_issues"][0]["code"] == (
+        "mcq_duplicate_choice_content"
+    )
+    assert payload["blocking_issues"][0]["field"] == "choices"
+    assert payload["symbolic_checks"][0]["code"] == (
+        "symbolic_correct_answer_mismatch"
+    )
+    assert payload["symbolic_checks"][0]["passed"] is False
 
 
 def test_generation_quality_endpoint_returns_400_for_missing_source(

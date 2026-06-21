@@ -20,6 +20,9 @@ Câu hỏi 2: Tính $\int_0^1 x dx$.
 
     first = result.questions[0]
     assert first.sequence_number == 1
+    assert first.question_type == "free_response"
+    assert first.choices == []
+    assert first.correct_choice is None
     assert first.marker == "Bài"
     assert first.marker_number == "1"
     assert first.statement == "Tính $x^2 + 1$."

@@ -4,6 +4,8 @@ from types import SimpleNamespace
 import pytest
 
 from modules.semantic_search import (
+    FormulaSearchFilters,
+    FormulaSearchVectorHit,
     QuestionSearchFilters,
     QuestionSearchVectorHit,
     SemanticSearchService,
@@ -30,11 +32,13 @@ class FakeQuestionRepository:
 
 
 class FakeVectorRepository:
-    def __init__(self, hits) -> None:
+    def __init__(self, hits, formula_hits=None) -> None:
         self.hits = hits
+        self.formula_hits = formula_hits or []
         self.vector = None
         self.limit = None
         self.filters = None
+        self.formula_filters = None
 
     async def search_questions(
         self,
@@ -47,6 +51,18 @@ class FakeVectorRepository:
         self.limit = limit
         self.filters = filters
         return self.hits
+
+    async def search_formulas(
+        self,
+        *,
+        vector: list[float],
+        limit: int,
+        filters: FormulaSearchFilters,
+    ):
+        self.vector = vector
+        self.limit = limit
+        self.formula_filters = filters
+        return self.formula_hits
 
 
 class FakeEmbedder:
@@ -62,6 +78,7 @@ def make_question(
     *,
     question_id: str,
     embedding_status: str = "completed",
+    question_type: str = "multiple_choice",
 ):
     return SimpleNamespace(
         id=question_id,
@@ -71,6 +88,15 @@ def make_question(
         statement="Tinh dao ham cua ham so.",
         solution="Lay dao ham theo cong thuc.",
         answer="2x",
+        question_type=question_type,
+        choices=[
+            {"key": "A", "text": "x"},
+            {"key": "B", "text": "2x", "is_correct": True},
+        ],
+        correct_choice="B",
+        validation_report={"can_save": True},
+        generation_method="ai_symbolic",
+        solver_code="DERIV_POWER",
         subject="calculus",
         chapter="derivative",
         difficulty="easy",
@@ -142,6 +168,12 @@ def test_search_questions_returns_enriched_results_in_score_order() -> None:
     assert results[0].semantic_score == 0.95
     assert 0.0 <= results[0].score <= 1.0
     assert results[0].statement == "Tinh dao ham cua ham so."
+    assert results[0].question_type == "multiple_choice"
+    assert results[0].choices[1]["key"] == "B"
+    assert results[0].correct_choice == "B"
+    assert results[0].validation_report["can_save"] is True
+    assert results[0].generation_method == "ai_symbolic"
+    assert results[0].solver_code == "DERIV_POWER"
 
     assert results[0].taxonomy_score >= 0.0
     assert results[0].formula_score == 0.0
@@ -307,3 +339,134 @@ def test_search_questions_reranks_by_hybrid_score() -> None:
     ]
     assert results[0].score > results[1].score
     assert results[0].taxonomy_score == 1.0
+
+
+def test_search_questions_filters_by_question_type() -> None:
+    mcq_question = make_question(
+        question_id="mcq",
+        question_type="multiple_choice",
+    )
+    free_response_question = make_question(
+        question_id="free-response",
+        question_type="free_response",
+    )
+    free_response_question.choices = []
+    free_response_question.correct_choice = None
+
+    vector_repository = FakeVectorRepository(
+        [
+            QuestionSearchVectorHit(
+                question_id="mcq",
+                document_id="document-id",
+                score=0.90,
+            ),
+            QuestionSearchVectorHit(
+                question_id="free-response",
+                document_id="document-id",
+                score=0.89,
+            ),
+        ]
+    )
+
+    service = SemanticSearchService(
+        question_repository=FakeQuestionRepository([
+            mcq_question,
+            free_response_question,
+        ]),
+        vector_repository=vector_repository,
+        embedder=FakeEmbedder(),
+    )
+
+    results = asyncio.run(
+        service.search_questions(
+            query="dao ham",
+            filters=QuestionSearchFilters(
+                question_type="multiple_choice",
+            ),
+        )
+    )
+
+    assert vector_repository.filters.question_type == "multiple_choice"
+    assert [result.question_id for result in results] == ["mcq"]
+    assert results[0].question_type == "multiple_choice"
+
+
+def test_search_questions_without_question_type_returns_mixed_results() -> None:
+    mcq_question = make_question(
+        question_id="mcq",
+        question_type="multiple_choice",
+    )
+    free_response_question = make_question(
+        question_id="free-response",
+        question_type="free_response",
+    )
+    free_response_question.choices = []
+    free_response_question.correct_choice = None
+
+    service = SemanticSearchService(
+        question_repository=FakeQuestionRepository([
+            mcq_question,
+            free_response_question,
+        ]),
+        vector_repository=FakeVectorRepository(
+            [
+                QuestionSearchVectorHit(
+                    question_id="mcq",
+                    document_id="document-id",
+                    score=0.90,
+                ),
+                QuestionSearchVectorHit(
+                    question_id="free-response",
+                    document_id="document-id",
+                    score=0.89,
+                ),
+            ]
+        ),
+        embedder=FakeEmbedder(),
+    )
+
+    results = asyncio.run(service.search_questions(query="dao ham"))
+
+    assert {
+        result.question_type
+        for result in results
+    } == {"multiple_choice", "free_response"}
+
+
+def test_search_formulas_returns_mcq_fields_for_choice_formula() -> None:
+    question = make_question(question_id="mcq")
+    vector_repository = FakeVectorRepository(
+        [],
+        formula_hits=[
+            FormulaSearchVectorHit(
+                question_id="mcq",
+                document_id="document-id",
+                formula_index=1,
+                latex=r"\frac{1}{2}",
+                normalized_latex=r"\frac{1}{2}",
+                source="choice",
+                score=0.93,
+            )
+        ],
+    )
+    service = SemanticSearchService(
+        question_repository=FakeQuestionRepository([question]),
+        vector_repository=vector_repository,
+        embedder=FakeEmbedder(),
+    )
+
+    results = asyncio.run(
+        service.search_formulas(
+            latex=r"\frac{1}{2}",
+            filters=FormulaSearchFilters(source="choice"),
+        )
+    )
+
+    assert vector_repository.formula_filters == FormulaSearchFilters(
+        source="choice",
+    )
+    assert len(results) == 1
+    assert results[0].source == "choice"
+    assert results[0].question_type == "multiple_choice"
+    assert results[0].choices[1]["key"] == "B"
+    assert results[0].correct_choice == "B"

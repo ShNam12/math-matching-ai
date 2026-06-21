@@ -9,6 +9,10 @@ from apps.api.v1.models.search import (
     QuestionSearchRequest,
     QuestionSearchResponse,
 )
+from apps.api.v1.endpoints.questions import (
+    to_choice_items,
+    to_validation_report_item,
+)
 from core.config.settings import settings
 from infra.db.repositories.questions import QuestionRepository
 from infra.db.session import get_db_session
@@ -50,6 +54,7 @@ async def search_questions(
             filters=QuestionSearchFilters(
                 subject=request.subject,
                 chapter=request.chapter,
+                question_type=request.question_type,
                 chapter_code=request.chapter_code,
                 topic_code=request.topic_code,
                 problem_type_code=request.problem_type_code,
@@ -70,11 +75,47 @@ async def search_questions(
                     formula_score=result.formula_score,
                     difficulty_score=result.difficulty_score,
                     skill_score=result.skill_score,
+                    choice_structure_score=getattr(
+                        result,
+                        "choice_structure_score",
+                        0.0,
+                    ),
                     marker=result.marker,
                     marker_number=result.marker_number,
                     statement=result.statement,
-                    solution=result.solution,
-                    answer=result.answer,
+                    solution=(
+                        result.solution
+                        if request.include_answers
+                        else None
+                    ),
+                    answer=(
+                        result.answer
+                        if request.include_answers
+                        else None
+                    ),
+                    question_type=getattr(
+                        result,
+                        "question_type",
+                        "free_response",
+                    ),
+                    choices=to_choice_items(
+                        getattr(result, "choices", []),
+                        include_answers=request.include_answers,
+                    ),
+                    correct_choice=(
+                        getattr(result, "correct_choice", None)
+                        if request.include_answers
+                        else None
+                    ),
+                    validation_report=to_validation_report_item(
+                        getattr(result, "validation_report", {})
+                    ),
+                    generation_method=getattr(
+                        result,
+                        "generation_method",
+                        None,
+                    ),
+                    solver_code=getattr(result, "solver_code", None),
                     subject=result.subject,
                     chapter=result.chapter,
                     difficulty=result.difficulty,
@@ -142,8 +183,30 @@ async def search_formulas(
                     marker=result.marker,
                     marker_number=result.marker_number,
                     statement=result.statement,
-                    solution=result.solution,
-                    answer=result.answer,
+                    solution=(
+                        result.solution
+                        if request.include_answers
+                        else None
+                    ),
+                    answer=(
+                        result.answer
+                        if request.include_answers
+                        else None
+                    ),
+                    question_type=getattr(
+                        result,
+                        "question_type",
+                        "free_response",
+                    ),
+                    choices=to_choice_items(
+                        getattr(result, "choices", []),
+                        include_answers=request.include_answers,
+                    ),
+                    correct_choice=(
+                        getattr(result, "correct_choice", None)
+                        if request.include_answers
+                        else None
+                    ),
                     subject=result.subject,
                     chapter=result.chapter,
                     difficulty=result.difficulty,

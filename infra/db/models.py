@@ -84,6 +84,30 @@ class Question(Base):
     solution: Mapped[str | None] = mapped_column(Text, nullable=True)
     answer: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    question_type: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="free_response",
+    )
+    choices: Mapped[list[dict[str, object]]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+    )
+    correct_choice: Mapped[str | None] = mapped_column(Text, nullable=True)
+    validation_report: Mapped[dict[str, object]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+    )
+    generation_method: Mapped[str | None] = mapped_column(Text, nullable=True)
+    solver_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    distractor_metadata: Mapped[dict[str, object]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+    )
+
     formulas: Mapped[list[dict[str, str]]] = mapped_column(
         JSON,
         nullable=False,

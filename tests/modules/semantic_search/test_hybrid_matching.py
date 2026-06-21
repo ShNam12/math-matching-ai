@@ -1,6 +1,7 @@
 from modules.semantic_search import (
     HybridMatchingCandidate,
     HybridMatchingContext,
+    calculate_choice_structure_score,
     calculate_hybrid_score,
     calculate_taxonomy_score,
 )
@@ -142,6 +143,9 @@ def test_final_score_is_clamped_to_valid_range() -> None:
         difficulty="easy",
         skills=["skill"],
         formula_score=2.0,
+        question_type="multiple_choice",
+        choice_count=4,
+        answer_type="number",
     )
 
     score = calculate_hybrid_score(
@@ -193,3 +197,79 @@ def test_no_hybrid_context_keeps_semantic_score_as_final_score() -> None:
     assert score.difficulty_score == 0.0
     assert score.skill_score == 0.0
     assert score.final_score == 0.92
+
+
+def test_same_question_type_increases_choice_structure_score() -> None:
+    context = HybridMatchingContext(question_type="multiple_choice")
+    matching_candidate = HybridMatchingCandidate(
+        semantic_score=0.8,
+        question_type="multiple_choice",
+    )
+    non_matching_candidate = HybridMatchingCandidate(
+        semantic_score=0.8,
+        question_type="free_response",
+    )
+
+    assert calculate_choice_structure_score(
+        context=context,
+        candidate=matching_candidate,
+    ) == 1.0
+    assert calculate_choice_structure_score(
+        context=context,
+        candidate=non_matching_candidate,
+    ) == 0.0
+
+
+def test_mcq_candidate_scores_higher_than_free_response_for_mcq_context() -> None:
+    context = HybridMatchingContext(
+        question_type="multiple_choice",
+        choice_count=4,
+        answer_type="number",
+    )
+    mcq_candidate = HybridMatchingCandidate(
+        semantic_score=0.8,
+        question_type="multiple_choice",
+        choice_count=4,
+        answer_type="number",
+    )
+    free_response_candidate = HybridMatchingCandidate(
+        semantic_score=0.8,
+        question_type="free_response",
+        choice_count=0,
+        answer_type="number",
+    )
+
+    mcq_score = calculate_hybrid_score(
+        context=context,
+        candidate=mcq_candidate,
+    )
+    free_response_score = calculate_hybrid_score(
+        context=context,
+        candidate=free_response_candidate,
+    )
+
+    assert mcq_score.choice_structure_score == 1.0
+    assert free_response_score.choice_structure_score < 1.0
+    assert mcq_score.final_score > free_response_score.final_score
+
+
+def test_missing_choices_do_not_crash_choice_structure_score() -> None:
+    context = HybridMatchingContext(
+        question_type="multiple_choice",
+        choice_count=4,
+        answer_type="expression",
+    )
+    candidate = HybridMatchingCandidate(
+        semantic_score=0.8,
+        question_type="multiple_choice",
+        choice_count=None,
+        answer_type=None,
+    )
+
+    score = calculate_hybrid_score(
+        context=context,
+        candidate=candidate,
+    )
+
+    assert score.choice_structure_score > 0.0
+    assert 0.0 <= score.final_score <= 1.0

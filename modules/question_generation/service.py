@@ -6,15 +6,24 @@ from typing import Protocol
 from infra.db.models import Question
 from infra.db.repositories.questions import QuestionRepository
 from modules.question_generation.prompt_builder import (
+    build_convert_to_mcq_prompt,
     build_question_generation_prompt,
 )
 from modules.question_generation.schemas import (
     GeneratedQuestionCandidate,
     GenerationConstraints,
+    MultipleChoiceOption,
     QuestionGenerationPreview,
 )
-from modules.question_segmenter.formula_extractor import extract_formulas
+from modules.question_segmenter.formula_extractor import (
+    extract_formulas,
+    normalize_formula,
+)
 from modules.question_quality.service import QuestionQualityService
+from modules.question_quality.schemas import (
+    QuestionQualityReport,
+    QuestionValidationReport,
+)
 
 
 class TextQuestionGenerator(Protocol):
@@ -34,6 +43,131 @@ def _loads_generation_json(raw_text: str) -> dict:
         cleaned = re.sub(r"```$", "", cleaned).strip()
 
     return json.loads(cleaned)
+
+
+def _to_validation_report(
+    quality_report: QuestionQualityReport,
+) -> QuestionValidationReport:
+    return QuestionValidationReport(
+        warnings=quality_report.warnings,
+        blocking_issues=quality_report.blocking_issues,
+        symbolic_checks=quality_report.symbolic_checks,
+    )
+
+
+def _optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    return text or None
+
+
+def _parse_choices(value: object) -> list[MultipleChoiceOption]:
+    if not isinstance(value, list):
+        return []
+
+    return [
+        MultipleChoiceOption.from_dict(choice)
+        for choice in value
+        if isinstance(choice, dict)
+    ]
+
+
+def _infer_correct_choice(
+    *,
+    correct_choice: str | None,
+    choices: list[MultipleChoiceOption],
+) -> str | None:
+    if correct_choice:
+        return correct_choice.strip().upper()
+
+    correct_choices = [
+        choice.key
+        for choice in choices
+        if choice.is_correct
+    ]
+
+    if len(correct_choices) == 1:
+        return correct_choices[0]
+
+    return None
+
+
+def _answer_from_correct_choice(
+    *,
+    answer: str | None,
+    correct_choice: str | None,
+    choices: list[MultipleChoiceOption],
+) -> str | None:
+    if answer or not correct_choice:
+        return answer
+
+    for choice in choices:
+        if choice.key == correct_choice:
+            return choice.latex or choice.text
+
+    return answer
+
+
+def _append_extracted_formulas(
+    formulas: list[dict[str, str]],
+    text: str | None,
+    *,
+    source: str,
+) -> None:
+    for extracted in extract_formulas(text, source=source):
+        formulas.append(extracted.model_dump())
+
+
+def _append_choice_latex_formula(
+    formulas: list[dict[str, str]],
+    latex: str | None,
+) -> None:
+    if not latex:
+        return
+
+    text = latex.strip()
+
+    if not text:
+        return
+
+    extracted = extract_formulas(text, source="choice")
+
+    if extracted:
+        formulas.extend(formula.model_dump() for formula in extracted)
+        return
+
+    formulas.append(
+        {
+            "latex": text,
+            "normalized_latex": normalize_formula(text),
+            "source": "choice",
+        }
+    )
+
+
+def _build_distractor_metadata(
+    choices: list[MultipleChoiceOption],
+) -> dict[str, object]:
+    distractors = []
+
+    for choice in choices:
+        if choice.is_correct:
+            continue
+
+        distractors.append(
+            {
+                "key": choice.key,
+                "distractor_type": choice.distractor_type,
+                "rationale": choice.rationale,
+                "metadata": choice.metadata,
+            }
+        )
+
+    return {
+        "distractors": distractors,
+    } if distractors else {}
 
 
 class QuestionGenerationService:
@@ -109,6 +243,13 @@ class QuestionGenerationService:
                     statement=candidate.statement,
                     solution=candidate.solution,
                     answer=candidate.answer,
+                    question_type=candidate.question_type,
+                    choices=candidate.choices,
+                    correct_choice=candidate.correct_choice,
+                    symbolic_answer=candidate.symbolic_answer,
+                    generation_method=candidate.generation_method,
+                    solver_code=candidate.solver_code,
+                    validation_report=_to_validation_report(quality_report),
                     subject=candidate.subject,
                     chapter=candidate.chapter,
                     difficulty=candidate.difficulty,
@@ -121,6 +262,139 @@ class QuestionGenerationService:
         return QuestionGenerationPreview(
             source_question_id=source_question.id,
             candidates=candidates,
+        )
+
+    async def preview_convert_to_mcq(
+        self,
+        *,
+        source_question_id: str,
+        generation_count: int = 1,
+        constraints: GenerationConstraints | None = None,
+    ) -> QuestionGenerationPreview:
+        if generation_count < 1 or generation_count > 10:
+            raise ValueError("Generation count must be between 1 and 10")
+
+        source_question = await self.question_repository.get_question(
+            source_question_id
+        )
+
+        if source_question is None:
+            raise LookupError("Source question not found")
+
+        if getattr(source_question, "question_type", "free_response") != (
+            "free_response"
+        ):
+            raise ValueError("Only free_response questions can be converted to MCQ")
+
+        constraints = constraints or GenerationConstraints()
+        prompt = build_convert_to_mcq_prompt(
+            source_question=source_question,
+            generation_count=generation_count,
+            constraints=constraints,
+        )
+
+        raw_output = await asyncio.to_thread(
+            self.generator.generate_text,
+            prompt,
+        )
+
+        payload = _loads_generation_json(raw_output)
+        items = payload.get("items")
+
+        if not isinstance(items, list):
+            raise ValueError("Generation output must contain an items list")
+
+        existing_questions = await self.question_repository.list_by_document(
+            source_question.document_id
+        )
+        candidates: list[GeneratedQuestionCandidate] = []
+
+        for item in items[:generation_count]:
+            candidate = self._parse_candidate(
+                item=item,
+                source_question=source_question,
+                constraints=constraints,
+            )
+
+            if candidate.question_type != "multiple_choice":
+                raise ValueError("Converted candidate must be multiple_choice")
+
+            quality_report = await self.quality_service.assess_candidate(
+                candidate=candidate,
+                source_question=source_question,
+                existing_questions=existing_questions,
+                requested_difficulty=constraints.difficulty,
+            )
+
+            candidates.append(
+                GeneratedQuestionCandidate(
+                    statement=candidate.statement,
+                    solution=candidate.solution,
+                    answer=candidate.answer,
+                    question_type=candidate.question_type,
+                    choices=candidate.choices,
+                    correct_choice=candidate.correct_choice,
+                    symbolic_answer=candidate.symbolic_answer,
+                    generation_method=candidate.generation_method
+                    or "ai_convert",
+                    solver_code=candidate.solver_code,
+                    validation_report=_to_validation_report(quality_report),
+                    subject=candidate.subject,
+                    chapter=candidate.chapter,
+                    difficulty=candidate.difficulty,
+                    skills=candidate.skills,
+                    formulas=candidate.formulas,
+                    quality_warnings=quality_report.quality_warnings,
+                )
+            )
+
+        return QuestionGenerationPreview(
+            source_question_id=source_question.id,
+            candidates=candidates,
+        )
+
+    async def save_convert_to_mcq(
+        self,
+        *,
+        source_question_id: str,
+        candidate: GeneratedQuestionCandidate,
+    ) -> Question:
+        source_question = await self.question_repository.get_question(
+            source_question_id
+        )
+
+        if source_question is None:
+            raise LookupError("Source question not found")
+
+        if getattr(source_question, "question_type", "free_response") != (
+            "free_response"
+        ):
+            raise ValueError("Only free_response questions can be converted to MCQ")
+
+        if candidate.question_type != "multiple_choice":
+            raise ValueError("Converted candidate must be multiple_choice")
+
+        return await self.save_generated_question(
+            source_question_id=source_question_id,
+            candidate=GeneratedQuestionCandidate(
+                statement=candidate.statement,
+                solution=candidate.solution,
+                answer=candidate.answer,
+                subject=candidate.subject,
+                chapter=candidate.chapter,
+                difficulty=candidate.difficulty,
+                skills=candidate.skills,
+                formulas=candidate.formulas,
+                quality_warnings=candidate.quality_warnings,
+                question_type=candidate.question_type,
+                choices=candidate.choices,
+                correct_choice=candidate.correct_choice,
+                symbolic_answer=candidate.symbolic_answer,
+                generation_method=candidate.generation_method
+                or "ai_convert",
+                solver_code=candidate.solver_code,
+                validation_report=candidate.validation_report,
+            ),
         )
     
     async def save_generated_question(
@@ -153,6 +427,8 @@ class QuestionGenerationService:
                 f"Generated question failed quality checks: {blocking_codes}"
             )
 
+        validation_report = _to_validation_report(quality_report)
+
         return await self.question_repository.create_generated_question(
             source_question=source_question,
             statement=candidate.statement,
@@ -163,6 +439,16 @@ class QuestionGenerationService:
             chapter=candidate.chapter,
             difficulty=candidate.difficulty,
             skills=candidate.skills,
+            question_type=candidate.question_type,
+            choices=[
+                choice.to_dict()
+                for choice in candidate.choices
+            ],
+            correct_choice=candidate.correct_choice,
+            validation_report=validation_report.to_dict(),
+            generation_method=candidate.generation_method,
+            solver_code=candidate.solver_code,
+            distractor_metadata=_build_distractor_metadata(candidate.choices),
         )
 
     def _parse_candidate(
@@ -184,16 +470,26 @@ class QuestionGenerationService:
         answer_value = item.get("answer")
         difficulty_value = item.get("difficulty")
         skills_value = item.get("skills")
+        question_type = str(
+            item.get("question_type") or "free_response"
+        ).strip()
+        choices_value = item.get("choices")
+        correct_choice_value = item.get("correct_choice")
+        symbolic_answer_value = item.get("symbolic_answer")
+        generation_method_value = item.get("generation_method")
+        solver_code_value = item.get("solver_code")
+        validation_report_value = item.get("validation_report")
 
-        solution = (
-            str(solution_value).strip()
-            if solution_value is not None and str(solution_value).strip()
-            else None
+        solution = _optional_str(solution_value)
+        choices = _parse_choices(choices_value)
+        correct_choice = _infer_correct_choice(
+            correct_choice=_optional_str(correct_choice_value),
+            choices=choices,
         )
-        answer = (
-            str(answer_value).strip()
-            if answer_value is not None and str(answer_value).strip()
-            else None
+        answer = _answer_from_correct_choice(
+            answer=_optional_str(answer_value),
+            correct_choice=correct_choice,
+            choices=choices,
         )
         difficulty = (
             str(difficulty_value).strip()
@@ -208,14 +504,13 @@ class QuestionGenerationService:
         )
 
         formulas = []
-        for extracted in extract_formulas(statement, source="statement"):
-            formulas.append(extracted.model_dump())
+        _append_extracted_formulas(formulas, statement, source="statement")
+        _append_extracted_formulas(formulas, solution, source="solution")
+        _append_extracted_formulas(formulas, answer, source="answer")
 
-        for extracted in extract_formulas(solution, source="solution"):
-            formulas.append(extracted.model_dump())
-
-        for extracted in extract_formulas(answer, source="answer"):
-            formulas.append(extracted.model_dump())
+        for choice in choices:
+            _append_extracted_formulas(formulas, choice.text, source="choice")
+            _append_choice_latex_formula(formulas, choice.latex)
 
         quality_warnings: list[str] = []
 
@@ -223,6 +518,32 @@ class QuestionGenerationService:
             statement=statement,
             solution=solution,
             answer=answer,
+            question_type=question_type,
+            choices=choices,
+            correct_choice=correct_choice,
+            symbolic_answer=(
+                str(symbolic_answer_value).strip()
+                if symbolic_answer_value is not None
+                and str(symbolic_answer_value).strip()
+                else None
+            ),
+            generation_method=(
+                str(generation_method_value).strip()
+                if generation_method_value is not None
+                and str(generation_method_value).strip()
+                else None
+            ),
+            solver_code=(
+                str(solver_code_value).strip()
+                if solver_code_value is not None
+                and str(solver_code_value).strip()
+                else None
+            ),
+            validation_report=QuestionValidationReport.from_dict(
+                validation_report_value
+                if isinstance(validation_report_value, dict)
+                else None
+            ),
             subject=constraints.subject or source_question.subject,
             chapter=constraints.chapter or source_question.chapter,
             difficulty=difficulty,

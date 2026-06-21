@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class QuestionSearchFilters:
     subject: str | None = None
     chapter: str | None = None
+    question_type: str | None = None
     chapter_code: str | None = None
     topic_code: str | None = None
     problem_type_code: str | None = None
@@ -19,7 +20,7 @@ class QuestionSearchVectorHit:
     score: float
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class QuestionSearchResult:
     question_id: str
     document_id: str
@@ -29,11 +30,18 @@ class QuestionSearchResult:
     formula_score: float
     difficulty_score: float
     skill_score: float
+    choice_structure_score: float = 0.0
     marker: str
     marker_number: str
     statement: str
     solution: str | None
     answer: str | None
+    question_type: str
+    choices: list[dict[str, object]]
+    correct_choice: str | None
+    validation_report: dict[str, object]
+    generation_method: str | None
+    solver_code: str | None
     subject: str | None
     chapter: str | None
     difficulty: str | None
@@ -80,6 +88,9 @@ class FormulaSearchResult:
     statement: str
     solution: str | None
     answer: str | None
+    question_type: str
+    choices: list[dict[str, object]]
+    correct_choice: str | None
     subject: str | None
     chapter: str | None
     difficulty: str | None

@@ -25,10 +25,60 @@ def test_build_question_embedding_text() -> None:
     text = build_question_embedding_text(question)
 
     assert text.startswith("title: Bai 1 | text:")
+    assert "Question type: free_response" in text
     assert "Statement:\nTinh $x^2 + 1$." in text
     assert "Solution:\nThay $x = 2$." in text
     assert "Answer:\n$5$" in text
     assert "Formulas:\n- x^2 + 1" in text
+
+
+def test_build_question_embedding_text_contains_mcq_choices() -> None:
+    question = SimpleNamespace(
+        marker="Generated",
+        marker_number="3",
+        statement="Tinh $1+1$.",
+        solution="$1+1=2$.",
+        answer="2",
+        question_type="multiple_choice",
+        choices=[
+            {"key": "A", "text": "1", "latex": "1"},
+            {"key": "B", "text": "2", "latex": "2", "is_correct": True},
+            {"key": "C", "text": "3", "latex": "3"},
+            {"key": "D", "text": "4", "latex": "4"},
+        ],
+        correct_choice="B",
+        formulas=[],
+    )
+
+    text = build_question_embedding_text(question)
+
+    assert "Statement:\nTinh $1+1$." in text
+    assert "Question type: multiple_choice" in text
+    assert "Choices:\n- A: 1" in text
+    assert "- B: 2 (correct)" in text
+    assert "- C: 3" in text
+    assert "- D: 4" in text
+    assert "Correct choice: B" in text
+
+
+def test_build_question_embedding_text_handles_empty_mcq_choices() -> None:
+    question = SimpleNamespace(
+        marker="Generated",
+        marker_number="4",
+        statement="Tinh $2+2$.",
+        solution=None,
+        answer=None,
+        question_type="multiple_choice",
+        choices=[],
+        correct_choice=None,
+        formulas=[],
+    )
+
+    text = build_question_embedding_text(question)
+
+    assert "Question type: multiple_choice" in text
+    assert "Statement:\nTinh $2+2$." in text
+    assert "Choices:" not in text
 
 
 def test_build_formula_embedding_text() -> None:

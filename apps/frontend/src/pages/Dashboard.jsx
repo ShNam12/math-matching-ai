@@ -10,6 +10,7 @@ import {
 import { getHealth, getReadiness } from "../services/healthApi";
 import { listDocuments } from "../services/ingestionApi";
 import { getQuestion } from "../services/questionApi";
+import { getAnalyticsSummary } from "../services/analyticsApi";
 import { getRecentQuestionIds } from "../services/recentQuestions";
 import LatexInline from "../components/LatexInline";
 import MathText from "../components/MathText";
@@ -73,6 +74,7 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
   const [systemLoading, setSystemLoading] = useState(true);
   const [systemError, setSystemError] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [analyticsSummary, setAnalyticsSummary] = useState(null);
   const [recentQuestions, setRecentQuestions] = useState([]);
   const [recentLoading, setRecentLoading] = useState(false);
   const [recentError, setRecentError] = useState(null);
@@ -85,16 +87,23 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
       setSystemError(null);
 
       try {
-        const [healthData, readinessData, documentData] = await Promise.all([
+        const [
+          healthData,
+          readinessData,
+          documentData,
+          analyticsData,
+        ] = await Promise.all([
           getHealth(),
           getReadiness(),
           listDocuments(),
+          getAnalyticsSummary().catch(() => null),
         ]);
 
         if (!cancelled) {
           setHealth(healthData);
           setReadiness(readinessData);
           setDocuments(Array.isArray(documentData) ? documentData : []);
+          setAnalyticsSummary(analyticsData);
         }
       } catch (requestError) {
         if (!cancelled) {
@@ -183,6 +192,12 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
     ["uploaded", "processing"].includes(doc.status)
   ).length;
   const failedDocumentCount = documents.filter((doc) => doc.status === "failed").length;
+  const mcqCount = analyticsSummary?.multiple_choice_question_count || 0;
+  const freeResponseCount = analyticsSummary?.free_response_question_count || 0;
+  const validatedMcqCount = analyticsSummary?.validated_mcq_count || 0;
+  const blockingMcqCount = analyticsSummary?.blocking_mcq_count || 0;
+  const symbolicValidatedCount =
+    analyticsSummary?.symbolic_validated_question_count || 0;
 
   const statusCards = [
     {
@@ -259,6 +274,45 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
       icon: AlertTriangle,
       iconBg: failedDocumentCount > 0 ? "#FCEBEB" : "#EAF3DE",
       iconColor: failedDocumentCount > 0 ? "#A32D2D" : "#3B6D11",
+    },
+  ];
+
+  const mcqCards = [
+    {
+      label: "Cau trac nghiem",
+      value: systemLoading ? "Dang tai" : `${mcqCount}`,
+      delta: `${freeResponseCount} cau tu luan`,
+      trend: "up",
+      icon: CheckSquare,
+      iconBg: "#EAF3DE",
+      iconColor: "#3B6D11",
+    },
+    {
+      label: "MCQ da kiem dinh",
+      value: systemLoading ? "Dang tai" : `${validatedMcqCount}`,
+      delta: "validation_report.can_save",
+      trend: "up",
+      icon: Activity,
+      iconBg: "#E6F1FB",
+      iconColor: "#185FA5",
+    },
+    {
+      label: "MCQ co loi blocking",
+      value: systemLoading ? "Dang tai" : `${blockingMcqCount}`,
+      delta: blockingMcqCount > 0 ? "Can review truoc khi luu" : "Khong co loi chan",
+      trend: blockingMcqCount > 0 ? "error" : "up",
+      icon: AlertTriangle,
+      iconBg: blockingMcqCount > 0 ? "#FCEBEB" : "#EAF3DE",
+      iconColor: blockingMcqCount > 0 ? "#A32D2D" : "#3B6D11",
+    },
+    {
+      label: "Symbolic validation",
+      value: systemLoading ? "Dang tai" : `${symbolicValidatedCount}`,
+      delta: "solver_code / symbolic_checks",
+      trend: "up",
+      icon: Zap,
+      iconBg: "#F3E8FF",
+      iconColor: "#7E22CE",
     },
   ];
 
@@ -426,6 +480,24 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
 
           <div className="grid grid-cols-4 gap-2.5">
             {documentCards.map((h, i) => (
+              <div key={i} className="bg-white border border-slate-100 rounded-xl p-3 flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: h.iconBg }}>
+                  <h.icon size={16} style={{ color: h.iconColor }} strokeWidth={1.8} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-slate-400 truncate">{h.label}</p>
+                  <p className={`text-[15px] font-bold leading-tight ${h.trend === "error" ? "text-red-700" : "text-slate-800"}`}>{h.value}</p>
+                  <p className={`text-[10px] mt-0.5 ${h.trend === "up" ? "text-emerald-600" : h.trend === "error" ? "text-red-600" : "text-amber-600"}`}>
+                    {h.delta}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-4 gap-2.5">
+            {mcqCards.map((h, i) => (
               <div key={i} className="bg-white border border-slate-100 rounded-xl p-3 flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: h.iconBg }}>

@@ -118,6 +118,164 @@ const RULES = [
   },
 ];
 
+const MCQ_RULES = [
+  {
+    id: "MCQ-STRUCT",
+    title: "Structural rules",
+    desc: "MCQ must have exactly 4 choices A/B/C/D, one correct choice, a valid correct_choice key, and no empty option text.",
+    category: "Structural",
+    status: "ok",
+    passRate: 100,
+    issues: 0,
+    lastRun: "Theo backend quality service",
+    icon: CheckSquare,
+    affectedIds: [],
+    codes: [
+      "mcq_missing_choices",
+      "mcq_invalid_choice_count",
+      "mcq_invalid_choice_key",
+      "mcq_duplicate_choice_key",
+      "mcq_missing_correct_choice",
+      "mcq_correct_choice_not_found",
+      "mcq_multiple_correct_choices",
+      "mcq_no_correct_choice_flagged",
+      "mcq_empty_choice_text",
+    ],
+    checks: [
+      "Question type multiple_choice requires choices.",
+      "Allowed keys are A, B, C, D.",
+      "Exactly one option is marked correct.",
+      "correct_choice must point to the marked correct option.",
+    ],
+    savePolicy: "Blocking issue: cannot save until fixed.",
+  },
+  {
+    id: "MCQ-DISTRACTOR",
+    title: "Distractor rules",
+    desc: "Distractors must be distinct from each other and must not duplicate or symbolically equal the correct answer.",
+    category: "Distractor",
+    status: "ok",
+    passRate: 100,
+    issues: 0,
+    lastRun: "Theo backend quality service",
+    icon: Copy,
+    affectedIds: [],
+    codes: [
+      "mcq_duplicate_choice_content",
+      "mcq_distractor_equals_correct_answer",
+      "mcq_all_choices_too_similar",
+    ],
+    checks: [
+      "Normalize text, whitespace, and LaTeX before comparison.",
+      "Detect duplicate option content.",
+      "Detect distractors equal to the correct answer.",
+      "Warn when all choices are too similar.",
+    ],
+    savePolicy: "Duplicate/equal distractors are blocking; similarity can be reviewed.",
+  },
+  {
+    id: "MCQ-SYMBOLIC",
+    title: "Symbolic rules",
+    desc: "When a solver is available, the correct choice must match the symbolic result and distractors must not be equivalent to it.",
+    category: "Symbolic",
+    status: "ok",
+    passRate: 100,
+    issues: 0,
+    lastRun: "Theo SymbolicMCQValidator",
+    icon: Code2,
+    affectedIds: [],
+    codes: [
+      "symbolic_correct_answer_verified",
+      "symbolic_correct_answer_mismatch",
+      "symbolic_distractor_equals_correct",
+      "symbolic_distractor_duplicate",
+      "symbolic_parse_failed",
+      "solver_not_available",
+    ],
+    checks: [
+      "Run solver_code through the solver executor.",
+      "Compare correct answer with solver output using symbolic simplification.",
+      "Compare distractors against solver output and each other.",
+      "Report parser and solver failures without crashing the pipeline.",
+    ],
+    savePolicy: "Mismatch and equivalent distractors block save; missing solver is a warning.",
+  },
+  {
+    id: "MCQ-TAXONOMY",
+    title: "Taxonomy rules",
+    desc: "Question metadata must align with the Calculus 1 taxonomy: chapter, topic, problem type, difficulty, and skills.",
+    category: "Taxonomy",
+    status: "ok",
+    passRate: 100,
+    issues: 0,
+    lastRun: "Theo taxonomy quality endpoint",
+    icon: Layers,
+    affectedIds: [],
+    codes: [
+      "taxonomy_low_confidence",
+      "taxonomy_missing_code",
+      "taxonomy_invalid_code",
+      "difficulty_mismatch",
+    ],
+    checks: [
+      "Validate chapter/topic/problem type codes.",
+      "Surface low-confidence AI Matching results.",
+      "Compare generated difficulty against source and taxonomy context.",
+      "Keep skills consistent with the selected problem type.",
+    ],
+    savePolicy: "Warnings route the question to review; invalid taxonomy needs correction.",
+  },
+  {
+    id: "MCQ-SEMANTIC",
+    title: "Semantic duplicate rules",
+    desc: "Generated MCQs are compared with the existing bank so near-duplicate statements or formulas can be blocked or reviewed.",
+    category: "Semantic",
+    status: "ok",
+    passRate: 100,
+    issues: 0,
+    lastRun: "Theo semantic search quality",
+    icon: Shield,
+    affectedIds: [],
+    codes: [
+      "exact_duplicate_statement",
+      "semantic_duplicate_candidate",
+      "invalid_formula_payload",
+    ],
+    checks: [
+      "Compare normalized statement text.",
+      "Use semantic search for near-duplicate candidates.",
+      "Include formula payloads and choice text in duplicate context.",
+      "Show duplicate question ids and similarity scores for review.",
+    ],
+    savePolicy: "Exact duplicates block save; semantic duplicates require review.",
+  },
+  {
+    id: "MCQ-SAVE",
+    title: "Save policy",
+    desc: "The save endpoint persists MCQs only when the merged validation report has no blocking issues.",
+    category: "Policy",
+    status: "ok",
+    passRate: 100,
+    issues: 0,
+    lastRun: "Theo generation save endpoint",
+    icon: FileText,
+    affectedIds: [],
+    codes: [
+      "can_save_false",
+      "blocking_issues",
+      "warnings",
+      "validation_report",
+    ],
+    checks: [
+      "Merge structural, distractor, symbolic, taxonomy, and semantic findings.",
+      "Block save when blocking_issues is not empty.",
+      "Allow save with warnings but persist validation_report.",
+      "Store choices, correct_choice, solver_code, and generation_method.",
+    ],
+    savePolicy: "Only candidates with can_save=true are stored in the question bank.",
+  },
+];
+
 const statusCfg = {
   idle: { label: "Chưa chạy", icon: Clock, bg: "bg-slate-50", text: "text-slate-500", border: "border-slate-200", dot: "bg-slate-300" },
   ok:   { label: "Đã qua", icon: CheckCircle,    bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
@@ -130,6 +288,12 @@ const catColor = {
   "Metadata": "bg-purple-50 text-purple-700 border-purple-200",
   "Nội dung": "bg-teal-50 text-teal-700 border-teal-200",
   "Vector": "bg-indigo-50 text-indigo-700 border-indigo-200",
+  Structural: "bg-blue-50 text-blue-700 border-blue-200",
+  Distractor: "bg-teal-50 text-teal-700 border-teal-200",
+  Symbolic: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  Taxonomy: "bg-purple-50 text-purple-700 border-purple-200",
+  Semantic: "bg-amber-50 text-amber-700 border-amber-200",
+  Policy: "bg-slate-50 text-slate-700 border-slate-200",
 };
 
 export default function QARules({
@@ -151,6 +315,7 @@ export default function QARules({
   const warnings = qualityResult?.warnings || [];
   const blockingIssues = qualityResult?.blocking_issues || [];
   const semanticDuplicates = qualityResult?.semantic_duplicates || [];
+  const symbolicChecks = qualityResult?.symbolic_checks || [];
 
   const qualityRules = hasQualityContext
     ? [
@@ -202,8 +367,9 @@ export default function QARules({
               affectedIds: [selectedQualityContext.variantId].filter(Boolean),
             },
       ]
-    : RULES.map((rule) => ({
+    : MCQ_RULES.map((rule) => ({
         ...rule,
+        legacyRuleCount: RULES.length,
         status: "idle",
         passRate: 0,
         issues: 0,
@@ -458,6 +624,56 @@ export default function QARules({
                       ))}
                     </div>
 
+                    {selectedRule.checks?.length > 0 && (
+                      <div className="bg-white border border-slate-100 rounded-xl p-3">
+                        <p className="text-[11px] font-bold text-slate-600 mb-2">
+                          Checklist
+                        </p>
+                        <div className="space-y-1.5">
+                          {selectedRule.checks.map((check) => (
+                            <div key={check} className="flex items-start gap-2">
+                              <CheckCircle size={11} className="mt-0.5 text-emerald-600 flex-shrink-0" />
+                              <span className="text-[10px] text-slate-600 leading-relaxed">
+                                {check}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRule.codes?.length > 0 && (
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                        <p className="text-[11px] font-bold text-slate-600 mb-2">
+                          Backend quality codes
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedRule.codes.map((code) => (
+                            <code
+                              key={code}
+                              className="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[9px] font-semibold text-slate-600"
+                            >
+                              {code}
+                            </code>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRule.savePolicy && (
+                      <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Shield size={12} className="text-blue-600" />
+                          <p className="text-[11px] font-bold text-blue-700">
+                            Save policy
+                          </p>
+                        </div>
+                        <p className="text-[10px] text-blue-700 leading-relaxed">
+                          {selectedRule.savePolicy}
+                        </p>
+                      </div>
+                    )}
+
                     {hasQualityContext && blockingIssues.length > 0 && (
                       <div>
                         <p className="text-[11px] font-bold text-red-700 mb-2">
@@ -500,6 +716,50 @@ export default function QARules({
                               <p className="text-[10px] text-amber-700 leading-relaxed">
                                 {issue.message}
                               </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {hasQualityContext && symbolicChecks.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-bold text-blue-700 mb-2">
+                          Symbolic checks
+                        </p>
+                        <div className="space-y-1.5">
+                          {symbolicChecks.map((check, index) => (
+                            <div
+                              key={`${check.code || "symbolic"}-${index}`}
+                              className={`rounded-lg border px-2.5 py-2 ${
+                                check.passed
+                                  ? "border-emerald-100 bg-emerald-50"
+                                  : "border-blue-100 bg-blue-50"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 mb-1">
+                                {check.passed ? (
+                                  <CheckCircle size={11} className="text-emerald-600" />
+                                ) : (
+                                  <AlertTriangle size={11} className="text-blue-600" />
+                                )}
+                                <span
+                                  className={`text-[10px] font-bold ${
+                                    check.passed ? "text-emerald-700" : "text-blue-700"
+                                  }`}
+                                >
+                                  {check.code || "symbolic_check"}
+                                </span>
+                              </div>
+                              {check.message && (
+                                <p
+                                  className={`text-[10px] leading-relaxed ${
+                                    check.passed ? "text-emerald-700" : "text-blue-700"
+                                  }`}
+                                >
+                                  {check.message}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>

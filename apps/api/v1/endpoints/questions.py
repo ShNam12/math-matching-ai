@@ -10,9 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.v1.models.questions import (
+    MultipleChoiceOptionItem,
     QuestionFormulaItem,
     QuestionResponse,
+    QuestionReviewStatusUpdateRequest,
     QuestionUpdateRequest,
+    QuestionValidationReportItem,
     TaxonomyQualityIssueResponse,
     TaxonomyQualityReportResponse,
 )
@@ -30,12 +33,90 @@ from apps.api.v1.services.question_vector_sync import (
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
+
+def to_choice_items(
+    choices: object,
+    *,
+    include_answers: bool = True,
+) -> list[MultipleChoiceOptionItem]:
+    if not isinstance(choices, list):
+        return []
+
+    return [
+        MultipleChoiceOptionItem(
+            key=str(choice.get("key") or ""),
+            text=str(choice.get("text") or ""),
+            latex=(
+                str(choice["latex"])
+                if choice.get("latex") is not None
+                else None
+            ),
+            is_correct=(
+                choice.get("is_correct") is True
+                if include_answers
+                else False
+            ),
+            distractor_type=(
+                str(choice["distractor_type"])
+                if include_answers and choice.get("distractor_type") is not None
+                else None
+            ),
+            rationale=(
+                str(choice["rationale"])
+                if include_answers and choice.get("rationale") is not None
+                else None
+            ),
+            metadata=(
+                choice["metadata"]
+                if isinstance(choice.get("metadata"), dict)
+                else {}
+            ),
+        )
+        for choice in choices
+        if isinstance(choice, dict)
+    ]
+
+
+def to_validation_report_item(report: object) -> QuestionValidationReportItem:
+    if not isinstance(report, dict):
+        return QuestionValidationReportItem()
+
+    can_save = report.get("can_save")
+    blocking_issues = report.get("blocking_issues")
+
+    return QuestionValidationReportItem(
+        can_save=(
+            can_save
+            if isinstance(can_save, bool)
+            else not bool(blocking_issues)
+        ),
+        warnings=(
+            report["warnings"]
+            if isinstance(report.get("warnings"), list)
+            else []
+        ),
+        blocking_issues=(
+            blocking_issues
+            if isinstance(blocking_issues, list)
+            else []
+        ),
+        symbolic_checks=(
+            report["symbolic_checks"]
+            if isinstance(report.get("symbolic_checks"), list)
+            else []
+        ),
+    )
+
 def create_question_classification_service() -> QuestionClassificationService:
     return QuestionClassificationService(
         classifier=GeminiQuestionClassifier(),
     )
 
-def to_question_response(question: Question) -> QuestionResponse:
+def to_question_response(
+    question: Question,
+    *,
+    include_answers: bool = True,
+) -> QuestionResponse:
     return QuestionResponse(
         id=question.id,
         document_id=question.document_id,
@@ -43,8 +124,23 @@ def to_question_response(question: Question) -> QuestionResponse:
         marker=question.marker,
         marker_number=question.marker_number,
         statement=question.statement,
-        solution=question.solution,
-        answer=question.answer,
+        solution=question.solution if include_answers else None,
+        answer=question.answer if include_answers else None,
+        question_type=getattr(question, "question_type", "free_response"),
+        choices=to_choice_items(
+            getattr(question, "choices", []),
+            include_answers=include_answers,
+        ),
+        correct_choice=(
+            getattr(question, "correct_choice", None)
+            if include_answers
+            else None
+        ),
+        validation_report=to_validation_report_item(
+            getattr(question, "validation_report", {})
+        ),
+        generation_method=getattr(question, "generation_method", None),
+        solver_code=getattr(question, "solver_code", None),
         formulas=[
             QuestionFormulaItem(
                 latex=formula.get("latex", ""),
@@ -71,7 +167,7 @@ def to_question_response(question: Question) -> QuestionResponse:
         taxonomy_version=question.taxonomy_version,
         taxonomy_confidence=question.taxonomy_confidence,
         taxonomy_reason=question.taxonomy_reason,
-        review_status=question.review_status,
+        review_status=getattr(question, "review_status", None),
 
         classification_status=question.classification_status,
         classification_model=question.classification_model,
@@ -141,6 +237,7 @@ async def get_question_taxonomy_quality(
 @router.get("/{question_id}", response_model=QuestionResponse)
 async def get_question(
     question_id: str,
+    include_answers: bool = Query(default=True),
     session: AsyncSession = Depends(get_db_session),
 ) -> QuestionResponse:
     repository = QuestionRepository(session)
@@ -152,13 +249,14 @@ async def get_question(
             detail="Question not found",
         )
 
-    return to_question_response(question)
+    return to_question_response(question, include_answers=include_answers)
 
 @router.get("", response_model=list[QuestionResponse])
 async def list_questions(
     chapter_code: str | None = Query(default=None),
     topic_code: str | None = Query(default=None),
     problem_type_code: str | None = Query(default=None),
+    include_answers: bool = Query(default=True),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db_session),
@@ -180,7 +278,7 @@ async def list_questions(
     )
 
     return [
-        to_question_response(question)
+        to_question_response(question, include_answers=include_answers)
         for question in questions
     ]
 
@@ -208,6 +306,37 @@ async def update_question(
     )
 
     return to_question_response(updated_question)
+
+
+@router.patch("/{question_id}/review-status", response_model=QuestionResponse)
+async def update_question_review_status(
+    question_id: str,
+    payload: QuestionReviewStatusUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> QuestionResponse:
+    repository = QuestionRepository(session)
+    question = await repository.get_question(question_id)
+
+    if question is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question not found",
+        )
+
+    try:
+        updated_question = await repository.update_review_status(
+            question,
+            review_status=payload.review_status,
+        )
+        await try_sync_question_classification_payload(updated_question)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return to_question_response(updated_question)
+
 
 @router.post("/{question_id}/classify", response_model=QuestionResponse)
 async def classify_question(

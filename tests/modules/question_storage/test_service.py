@@ -5,6 +5,7 @@ import pytest
 
 from modules.embeddings.schemas import EmbeddingResult
 from modules.question_storage import QuestionStorageService
+from infra.db.repositories.questions import infer_mcq_review_status
 
 
 class FakeQuestionCatalogService:
@@ -27,10 +28,12 @@ class FakeQuestionCatalogService:
 class FakeClassificationService:
     def __init__(self, *, failed_question_ids=None) -> None:
         self.question_ids = []
+        self.questions = []
         self.failed_question_ids = set(failed_question_ids or [])
 
     def classify_question(self, question):
         self.question_ids.append(question.id)
+        self.questions.append(question)
 
         if question.id in self.failed_question_ids:
             raise RuntimeError(f"classification failed: {question.id}")
@@ -175,6 +178,75 @@ def test_store_document_marks_failed_classification_and_continues() -> None:
     assert embedding_service.document_id == "document-id"
     assert result.classification_success_count == 1
     assert result.classification_failed_count == 1
+
+
+def test_store_document_keeps_ingested_mcq_questions_in_pipeline() -> None:
+    mcq_question = SimpleNamespace(
+        id="q-mcq",
+        question_type="multiple_choice",
+        choices=[
+            {"key": "A", "text": "1", "is_correct": False},
+            {"key": "B", "text": "2", "is_correct": True},
+            {"key": "C", "text": "3", "is_correct": False},
+            {"key": "D", "text": "4", "is_correct": False},
+        ],
+        correct_choice="B",
+    )
+    catalog_service = FakeQuestionCatalogService(questions=[mcq_question])
+    classification_service = FakeClassificationService()
+
+    service = make_service(
+        catalog_service=catalog_service,
+        classification_service=classification_service,
+    )
+
+    result = asyncio.run(service.store_document("document-id"))
+
+    classified_question = classification_service.questions[0]
+    assert classified_question.question_type == "multiple_choice"
+    assert classified_question.correct_choice == "B"
+    assert classified_question.choices[1]["is_correct"] is True
+    assert result.question_count == 1
+
+
+def test_mcq_review_status_policy_marks_valid_candidate_validated() -> None:
+    review_status = infer_mcq_review_status(
+        question_type="multiple_choice",
+        validation_report={
+            "can_save": True,
+            "warnings": [],
+            "blocking_issues": [],
+        },
+    )
+
+    assert review_status == "validated"
+
+
+def test_mcq_review_status_policy_marks_warning_needs_review() -> None:
+    review_status = infer_mcq_review_status(
+        question_type="multiple_choice",
+        validation_report={
+            "can_save": True,
+            "warnings": [
+                {
+                    "code": "solver_not_available",
+                    "message": "Solver not available.",
+                }
+            ],
+            "blocking_issues": [],
+        },
+    )
+
+    assert review_status == "needs_review"
+
+
+def test_review_status_policy_keeps_free_response_legacy_compatible() -> None:
+    review_status = infer_mcq_review_status(
+        question_type="free_response",
+        validation_report=None,
+    )
+
+    assert review_status is None
 
 
 def test_store_document_rejects_document_without_questions() -> None:

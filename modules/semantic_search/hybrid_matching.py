@@ -8,6 +8,7 @@ class HybridScoreBreakdown:
     formula_score: float
     difficulty_score: float
     skill_score: float
+    choice_structure_score: float
     final_score: float
 
 
@@ -18,6 +19,9 @@ class HybridMatchingContext:
     problem_type_code: str | None = None
     difficulty: str | None = None
     skills: list[str] | None = None
+    question_type: str | None = None
+    choice_count: int | None = None
+    answer_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -29,6 +33,9 @@ class HybridMatchingCandidate:
     difficulty: str | None = None
     skills: list[str] | None = None
     formula_score: float = 0.0
+    question_type: str | None = None
+    choice_count: int | None = None
+    answer_type: str | None = None
 
 
 def clamp_score(value: float) -> float:
@@ -41,6 +48,9 @@ def has_hybrid_context(context: HybridMatchingContext) -> bool:
         context.problem_type_code,
         context.difficulty,
         context.skills,
+        context.question_type,
+        context.choice_count is not None,
+        context.answer_type,
     ])
 
 def calculate_taxonomy_score(
@@ -113,6 +123,35 @@ def calculate_skill_score(
     return len(overlap) / len(union)
 
 
+def calculate_choice_structure_score(
+    *,
+    context: HybridMatchingContext,
+    candidate: HybridMatchingCandidate,
+) -> float:
+    available = 0.0
+    matched = 0.0
+
+    if context.question_type:
+        available += 0.5
+        if context.question_type == candidate.question_type:
+            matched += 0.5
+
+    if context.choice_count is not None:
+        available += 0.25
+        if context.choice_count == candidate.choice_count:
+            matched += 0.25
+
+    if context.answer_type:
+        available += 0.25
+        if context.answer_type == candidate.answer_type:
+            matched += 0.25
+
+    if available == 0.0:
+        return 0.0
+
+    return matched / available
+
+
 def calculate_hybrid_score(
     *,
     context: HybridMatchingContext,
@@ -128,6 +167,7 @@ def calculate_hybrid_score(
             formula_score=formula_score,
             difficulty_score=0.0,
             skill_score=0.0,
+            choice_structure_score=0.0,
             final_score=semantic_score,
         )
 
@@ -143,13 +183,18 @@ def calculate_hybrid_score(
         context=context,
         candidate=candidate,
     )
+    choice_structure_score = calculate_choice_structure_score(
+        context=context,
+        candidate=candidate,
+    )
 
     final_score = (
-        0.50 * semantic_score
+        0.45 * semantic_score
         + 0.20 * taxonomy_score
         + 0.15 * formula_score
         + 0.10 * difficulty_score
         + 0.05 * skill_score
+        + 0.05 * choice_structure_score
     )
 
     return HybridScoreBreakdown(
@@ -158,5 +203,6 @@ def calculate_hybrid_score(
         formula_score=formula_score,
         difficulty_score=difficulty_score,
         skill_score=skill_score,
+        choice_structure_score=choice_structure_score,
         final_score=clamp_score(final_score),
     )

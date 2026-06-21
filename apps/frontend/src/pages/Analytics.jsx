@@ -173,6 +173,14 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
     return Number(value).toLocaleString("vi-VN");
   };
 
+  const formatPercent = (value) => {
+    if (value === null || value === undefined) {
+      return "0%";
+    }
+
+    return `${Math.round(Number(value || 0) * 100)}%`;
+  };
+
   const difficultyLabel = (difficulty) => {
     const labels = {
       easy: "Dễ",
@@ -256,6 +264,46 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
           bg: "bg-teal-50",
         },
         {
+          label: "Cau trac nghiem",
+          val: formatNumber(summary.multiple_choice_question_count),
+          delta: `${formatNumber(summary.free_response_question_count)} tu luan`,
+          trend: "up",
+          sub: "question_type",
+          icon: CheckSquare,
+          color: "text-teal-600",
+          bg: "bg-teal-50",
+        },
+        {
+          label: "MCQ hop le",
+          val: formatPercent(summary.valid_mcq_rate),
+          delta: `${formatNumber(summary.validated_mcq_count)} cau`,
+          trend: "up",
+          sub: "can_save",
+          icon: Zap,
+          color: "text-purple-600",
+          bg: "bg-purple-50",
+        },
+        {
+          label: "Symbolic checked",
+          val: formatNumber(summary.symbolic_validated_question_count),
+          delta: "",
+          trend: "flat",
+          sub: "solver/checks",
+          icon: Users,
+          color: "text-indigo-600",
+          bg: "bg-indigo-50",
+        },
+        {
+          label: "Distractor error",
+          val: formatPercent(summary.distractor_error_rate),
+          delta: `${formatNumber(summary.distractor_error_count)} cau`,
+          trend: summary.distractor_error_count > 0 ? "down" : "flat",
+          sub: "distractor",
+          icon: Clock,
+          color: "text-red-600",
+          bg: "bg-red-50",
+        },
+        {
           label: "Câu đã embedding",
           val: formatNumber(summary.embedded_question_count),
           delta: `${formatNumber(summary.embedding_status_counts?.pending || 0)} pending`,
@@ -313,7 +361,9 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
       })
     : DIFF_DATA;    
 
-  const topicEntries = Object.entries(summary?.chapter_counts || {});
+  const topicEntries = Object.entries(
+    summary?.topic_counts || summary?.chapter_counts || {}
+  );
   const topicTotal = topicEntries.reduce(
     (total, [, count]) => total + Number(count || 0),
     0
@@ -327,6 +377,40 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
         pct: Math.round((Number(count || 0) / topicTotal) * 100),
       }))
     : TOPIC_DATA;    
+
+  const questionTypeEntries = Object.entries(
+    summary?.question_type_counts || {}
+  );
+  const questionTypeTotal = questionTypeEntries.reduce(
+    (total, [, count]) => total + Number(count || 0),
+    0
+  );
+  const questionTypeData = questionTypeTotal > 0
+    ? questionTypeEntries.map(([type, count], index) => ({
+        label: type === "multiple_choice" ? "Trac nghiem" : "Tu luan",
+        val: Number(count || 0),
+        color: topicColors[index % topicColors.length],
+        pct: Math.round((Number(count || 0) / questionTypeTotal) * 100),
+      }))
+    : [];
+
+  const generationMethodEntries = Object.entries(
+    summary?.generation_method_counts || {}
+  );
+  const generationMethodTotal = generationMethodEntries.reduce(
+    (total, [, count]) => total + Number(count || 0),
+    0
+  );
+  const generationMethodData = generationMethodEntries.map(
+    ([method, count], index) => ({
+      label: method || "unknown",
+      val: Number(count || 0),
+      color: topicColors[(index + 2) % topicColors.length],
+      pct: generationMethodTotal > 0
+        ? Math.round((Number(count || 0) / generationMethodTotal) * 100)
+        : 0,
+    })
+  );
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -432,6 +516,120 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
               </div>
             ))}
           </div>
+
+          {summary && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white border border-slate-100 rounded-xl p-4">
+                <p className="text-[12px] font-bold text-slate-700 mb-3">
+                  Phan bo loai cau hoi
+                </p>
+                <div className="space-y-3">
+                  {(questionTypeData.length ? questionTypeData : [
+                    { label: "Trac nghiem", val: 0, pct: 0, color: "bg-teal-500" },
+                    { label: "Tu luan", val: 0, pct: 0, color: "bg-slate-400" },
+                  ]).map((item) => (
+                    <div key={item.label}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-[11px] text-slate-600 font-medium">{item.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-bold text-slate-700">
+                            {formatNumber(item.val)}
+                          </span>
+                          <span className="text-[10px] text-slate-400">({item.pct}%)</span>
+                        </div>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-100 rounded-xl p-4">
+                <p className="text-[12px] font-bold text-slate-700 mb-3">
+                  Chat luong MCQ
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    [
+                      "MCQ hop le",
+                      formatPercent(summary.valid_mcq_rate),
+                      `${formatNumber(summary.validated_mcq_count)} cau`,
+                      "text-emerald-700",
+                      "bg-emerald-50",
+                    ],
+                    [
+                      "Loi dap an dung",
+                      formatPercent(summary.correct_answer_error_rate),
+                      `${formatNumber(summary.correct_answer_error_count)} cau`,
+                      "text-red-700",
+                      "bg-red-50",
+                    ],
+                    [
+                      "Loi distractor",
+                      formatPercent(summary.distractor_error_rate),
+                      `${formatNumber(summary.distractor_error_count)} cau`,
+                      "text-amber-700",
+                      "bg-amber-50",
+                    ],
+                    [
+                      "Solver unavailable",
+                      formatPercent(summary.solver_unavailable_rate),
+                      `${formatNumber(summary.solver_unavailable_count)} cau`,
+                      "text-indigo-700",
+                      "bg-indigo-50",
+                    ],
+                    [
+                      "Can review",
+                      formatPercent(summary.needs_review_rate),
+                      `${formatNumber(summary.needs_review_count)} cau`,
+                      "text-purple-700",
+                      "bg-purple-50",
+                    ],
+                    [
+                      "Blocking",
+                      formatNumber(summary.blocking_mcq_count || 0),
+                      "khong the luu",
+                      "text-slate-700",
+                      "bg-slate-50",
+                    ],
+                  ].map(([label, value, sub, textClass, bgClass]) => (
+                    <div key={label} className={`rounded-lg border border-slate-100 ${bgClass} px-3 py-2`}>
+                      <p className="text-[10px] text-slate-500">{label}</p>
+                      <p className={`text-[16px] font-bold ${textClass}`}>
+                        {value}
+                      </p>
+                      <p className="text-[10px] text-slate-500">{sub}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-100 rounded-xl p-4">
+                <p className="text-[12px] font-bold text-slate-700 mb-3">
+                  Generation method
+                </p>
+                <div className="space-y-3">
+                  {(generationMethodData.length ? generationMethodData : [
+                    { label: "Chua co du lieu", val: 0, pct: 0, color: "bg-slate-400" },
+                  ]).map((item) => (
+                    <div key={item.label}>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-[11px] text-slate-600 font-medium">{item.label}</span>
+                        <span className="text-[11px] font-bold text-slate-700">
+                          {formatNumber(item.val)}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {!summaryLoading && !summaryError && summary && !hasAnalyticsData && (
             <div className="bg-white border border-dashed border-slate-200 rounded-xl px-4 py-10 text-center">

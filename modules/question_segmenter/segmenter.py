@@ -1,4 +1,5 @@
 from modules.question_segmenter.formula_extractor import extract_formulas
+from modules.question_segmenter.mcq_parser import parse_mcq
 from modules.question_segmenter.patterns import (
     QUESTION_START_RE,
     SECTION_MARKER_RE,
@@ -77,9 +78,29 @@ def segment_questions(markdown: str) -> SegmentationResult:
         )
 
         statement, solution, answer = _split_question_sections(content)
+        parsed_mcq = parse_mcq(statement, answer=answer)
+
+        question_type = "free_response"
+        choices = []
+        correct_choice = None
+
+        if parsed_mcq is not None:
+            question_type = "multiple_choice"
+            statement = parsed_mcq.statement
+            choices = parsed_mcq.choices
+            correct_choice = parsed_mcq.correct_choice
+            answer = parsed_mcq.answer
 
         formulas = [
             *extract_formulas(statement, source="statement"),
+            *[
+                formula
+                for choice in choices
+                for formula in extract_formulas(
+                    choice.text,
+                    source="choice",
+                )
+            ],
             *extract_formulas(solution, source="solution"),
             *extract_formulas(answer, source="answer"),
         ]
@@ -93,6 +114,9 @@ def segment_questions(markdown: str) -> SegmentationResult:
                 solution=solution,
                 answer=answer,
                 formulas=formulas,
+                question_type=question_type,
+                choices=choices,
+                correct_choice=correct_choice,
             )
         )
 

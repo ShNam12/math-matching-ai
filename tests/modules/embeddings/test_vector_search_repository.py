@@ -81,6 +81,7 @@ def test_search_questions_calls_qdrant_with_filters() -> None:
             filters=QuestionSearchFilters(
                 subject="calculus",
                 chapter="derivative",
+                question_type="multiple_choice",
                 difficulty="easy",
             ),
         )

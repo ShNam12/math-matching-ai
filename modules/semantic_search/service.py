@@ -19,6 +19,57 @@ from modules.semantic_search.hybrid_matching import (
     calculate_hybrid_score,
 )
 
+
+def _choice_value(choice: object, field: str):
+    if isinstance(choice, dict):
+        return choice.get(field)
+
+    return getattr(choice, field, None)
+
+
+def _choice_answer_type(question) -> str | None:
+    choices = getattr(question, "choices", []) or []
+    correct_choice = getattr(question, "correct_choice", None)
+    correct_text = None
+
+    for choice in choices:
+        key = str(_choice_value(choice, "key") or "").strip().upper()
+        if correct_choice and key != str(correct_choice).strip().upper():
+            continue
+
+        correct_text = (
+            _choice_value(choice, "latex")
+            or _choice_value(choice, "text")
+        )
+        break
+
+    if correct_text is None and getattr(question, "answer", None):
+        correct_text = question.answer
+
+    if correct_text is None:
+        return None
+
+    text = str(correct_text).strip()
+
+    if not text:
+        return None
+
+    if "\\begin{matrix" in text or "\\begin{pmatrix" in text:
+        return "matrix"
+
+    numeric_text = text.strip("$").replace(",", ".")
+    try:
+        float(numeric_text)
+        return "number"
+    except ValueError:
+        pass
+
+    if any(token in text for token in ["\\", "^", "_", "=", "+", "-", "*", "/"]):
+        return "expression"
+
+    return "text"
+
+
 class TextEmbedder(Protocol):
     def embed_text(self, text: str) -> list[float]:
         ...
@@ -78,10 +129,12 @@ class SemanticSearchService:
             problem_type_code=filters.problem_type_code,
             difficulty=filters.difficulty,
             skills=[filters.skill] if filters.skill else [],
+            question_type=filters.question_type,
         )
         vector_filters = QuestionSearchFilters(
             subject=filters.subject,
             chapter=filters.chapter,
+            question_type=filters.question_type,
         )
 
         query_vector = await asyncio.to_thread(
@@ -122,6 +175,15 @@ class SemanticSearchService:
             if filters.chapter and question.chapter != filters.chapter:
                 continue
 
+            question_type = getattr(
+                question,
+                "question_type",
+                "free_response",
+            )
+
+            if filters.question_type and question_type != filters.question_type:
+                continue
+
             # if filters.chapter_code and question.chapter_code != filters.chapter_code:
             #     continue
 
@@ -149,6 +211,9 @@ class SemanticSearchService:
                     problem_type_code=question.problem_type_code,
                     difficulty=question.difficulty,
                     skills=question.skills,
+                    question_type=question_type,
+                    choice_count=len(getattr(question, "choices", []) or []),
+                    answer_type=_choice_answer_type(question),
                 ),
             )            
 
@@ -162,11 +227,28 @@ class SemanticSearchService:
                     formula_score=hybrid_score.formula_score,
                     difficulty_score=hybrid_score.difficulty_score,
                     skill_score=hybrid_score.skill_score,
+                    choice_structure_score=(
+                        hybrid_score.choice_structure_score
+                    ),
                     marker=question.marker,
                     marker_number=question.marker_number,
                     statement=question.statement,
                     solution=question.solution,
                     answer=question.answer,
+                    question_type=question_type,
+                    choices=getattr(question, "choices", []),
+                    correct_choice=getattr(question, "correct_choice", None),
+                    validation_report=getattr(
+                        question,
+                        "validation_report",
+                        {},
+                    ),
+                    generation_method=getattr(
+                        question,
+                        "generation_method",
+                        None,
+                    ),
+                    solver_code=getattr(question, "solver_code", None),
                     subject=question.subject,
                     chapter=question.chapter,
                     difficulty=question.difficulty,
@@ -251,6 +333,13 @@ class SemanticSearchService:
                     statement=question.statement,
                     solution=question.solution,
                     answer=question.answer,
+                    question_type=getattr(
+                        question,
+                        "question_type",
+                        "free_response",
+                    ),
+                    choices=getattr(question, "choices", []),
+                    correct_choice=getattr(question, "correct_choice", None),
                     subject=question.subject,
                     chapter=question.chapter,
                     difficulty=question.difficulty,

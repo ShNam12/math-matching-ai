@@ -1,4 +1,12 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
+
+from apps.api.v1.models.questions import (
+    MultipleChoiceOptionItem,
+    QuestionValidationReportItem,
+    SymbolicCheckResultItem,
+)
 
 
 class GenerationConstraintsRequest(BaseModel):
@@ -27,6 +35,15 @@ class GeneratedQuestionCandidateItem(BaseModel):
     statement: str
     solution: str | None = None
     answer: str | None = None
+    question_type: str = "free_response"
+    choices: list[MultipleChoiceOptionItem] = Field(default_factory=list)
+    correct_choice: str | None = None
+    symbolic_answer: str | None = None
+    generation_method: str | None = None
+    solver_code: str | None = None
+    validation_report: QuestionValidationReportItem = Field(
+        default_factory=QuestionValidationReportItem
+    )
     subject: str | None = None
     chapter: str | None = None
     difficulty: str | None = None
@@ -38,6 +55,42 @@ class GeneratedQuestionCandidateItem(BaseModel):
 class QuestionGenerationPreviewResponse(BaseModel):
     source_question_id: str
     candidates: list[GeneratedQuestionCandidateItem]
+
+
+class ConvertToMCQPreviewRequest(BaseModel):
+    generation_count: int = Field(default=1, ge=1, le=10)
+    constraints: GenerationConstraintsRequest | None = None
+
+
+class ConvertToMCQSaveRequest(BaseModel):
+    candidate: GeneratedQuestionCandidateItem
+
+
+class SymbolicMCQPreviewRequest(BaseModel):
+    solver_code: str = Field(min_length=1)
+    generation_count: int = Field(default=3, ge=1, le=10)
+    difficulty: str | None = None
+    subject: str | None = None
+    chapter: str | None = None
+    skills: list[str] = Field(default_factory=list)
+    taxonomy: dict[str, Any] = Field(default_factory=dict)
+    seed: int | None = None
+
+
+class SymbolicMCQPreviewResponse(BaseModel):
+    solver_code: str
+    candidates: list[GeneratedQuestionCandidateItem]
+
+
+class SymbolicMCQSolverItem(BaseModel):
+    code: str
+    name: str
+    taxonomy_hint: str | None = None
+    param_schema: dict[str, Any]
+
+
+class SymbolicMCQSolversResponse(BaseModel):
+    solvers: list[SymbolicMCQSolverItem]
 
 
 class QuestionGenerationSaveRequest(BaseModel):
@@ -54,6 +107,15 @@ class QuestionGenerationSaveResponse(BaseModel):
     statement: str
     solution: str | None = None
     answer: str | None = None
+    question_type: str = "free_response"
+    choices: list[MultipleChoiceOptionItem] = Field(default_factory=list)
+    correct_choice: str | None = None
+    validation_report: QuestionValidationReportItem = Field(
+        default_factory=QuestionValidationReportItem
+    )
+    generation_method: str | None = None
+    solver_code: str | None = None
+    review_status: str | None = None
     subject: str | None = None
     chapter: str | None = None
     difficulty: str | None = None
@@ -86,4 +148,5 @@ class QuestionGenerationQualityResponse(BaseModel):
     quality_warnings: list[str]
     warnings: list[QualityIssueItem]
     blocking_issues: list[QualityIssueItem]
+    symbolic_checks: list[SymbolicCheckResultItem] = Field(default_factory=list)
     semantic_duplicates: list[SemanticDuplicateItem]

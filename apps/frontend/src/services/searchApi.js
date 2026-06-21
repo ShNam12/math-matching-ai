@@ -10,6 +10,7 @@ export function searchQuestions({
   problem_type_code = null,
   difficulty = null,
   skill = null,
+  question_type = null,
 }) {
   return apiRequest("/search/questions", {
     method: "POST",
@@ -25,7 +26,8 @@ export function searchQuestions({
       topic_code,
       problem_type_code,
       difficulty,
-      skill
+      skill,
+      question_type,
     }),
   });
 }

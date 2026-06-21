@@ -32,6 +32,33 @@ const toPercent = (value) => (
   value == null ? null : Math.round(value * 100)
 );
 
+const normalizeQuestionType = (value) => {
+  if (value === "multiple_choice" || value === "free_response") {
+    return value;
+  }
+
+  return "free_response";
+};
+
+const formatQuestionType = (value) => (
+  normalizeQuestionType(value) === "multiple_choice" ? "Trac nghiem" : "Tu luan"
+);
+
+const getChoiceValue = (choice, key) => {
+  if (!choice || typeof choice !== "object") {
+    return null;
+  }
+
+  return choice[key] ?? null;
+};
+
+const getChoiceDisplayText = (choice) => {
+  const text = getChoiceValue(choice, "text");
+  const latex = getChoiceValue(choice, "latex");
+
+  return String(text || latex || "").trim();
+};
+
 export default function SemanticSearch({
   activePage = "search",
   onNavigate = () => {},
@@ -44,6 +71,7 @@ export default function SemanticSearch({
   const [topic, setTopic] = useState("");
   const [diff, setDiff] = useState("");
   const [skill, setSkill] = useState("");
+  const [questionType, setQuestionType] = useState("");
   const [taxonomyFilters, setTaxonomyFilters] = useState(null);
 
   const normalizeDifficultyFilter = (value) => {
@@ -85,7 +113,10 @@ export default function SemanticSearch({
   const [hasSearched, setHasSearched] = useState(false);
   const [taxonomyListMode, setTaxonomyListMode] = useState(false);
 
-  const filtered = results;
+  const filtered =
+    searchMode === "question" && questionType
+      ? results.filter((item) => item.questionType === questionType)
+      : results;
 
   const normalizeTopicCodeFilter = (value) => {
     const map = {
@@ -132,6 +163,9 @@ export default function SemanticSearch({
       statement: item.statement,
       solution: item.solution,
       answer: item.answer,
+      questionType: normalizeQuestionType(item.question_type),
+      choices: Array.isArray(item.choices) ? item.choices : [],
+      correctChoice: item.correct_choice || null,
       tags: item.skills?.length ? item.skills : ["Backend"],
       starred: false,
     };
@@ -210,6 +244,7 @@ export default function SemanticSearch({
               problem_type_code: taxonomyFilters?.problem_type_code || null,
               difficulty: normalizeDifficultyFilter(diff),
               skill: skill || null,
+              question_type: questionType || null,
             });
 
         if (searchMode === "formula") {
@@ -376,6 +411,15 @@ export default function SemanticSearch({
               { label: "Chuyên đề", val: topic, setter: setTopic, opts: ["Đạo hàm", "Tích phân", "Chuỗi số", "Giới hạn", "Vi phân"] },
               { label: "Độ khó", val: diff, setter: setDiff, opts: ["Dễ", "Vừa", "Khó"] },
               { label: "Kỹ năng", val: skill, setter: setSkill, opts: ["Tính toán", "Chứng minh", "Ứng dụng"] },
+              {
+                label: "Loai cau hoi",
+                val: questionType,
+                setter: setQuestionType,
+                opts: [
+                  { value: "multiple_choice", label: "Trac nghiem" },
+                  { value: "free_response", label: "Tu luan" },
+                ],
+              },
             ].map((f) => (
               <div key={f.label} className="relative">
                 <select
@@ -393,16 +437,28 @@ export default function SemanticSearch({
                   }`}
                   style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center" }}>
                   <option value="">{f.label}</option>
-                  {f.opts.map((o) => <option key={o}>{o}</option>)}
+                  {f.opts.map((o) => {
+                    const optionValue =
+                      typeof o === "string" ? o : o.value;
+                    const optionLabel =
+                      typeof o === "string" ? o : o.label;
+
+                    return (
+                      <option key={optionValue} value={optionValue}>
+                        {optionLabel}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             ))}
-            {(topic || diff || skill || taxonomyFilters) && (
+            {(topic || diff || skill || questionType || taxonomyFilters) && (
               <button
                 onClick={() => {
                   setTopic("");
                   setDiff("");
                   setSkill("");
+                  setQuestionType("");
                   setTaxonomyFilters(null);
 
                   setTaxonomyListMode(false);
@@ -480,6 +536,17 @@ export default function SemanticSearch({
                         <span className="text-[10px] font-bold text-slate-400 tracking-wide">{p.id}</span>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${dc.bg} ${dc.text} ${dc.border}`}>{p.difficulty}</span>
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500">{p.skill}</span>
+                        {searchMode === "question" && (
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                              p.questionType === "multiple_choice"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-slate-50 text-slate-600 border-slate-200"
+                            }`}
+                          >
+                            {formatQuestionType(p.questionType)}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5">
                         <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] font-bold ${matchColor}`}>
@@ -559,6 +626,52 @@ export default function SemanticSearch({
                       <p className={`text-[11px] text-slate-600 leading-relaxed ${!isExp ? "line-clamp-2" : ""}`}>
                         {p.statement}
                       </p>
+
+                      {p.questionType === "multiple_choice" && p.choices.length > 0 && (
+                        <div className={`mt-2 grid grid-cols-1 gap-1.5 ${!isExp ? "max-h-24 overflow-hidden" : ""}`}>
+                          {p.choices.map((choice, choiceIndex) => {
+                            const choiceKey =
+                              getChoiceValue(choice, "key") ||
+                              String.fromCharCode(65 + choiceIndex);
+                            const isCorrect =
+                              choiceKey === p.correctChoice ||
+                              getChoiceValue(choice, "is_correct") === true;
+
+                            return (
+                              <div
+                                key={`${p.id}-${choiceKey}-${choiceIndex}`}
+                                className={`flex items-start gap-2 rounded-lg border px-2.5 py-1.5 ${
+                                  isCorrect
+                                    ? "border-emerald-200 bg-emerald-50"
+                                    : "border-slate-100 bg-slate-50"
+                                }`}
+                              >
+                                <span
+                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                                    isCorrect
+                                      ? "bg-emerald-600 text-white"
+                                      : "bg-white text-slate-500 border border-slate-200"
+                                  }`}
+                                >
+                                  {choiceKey}
+                                </span>
+                                <span className="min-w-0 text-[11px] leading-relaxed text-slate-700 break-words">
+                                  {getChoiceDisplayText(choice)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {p.questionType === "multiple_choice" && p.correctChoice && (
+                        <div className="mt-2">
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
+                            Dap an dung: {p.correctChoice}
+                          </span>
+                        </div>
+                      )}
+
                       <button onClick={() => setExpanded(isExp ? null : p.id)}
                         className="text-[10px] text-blue-500 hover:text-blue-700 font-medium mt-1 transition-colors">
                         {isExp ? "Thu gọn ▲" : "Đọc đầy đủ ▼"}

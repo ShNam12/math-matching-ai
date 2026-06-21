@@ -14,6 +14,8 @@ import {
 } from "../services/questionApi";
 import { searchQuestions } from "../services/searchApi";
 import { rememberRecentQuestion } from "../services/recentQuestions";
+import LatexInline from "../components/LatexInline";
+import MathText from "../components/MathText";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -71,6 +73,38 @@ const STEPS = [
     latex: "F'(x) = e^x(x^2 - 2x + 2) + e^x(2x - 2) = e^x \\cdot x^2 = x^2 e^x \\checkmark",
   },
 ];
+
+function getChoiceValue(choice, field) {
+  if (!choice || typeof choice !== "object") return null;
+  return choice[field] ?? null;
+}
+
+function formatQuestionType(questionType) {
+  if (questionType === "multiple_choice") return "Trắc nghiệm";
+  return "Tự luận";
+}
+
+function getValidationReport(question) {
+  return question?.validation_report || {
+    can_save: true,
+    warnings: [],
+    blocking_issues: [],
+    symbolic_checks: [],
+  };
+}
+
+function getIssueCode(issue) {
+  return issue?.code || issue?.message || String(issue || "");
+}
+
+function getChoiceDisplayText(choice) {
+  const text = getChoiceValue(choice, "text");
+  const latex = getChoiceValue(choice, "latex");
+
+  if (text) return String(text);
+  if (latex) return `$${latex}$`;
+  return "";
+}
 
 export default function ProblemDetail({
   activePage = "detail",
@@ -319,6 +353,12 @@ export default function ProblemDetail({
         answer: question.answer,
         formulas: question.formulas || [],
         embeddingStatus: question.embedding_status,
+        questionType: question.question_type || "free_response",
+        choices: Array.isArray(question.choices) ? question.choices : [],
+        correctChoice: question.correct_choice || null,
+        validationReport: getValidationReport(question),
+        generationMethod: question.generation_method,
+        solverCode: question.solver_code,
 
         classificationStatus: question.classification_status,
         confidence: question.taxonomy_confidence,
@@ -330,6 +370,18 @@ export default function ProblemDetail({
 
       }
     : PROBLEM;
+
+  const isMultipleChoice = displayProblem.questionType === "multiple_choice";
+  const validationReport = displayProblem.validationReport || getValidationReport(null);
+  const validationWarnings = Array.isArray(validationReport.warnings)
+    ? validationReport.warnings
+    : [];
+  const validationBlockingIssues = Array.isArray(validationReport.blocking_issues)
+    ? validationReport.blocking_issues
+    : [];
+  const symbolicChecks = Array.isArray(validationReport.symbolic_checks)
+    ? validationReport.symbolic_checks
+    : [];
 
   const solutionBlocks = question
     ? [
@@ -457,13 +509,18 @@ export default function ProblemDetail({
               </div>
               <div className="bg-white/15 rounded-xl px-4 py-3 mb-3 font-mono text-[15px] font-bold flex items-center gap-3">
                 <span className="text-2xl opacity-70">∫</span>
-                {displayProblem.latex}
+                <LatexInline value={displayProblem.latex} />
                 <button onClick={handleCopy} className="ml-auto text-white/60 hover:text-white transition-colors">
                   {copiedLatex ? <CheckCircle size={14} /> : <Copy size={14} />}
                 </button>
               </div>
-              <p className="text-[12px] leading-relaxed text-white/90">{displayProblem.statement}</p>
+              <p className="text-[12px] leading-relaxed text-white/90">
+                <MathText value={displayProblem.statement} />
+              </p>
               <div className="flex flex-wrap gap-2 mt-3">
+                <span className="text-[10px] font-semibold bg-white/15 border border-white/20 text-white px-2.5 py-1 rounded-full">
+                  {formatQuestionType(displayProblem.questionType)}
+                </span>
                 <span className="text-[10px] font-semibold bg-red-400/30 border border-red-300/30 text-white px-2.5 py-1 rounded-full">{displayProblem.difficulty}</span>
                 <span className="text-[10px] font-semibold bg-white/15 border border-white/20 text-white px-2.5 py-1 rounded-full">{displayProblem.skill}</span>
                 {displayProblem.tags.map((t) => (
@@ -471,6 +528,70 @@ export default function ProblemDetail({
                 ))}
               </div>
             </div>
+
+            {isMultipleChoice && (
+              <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+                <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare size={14} className="text-blue-600" />
+                    <span className="text-[12px] font-bold text-slate-700">Lua chon dap an</span>
+                  </div>
+                  {displayProblem.correctChoice && (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                      Dap an dung: {displayProblem.correctChoice}
+                    </span>
+                  )}
+                </div>
+                <div className="p-4 grid grid-cols-1 gap-2">
+                  {displayProblem.choices.length === 0 && (
+                    <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+                      Chua co lua chon A/B/C/D.
+                    </div>
+                  )}
+
+                  {displayProblem.choices.map((choice, index) => {
+                    const key = getChoiceValue(choice, "key") || "?";
+                    const isCorrect =
+                      getChoiceValue(choice, "is_correct") === true ||
+                      key === displayProblem.correctChoice;
+                    const rationale = getChoiceValue(choice, "rationale");
+
+                    return (
+                      <div
+                        key={`${key}-${index}`}
+                        className={`rounded-xl border px-3 py-2.5 ${
+                          isCorrect
+                            ? "border-emerald-200 bg-emerald-50"
+                            : "border-slate-100 bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[12px] font-bold flex-shrink-0 ${
+                            isCorrect
+                              ? "bg-emerald-600 text-white"
+                              : "bg-white text-slate-600 border border-slate-200"
+                          }`}>
+                            {key}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-[12px] leading-relaxed ${
+                              isCorrect ? "text-emerald-800" : "text-slate-700"
+                            }`}>
+                              <MathText value={getChoiceDisplayText(choice)} />
+                            </p>
+                            {rationale && (
+                              <p className="mt-1 text-[10px] text-slate-500 leading-relaxed">
+                                {rationale}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Solution */}
             <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
@@ -487,11 +608,13 @@ export default function ProblemDetail({
                     </div>
                     <div className="flex-1">
                       <p className="text-[12px] font-bold text-slate-700 mb-1">{step.title}</p>
-                      <p className="text-[11px] text-slate-500 leading-relaxed mb-2">{step.content}</p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed mb-2">
+                        <MathText value={step.content} />
+                      </p>
                       {step.latex && (
                         <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
                           <code className="text-[11px] font-mono text-blue-800 break-all leading-relaxed">
-                            {step.latex}
+                            <LatexInline value={step.latex} />
                           </code>
                         </div>
                       )}
@@ -543,6 +666,109 @@ export default function ProblemDetail({
                   <span className="text-[11px] font-semibold text-slate-700 truncate">{row.val}</span>
                 </div>
               ))}
+
+              {question && (
+                <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                  <p className="text-[11px] font-bold text-slate-700">
+                    MCQ & Validation
+                  </p>
+
+                  <div className="space-y-1.5 text-[11px]">
+                    <p className="text-slate-500">
+                      Loai cau hoi:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {formatQuestionType(displayProblem.questionType)}
+                      </span>
+                    </p>
+
+                    {displayProblem.generationMethod && (
+                      <p className="text-slate-500">
+                        Generation:{" "}
+                        <span className="font-semibold text-slate-700">
+                          {displayProblem.generationMethod}
+                        </span>
+                      </p>
+                    )}
+
+                    {displayProblem.solverCode && (
+                      <p className="text-slate-500">
+                        Solver:{" "}
+                        <span className="font-semibold text-slate-700">
+                          {displayProblem.solverCode}
+                        </span>
+                      </p>
+                    )}
+
+                    {isMultipleChoice && (
+                      <p className="text-slate-500">
+                        Dap an dung:{" "}
+                        <span className="font-semibold text-emerald-700">
+                          {displayProblem.correctChoice || "Chua co"}
+                        </span>
+                      </p>
+                    )}
+
+                    <p className="text-slate-500">
+                      Trang thai luu:{" "}
+                      <span className={`font-semibold ${
+                        validationReport.can_save === false
+                          ? "text-red-700"
+                          : "text-emerald-700"
+                      }`}>
+                        {validationReport.can_save === false
+                          ? "Khong the luu"
+                          : "Co the luu"}
+                      </span>
+                    </p>
+                  </div>
+
+                  {validationBlockingIssues.length > 0 && (
+                    <div className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-2">
+                      <p className="text-[10px] font-bold text-red-700 mb-1">
+                        Blocking issues
+                      </p>
+                      <div className="space-y-1">
+                        {validationBlockingIssues.map((issue, index) => (
+                          <p key={`${getIssueCode(issue)}-${index}`} className="text-[10px] text-red-700">
+                            {getIssueCode(issue)}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {validationWarnings.length > 0 && (
+                    <div className="rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-2">
+                      <p className="text-[10px] font-bold text-amber-700 mb-1">
+                        Warnings
+                      </p>
+                      <div className="space-y-1">
+                        {validationWarnings.map((issue, index) => (
+                          <p key={`${getIssueCode(issue)}-${index}`} className="text-[10px] text-amber-700">
+                            {getIssueCode(issue)}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {symbolicChecks.length > 0 && (
+                    <div className="rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-2">
+                      <p className="text-[10px] font-bold text-blue-700 mb-1">
+                        Symbolic checks
+                      </p>
+                      <div className="space-y-1">
+                        {symbolicChecks.map((check, index) => (
+                          <p key={`${check?.code || "symbolic"}-${index}`} className="text-[10px] text-blue-700">
+                            {check?.code || check?.message || "symbolic_check"}:{" "}
+                            {check?.passed === false ? "failed" : "passed"}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {question && (
                 <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
