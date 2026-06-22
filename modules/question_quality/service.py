@@ -18,6 +18,7 @@ from modules.question_quality.schemas import (
     TaxonomyQualityReport,
 )
 
+from modules.neuro_symbolic.solver_registry import CALCULUS_1_SOLVER_CODES
 from modules.taxonomy import TaxonomyDefinition, TaxonomyIndex
 from modules.question_segmenter.formula_extractor import (
     extract_formulas,
@@ -483,6 +484,10 @@ class QuestionQualityService:
 
         blocking_issues.extend(self._validate_mcq_structure(candidate))
         blocking_issues.extend(self._validate_mcq_distractors(candidate))
+
+        blocking_issues.extend(
+            self._validate_calculus_1_solver_domain(candidate, source_question)
+        )
         symbolic_checks: list[SymbolicCheckResult] = []
         symbolic_report = self._validate_mcq_symbolically(candidate)
         warnings.extend(symbolic_report.warnings)
@@ -1014,3 +1019,42 @@ class QuestionQualityService:
             )
 
         return duplicates
+    
+    def _validate_calculus_1_solver_domain(
+        self,
+        candidate: GeneratedQuestionCandidate,
+        source_question: Question,
+    ) -> list[QualityIssue]:
+        if candidate.question_type != "multiple_choice":
+            return []
+
+        if not candidate.solver_code:
+            return []
+
+        subject_values = [
+            str(candidate.subject or "").lower(),
+            str(getattr(source_question, "subject", "") or "").lower(),
+            str(getattr(source_question, "subject_code", "") or "").lower(),
+        ]
+
+        is_calculus_1 = any(
+            value in {"calculus", "calculus 1", "gt1", "giai tich 1", "giải tích 1"}
+            or "calculus" in value
+            or "giai tich" in value
+            or "giải tích" in value
+            for value in subject_values
+        )
+
+        solver_code = candidate.solver_code.strip().upper()
+
+        if is_calculus_1 and solver_code not in CALCULUS_1_SOLVER_CODES:
+            return [
+                QualityIssue(
+                    code="solver_domain_mismatch",
+                    message="Solver is not supported for Calculus 1",
+                    severity="error",
+                    field="solver_code",
+                )
+            ]
+
+        return []

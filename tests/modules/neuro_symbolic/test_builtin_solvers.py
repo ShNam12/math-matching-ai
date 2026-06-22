@@ -1,7 +1,7 @@
 import sympy as sp
 
 from modules.neuro_symbolic import SolverExecutor, SolverRegistry
-
+from modules.neuro_symbolic.solver_registry import CALCULUS_1_SOLVER_CODES
 
 EXPECTED_PORTED_SOLVERS = {
     "INT_XN_EXP",
@@ -60,3 +60,40 @@ def test_builtin_solver_test_cases_match_expected_symbolically() -> None:
             actual = sp.sympify(result.output.answer)
             expected = sp.sympify(test_case["expected"])
             assert sp.simplify(actual - expected) == 0
+
+def test_deriv_composite_renders_concrete_statement():
+    registry = SolverRegistry()
+    solver = registry.get_solver("DERIV_COMPOSITE")
+
+    output = solver.solve({
+        "f_type": "exp",
+        "g_type": "linear",
+        "a": 2,
+        "b": 1,
+    })
+
+    assert "f=" not in output.statement
+    assert "g=" not in output.statement
+    assert "y=" in output.statement
+    assert "x" in output.statement
+
+def test_limit_zero_zero_renders_concrete_fraction():
+    registry = SolverRegistry()
+    solver = registry.get_solver("LIMIT_ZERO_ZERO")
+
+    output = solver.solve({
+        "numer_type": "sin_x",
+        "denom_type": "x",
+        "a": 3,
+        "b": 2,
+        "approach": 0,
+    })
+
+    assert "f(x)" not in output.statement
+    assert "g(x)" not in output.statement
+    assert "\\frac" in output.statement
+    assert "\\sin" in output.statement
+
+def test_calculus_1_solver_codes_exclude_linear_algebra():
+    assert "DET_2X2" not in CALCULUS_1_SOLVER_CODES
+    assert "DET_3X3" not in CALCULUS_1_SOLVER_CODES

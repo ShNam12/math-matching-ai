@@ -8,8 +8,6 @@ DEFAULT_PROBLEM_TYPE_SOLVER_MAP: dict[str, list[str]] = {
     "GT1_C2_01_T03_Integration_By_Parts": ["INT_XN_EXP", "INT_XN_LN"],
     "GT1_C1_05_T02_Algebraic_Transformation_Limit": ["LIMIT_ZERO_ZERO"],
     "GT1_C3_01_T01_Composite_Derivative": ["DERIV_COMPOSITE"],
-    "LA_C1_01_T01_Determinant_2x2": ["DET_2X2"],
-    "LA_C1_01_T02_Determinant_3x3": ["DET_3X3"],
 }
 
 

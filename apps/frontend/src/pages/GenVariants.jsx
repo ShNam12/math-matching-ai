@@ -359,7 +359,11 @@ export default function GenVariants({
 
       try {
         const data = await listSymbolicMCQSolvers();
-        const nextSolvers = Array.isArray(data.solvers) ? data.solvers : [];
+        const nextSolvers = (Array.isArray(data.solvers) ? data.solvers : [])
+          .filter((solver) => {
+            const hint = solver.taxonomy_hint || "";
+            return hint.startsWith("calculus.");
+          });
 
         if (!cancelled) {
           setSolvers(nextSolvers);
@@ -572,7 +576,7 @@ export default function GenVariants({
                 {generationMode === "symbolic" && (
                   <div>
                     <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
-                      Symbolic solver
+                      Calculus 1 symbolic solver
                     </label>
                     <select
                       value={selectedSolverCode}
@@ -659,7 +663,7 @@ export default function GenVariants({
                 }`}
               >
                 {generating ? <RefreshCw size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                {generating ? "Đang sinh..." : "Sinh biến thể"}
+                {generating ? "Đang sinh..." : "Sinh câu hỏi trắc nghiệm"}
               </button>
             </div>
           </div>

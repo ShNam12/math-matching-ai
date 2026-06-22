@@ -2,8 +2,10 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from modules.neuro_symbolic import SolverRegistry
+import pytest
 
+from modules.neuro_symbolic import SolverRegistry
+from modules.neuro_symbolic.solver_registry import CALCULUS_1_SOLVER_CODES
 
 FIXTURE_PATH = (
     Path(__file__).resolve().parents[2]
@@ -22,6 +24,11 @@ EXPECTED_CHOICE_KEYS = {"A", "B", "C", "D"}
 def load_fixture() -> list[dict[str, object]]:
     with FIXTURE_PATH.open(encoding="utf-8") as file:
         return json.load(file)
+
+
+@pytest.fixture
+def samples() -> list[dict[str, object]]:
+    return load_fixture()
 
 
 def test_mcq_eval_fixture_loads_and_has_expected_groups() -> None:
@@ -78,3 +85,19 @@ def test_mcq_eval_fixture_solver_codes_exist_when_present() -> None:
 
         assert solver.code == solver_code
         assert isinstance(sample.get("params"), dict)
+
+def test_mcq_eval_fixture_contains_only_calculus_1_solvers(samples):
+    for sample in samples:
+        solver_code = sample.get("solver_code")
+        if solver_code:
+            assert solver_code in CALCULUS_1_SOLVER_CODES
+
+def test_mcq_eval_fixture_does_not_contain_linear_algebra_content(samples):
+    banned_terms = ["dinh thuc", "định thức", "ma tran", "ma trận", "matrix", "determinant"]
+
+    for sample in samples:
+        statement = str(sample.get("statement") or "").lower()
+        solver_code = str(sample.get("solver_code") or "")
+
+        assert solver_code not in {"DET_2X2", "DET_3X3"}
+        assert not any(term in statement for term in banned_terms)

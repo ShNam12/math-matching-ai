@@ -2,6 +2,15 @@ import sympy as sp
 
 from modules.neuro_symbolic.schemas import SolverDefinition, SolverOutput
 
+CALCULUS_1_SOLVER_CODES = {
+    "LIMIT_ZERO_ZERO",
+    "DERIV_MONOMIAL",
+    "DERIV_COMPOSITE",
+    "INT_MONOMIAL",
+    "INT_XN_EXP",
+    "INT_XN_LN",
+    "INT_RATIONAL",
+}
 
 class SolverNotFoundError(ValueError):
     pass
@@ -264,16 +273,37 @@ def solve_limit_zero_zero(params: dict[str, object]) -> SolverOutput:
         "tan_x": sp.tan(b * x),
         "poly": b * x,
     }
+
+    numerator_texts = {
+        "sin_x": f"\\sin({a}x)",
+        "tan_x": f"\\tan({a}x)",
+        "exp_minus_1": f"e^{{{a}x}}-1",
+        "ln_1_plus_x": f"\\ln(1+{a}x)",
+        "poly": f"{a}x+{b}x^2",
+    }
+    denominator_texts = {
+        "x": f"{b}x",
+        "sin_x": f"\\sin({b}x)",
+        "tan_x": f"\\tan({b}x)",
+        "poly": f"{b}x",
+    }
+
     numerator = numerators.get(numer_type, x)
     denominator = denominators.get(denom_type, x)
+    numerator_text = numerator_texts.get(numer_type, "x")
+    denominator_text = denominator_texts.get(denom_type, "x")
+
     result = sp.limit(numerator / denominator, x, approach)
 
     return _sympy_output(
         statement=(
             f"Tinh gioi han $\\lim_{{x\\to {approach}}} "
-            "\\frac{f(x)}{g(x)}$ voi dang 0/0."
+            f"\\frac{{{numerator_text}}}{{{denominator_text}}}$."
         ),
-        solution="Rut gon hoac dung cac gioi han co ban/L'Hopital.",
+        solution=(
+            "Rut gon bieu thuc hoac su dung cac gioi han co ban de tinh "
+            "gioi han dang vo dinh."
+        ),
         result=result,
         metadata={
             "numer_type": numer_type,
@@ -283,8 +313,6 @@ def solve_limit_zero_zero(params: dict[str, object]) -> SolverOutput:
             "approach": approach,
         },
     )
-
-
 def solve_deriv_composite(params: dict[str, object]) -> SolverOutput:
     x = sp.symbols("x")
     f_type = _str_param(params, "f_type", "exp")
@@ -312,12 +340,13 @@ def solve_deriv_composite(params: dict[str, object]) -> SolverOutput:
     }
     expression = functions.get(f_type, g)
     result = sp.diff(expression, x)
+    expression_latex = sp.latex(expression)
 
     if point is not None:
         result = result.subs(x, int(point))
 
     return _sympy_output(
-        statement=f"Tinh dao ham cua ham hop $f(g(x))$ voi f={f_type}, g={g_type}.",
+        statement=f"Tinh dao ham cua ham so $y={expression_latex}$.",
         solution="Ap dung quy tac day chuyen: (f(g(x)))' = f'(g(x))*g'(x).",
         result=result,
         metadata={
@@ -506,10 +535,22 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
         taxonomy_hint="calculus.limit.zero_zero",
         param_schema=_object_schema(
             {
-                "numer_type": {"type": "string"},
-                "denom_type": {"type": "string"},
-                "a": {"type": "integer"},
-                "b": {"type": "integer"},
+                "numer_type": {
+                    "type": "string",
+                    "enum": [
+                        "sin_x",
+                        "tan_x",
+                        "exp_minus_1",
+                        "ln_1_plus_x",
+                        "poly",
+                    ],
+                },
+                "denom_type": {
+                    "type": "string",
+                    "enum": ["x", "sin_x", "tan_x", "poly"],
+                },
+                "a": {"type": "integer", "minimum": 1, "maximum": 5},
+                "b": {"type": "integer", "minimum": 1, "maximum": 5},
                 "approach": {"type": "integer", "default": 0},
             }
         ),
@@ -539,10 +580,16 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
         taxonomy_hint="calculus.derivative.chain_rule",
         param_schema=_object_schema(
             {
-                "f_type": {"type": "string"},
-                "g_type": {"type": "string"},
-                "a": {"type": "integer"},
-                "b": {"type": "integer"},
+                "f_type": {
+                    "type": "string",
+                    "enum": ["exp", "sin", "cos", "square"],
+                },
+                "g_type": {
+                    "type": "string",
+                    "enum": ["linear", "quadratic", "trig"],
+                },
+                "a": {"type": "integer", "minimum": 1, "maximum": 5},
+                "b": {"type": "integer", "minimum": -5, "maximum": 5},
             }
         ),
         statement_template="Tinh dao ham ham hop f(g(x)).",

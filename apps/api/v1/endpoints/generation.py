@@ -41,6 +41,7 @@ from modules.question_generation import (
 )
 
 from modules.neuro_symbolic import SolverRegistry
+from modules.neuro_symbolic.solver_registry import CALCULUS_1_SOLVER_CODES
 from modules.question_quality import QuestionQualityService, QuestionValidationReport
 from modules.semantic_search import SemanticSearchService
 
@@ -62,6 +63,15 @@ def create_symbolic_mcq_generator() -> SymbolicMCQGenerator:
 def create_solver_registry() -> SolverRegistry:
     return SolverRegistry()
 
+def ensure_calculus_1_solver(solver_code: str) -> str:
+    normalized_code = solver_code.strip().upper()
+
+    if normalized_code not in CALCULUS_1_SOLVER_CODES:
+        raise ValueError(
+            f"Solver is not supported for Calculus 1: {normalized_code}"
+        )
+
+    return normalized_code
 
 def create_question_embedding_service(
     *,
@@ -267,6 +277,7 @@ async def list_symbolic_mcq_solvers() -> SymbolicMCQSolversResponse:
                 param_schema=solver.param_schema,
             )
             for solver in registry.list_solvers()
+            if solver.code in CALCULUS_1_SOLVER_CODES
         ]
     )
 
@@ -279,9 +290,11 @@ async def preview_symbolic_mcq(
     request: SymbolicMCQPreviewRequest,
 ) -> SymbolicMCQPreviewResponse:
     try:
+        solver_code = ensure_calculus_1_solver(request.solver_code)
+
         generator = create_symbolic_mcq_generator()
         candidates = await generator.generate(
-            solver_code=request.solver_code,
+            solver_code=solver_code,
             generation_count=request.generation_count,
             difficulty=request.difficulty,
             subject=request.subject,
@@ -292,7 +305,7 @@ async def preview_symbolic_mcq(
         )
 
         return SymbolicMCQPreviewResponse(
-            solver_code=request.solver_code.strip().upper(),
+            solver_code=solver_code,
             candidates=[
                 _to_candidate_response(candidate)
                 for candidate in candidates
@@ -469,6 +482,7 @@ async def save_symbolic_mcq(
     client = create_qdrant_client()
 
     try:
+        ensure_calculus_1_solver(request.candidate.solver_code or "")
         generation_service = create_question_generation_service(session)
         saved_question = await generation_service.save_generated_question(
             source_question_id=request.source_question_id,

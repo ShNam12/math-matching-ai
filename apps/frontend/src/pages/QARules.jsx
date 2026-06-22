@@ -119,6 +119,7 @@ const RULES = [
 ];
 
 const MCQ_RULES = [
+  
   {
     id: "MCQ-STRUCT",
     title: "Structural rules",
@@ -200,6 +201,29 @@ const MCQ_RULES = [
     ],
     savePolicy: "Mismatch and equivalent distractors block save; missing solver is a warning.",
   },
+
+  {
+    id: "MCQ-SOLVER-DOMAIN",
+    title: "Calculus 1 solver domain",
+    desc: "Only Calculus 1 symbolic solvers are allowed in this system. Linear algebra solvers such as DET_2X2 and DET_3X3 are blocked.",
+    category: "Symbolic",
+    status: "ok",
+    passRate: 100,
+    issues: 0,
+    lastRun: "Theo backend quality service",
+    icon: Shield,
+    affectedIds: [],
+    codes: [
+      "solver_domain_mismatch",
+    ],
+    checks: [
+      "Symbolic solver must belong to the Calculus 1 solver domain.",
+      "Do not use determinant or matrix solvers in the Calculus 1 question generation pipeline.",
+      "Blocked solvers: DET_2X2, DET_3X3.",
+    ],
+    savePolicy: "Wrong-domain solvers are blocking issues and cannot be saved.",
+  },
+
   {
     id: "MCQ-TAXONOMY",
     title: "Taxonomy rules",

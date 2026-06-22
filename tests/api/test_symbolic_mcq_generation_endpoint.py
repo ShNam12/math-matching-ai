@@ -211,7 +211,7 @@ def test_symbolic_mcq_preview_endpoint_returns_400_for_missing_solver(
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Solver not found: MISSING"
+    assert response.json()["detail"] == "Solver is not supported for Calculus 1: MISSING"
 
 
 def test_symbolic_mcq_save_endpoint_saves_candidate(monkeypatch) -> None:
@@ -302,3 +302,30 @@ def test_symbolic_mcq_save_endpoint_returns_400_for_quality_error(
         "symbolic_correct_answer_mismatch"
     )
     assert fake_client.closed is True
+
+def test_list_symbolic_mcq_solvers_returns_only_calculus_1(client):
+    response = client.get("/generation/mcq/solvers")
+
+    assert response.status_code == 200
+
+    solver_codes = {
+        item["code"]
+        for item in response.json()["solvers"]
+    }
+
+    assert "INT_XN_EXP" in solver_codes
+    assert "DERIV_COMPOSITE" in solver_codes
+    assert "DET_2X2" not in solver_codes
+    assert "DET_3X3" not in solver_codes
+
+def test_preview_symbolic_mcq_rejects_linear_algebra_solver(client):
+    response = client.post(
+        "/generation/mcq/symbolic/preview",
+        json={
+            "solver_code": "DET_2X2",
+            "generation_count": 1,
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Calculus 1" in response.json()["detail"]
