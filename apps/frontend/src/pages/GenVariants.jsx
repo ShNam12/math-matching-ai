@@ -67,8 +67,8 @@ function getChoiceDisplayText(choice) {
   const text = getChoiceValue(choice, "text");
   const latex = getChoiceValue(choice, "latex");
 
-  if (text) return String(text);
   if (latex) return `$${latex}$`;
+  if (text) return String(text);
   return "";
 }
 
@@ -471,7 +471,7 @@ export default function GenVariants({
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
             <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold">N</div>
             <div>
-              <p className="text-[11px] font-semibold text-slate-700">Nguyễn V. An</p>
+              <p className="text-[11px] font-semibold text-slate-700">Sái Hoài Nam</p>
               <p className="text-[10px] text-slate-400">Administrator</p>
             </div>
           </div>

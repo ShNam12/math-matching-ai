@@ -3,6 +3,12 @@ from typing import Any
 
 from modules.question_quality.schemas import QuestionValidationReport
 
+def _clean_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    return text or None
 
 @dataclass(frozen=True)
 class GenerationConstraints:
@@ -49,14 +55,13 @@ class MultipleChoiceOption:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "MultipleChoiceOption":
+        text = _clean_optional_text(payload.get("text"))
+        latex = _clean_optional_text(payload.get("latex"))
+
         return cls(
             key=str(payload.get("key") or ""),
-            text=str(payload.get("text") or ""),
-            latex=(
-                str(payload["latex"])
-                if payload.get("latex") is not None
-                else None
-            ),
+            text=text or latex or "",
+            latex=latex,
             is_correct=payload.get("is_correct", False),
             distractor_type=(
                 str(payload["distractor_type"])

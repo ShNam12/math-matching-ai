@@ -7,6 +7,35 @@ from modules.question_generation.schemas import (
 from modules.question_quality.schemas import QualityIssue, QuestionValidationReport
 import pytest
 
+def test_choice_text_falls_back_to_latex_when_text_missing() -> None:
+    choice = MultipleChoiceOption.from_dict(
+        {
+            "key": "A",
+            "text": "",
+            "latex": r"y' = e^{x^2}",
+            "is_correct": False,
+        }
+    )
+
+    assert choice.text == r"y' = e^{x^2}"
+    assert choice.latex == r"y' = e^{x^2}"
+
+def test_mcq_choice_with_latex_fallback_is_not_empty() -> None:
+    candidate = GeneratedQuestionCandidate.from_dict(
+        {
+            "question_type": "multiple_choice",
+            "statement": "Tính đạo hàm.",
+            "choices": [
+                {"key": "A", "text": "", "latex": "1", "is_correct": False},
+                {"key": "B", "text": "", "latex": "2", "is_correct": True},
+                {"key": "C", "text": "", "latex": "3", "is_correct": False},
+                {"key": "D", "text": "", "latex": "4", "is_correct": False},
+            ],
+            "correct_choice": "B",
+        }
+    )
+
+    assert all(choice.text for choice in candidate.choices)
 
 def test_generation_constraints_default_values() -> None:
     constraints = GenerationConstraints()

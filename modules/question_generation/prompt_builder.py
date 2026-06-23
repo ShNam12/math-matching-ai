@@ -28,6 +28,9 @@ Requirements:
 - Use clear LaTeX for formulas.
 - Preserve the source LaTeX formula style whenever possible.
 - Always generate exactly 4 choices with keys A, B, C, and D.
+- Every choice must include non-empty "text".
+- If the choice is a formula, set "text" to a readable plain/math expression and set "latex" to the LaTeX expression.
+- Do not leave "text" empty when "latex" is present.
 - Mark exactly one choice with "is_correct": true.
 - Set "correct_choice" to the key of the only choice where "is_correct" is true.
 - Make distractors plausible and use the same expression/formula style as the correct answer.
@@ -54,8 +57,8 @@ Requirements:
         }},
         {{
           "key": "B",
-          "text": "choice text",
-          "latex": "choice LaTeX or null",
+          "text": "readable choice text, never empty",
+          "latex": "choice LaTeX or null"
           "is_correct": true,
           "rationale": null
         }},

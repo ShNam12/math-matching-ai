@@ -8,6 +8,7 @@ import {
 
 import { searchFormulas, searchQuestions } from "../services/searchApi";
 import { listQuestionsByTaxonomy } from "../services/questionApi";
+import MathText from "../components/MathText";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -56,7 +57,8 @@ const getChoiceDisplayText = (choice) => {
   const text = getChoiceValue(choice, "text");
   const latex = getChoiceValue(choice, "latex");
 
-  return String(text || latex || "").trim();
+  if (latex) return `$${latex}$`;
+  return String(text || "").trim();
 };
 
 export default function SemanticSearch({
@@ -315,7 +317,7 @@ export default function SemanticSearch({
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
             <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold">N</div>
             <div>
-              <p className="text-[11px] font-semibold text-slate-700">Nguyễn V. An</p>
+              <p className="text-[11px] font-semibold text-slate-700">Sái Hoài Nam</p>
               <p className="text-[10px] text-slate-400">Administrator</p>
             </div>
           </div>
@@ -656,7 +658,7 @@ export default function SemanticSearch({
                                   {choiceKey}
                                 </span>
                                 <span className="min-w-0 text-[11px] leading-relaxed text-slate-700 break-words">
-                                  {getChoiceDisplayText(choice)}
+                                  <MathText value={getChoiceDisplayText(choice)} />
                                 </span>
                               </div>
                             );
