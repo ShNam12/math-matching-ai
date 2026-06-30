@@ -12,7 +12,6 @@ import {
   Database,
   FileText,
   Hash,
-  KeyRound,
   LayoutDashboard,
   RefreshCcw,
   Search,
@@ -403,18 +402,6 @@ export default function SystemSettings({
 
             {activeTab === "model" && (
               <div className="max-w-3xl space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-[12px] font-bold text-blue-800">
-                      Gemini + Qdrant đang là cấu hình chính của hệ thống
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-blue-600">
-                    Trang này chỉ hiển thị cấu hình đang dùng; việc thay đổi model/API key thực hiện qua backend environment.
-                  </p>
-                </div>
-
                 <SectionCard title="Cấu hình AI & Embedding">
                   {AI_CONFIG.map(([label, value]) => (
                     <Row key={label} label={label}>
@@ -423,20 +410,6 @@ export default function SystemSettings({
                       </code>
                     </Row>
                   ))}
-                </SectionCard>
-
-                <SectionCard title="Ghi chú cấu hình">
-                  <div className="space-y-2">
-                    <p className="text-[12px] text-slate-600">
-                      Hệ thống sử dụng Gemini cho các tác vụ sinh, phân tích và phân loại nội dung toán học.
-                    </p>
-                    <p className="text-[12px] text-slate-600">
-                      Vector câu hỏi và công thức được lưu trong Qdrant để phục vụ semantic search và formula search.
-                    </p>
-                    <p className="text-[12px] text-slate-600">
-                      API key không hiển thị trên frontend để tránh lộ thông tin nhạy cảm khi demo.
-                    </p>
-                  </div>
                 </SectionCard>
               </div>
             )}
@@ -471,23 +444,6 @@ export default function SystemSettings({
 
             {activeTab === "permissions" && (
               <div className="max-w-3xl space-y-4">
-                <div className="bg-white border border-slate-100 rounded-xl p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <KeyRound size={16} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-[12px] font-bold text-slate-700 mb-1">
-                        Mô hình phân quyền RBAC
-                      </p>
-                      <p className="text-[12px] text-slate-600">
-                        Hệ thống dùng hai vai trò chính là <strong>admin</strong> và <strong>user</strong>. Dữ liệu câu hỏi,
-                        tài liệu, taxonomy và embedding dùng chung; quyền thao tác được kiểm soát theo vai trò.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <SectionCard title="Admin">
                     <Checklist items={ADMIN_PERMISSIONS} />
@@ -512,12 +468,6 @@ export default function SystemSettings({
                       </span>
                     </Row>
                   ))}
-                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                    <p className="text-[11px] text-amber-700">
-                      Tài khoản demo được tạo bằng seed script. Trong phạm vi đồ án,
-                      hệ thống không triển khai quản lý tài khoản trực tiếp trên frontend.
-                    </p>
-                  </div>
                 </SectionCard>
               </div>
             )}

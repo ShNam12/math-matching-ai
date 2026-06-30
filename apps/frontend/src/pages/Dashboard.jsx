@@ -35,18 +35,13 @@ const ACTIVITIES = [
   { dot: "green", action: "Upload", detail: "HUST_GT2.pdf hoàn thành, 2,103 bài", time: "09:22" },
 ];
 
-const TOPICS = [
-  { name: "Tích phân", count: "4,891", color: "#185FA5" },
-  { name: "Đạo hàm", count: "3,456", color: "#534AB7" },
-  { name: "Chuỗi số", count: "3,260", color: "#0F6E56" },
-  { name: "Giới hạn", count: "1,240", color: "#854F0B" },
-];
+const TOPIC_COLORS = ["#185FA5", "#534AB7", "#0F6E56", "#854F0B"];
 
 const QUICK_ACTIONS = [
-  { icon: Upload, label: "Upload tài liệu", color: "text-blue-600 bg-blue-50 border-blue-200" },
-  { icon: Sparkles, label: "Sinh biến thể", color: "text-purple-600 bg-purple-50 border-purple-200" },
-  { icon: CheckSquare, label: "Kiểm tra QA", color: "text-red-600 bg-red-50 border-red-200" },
-  { icon: BarChart2, label: "Xem analytics", color: "text-teal-600 bg-teal-50 border-teal-200" },
+  { icon: Upload, label: "Upload tài liệu", id: "upload", color: "text-blue-600 bg-blue-50 border-blue-200" },
+  { icon: Sparkles, label: "Sinh biến thể", id: "gen", color: "text-purple-600 bg-purple-50 border-purple-200" },
+  { icon: CheckSquare, label: "Kiểm tra QA", id: "qa", color: "text-red-600 bg-red-50 border-red-200" },
+  { icon: BarChart2, label: "Xem analytics", id: "analytics", color: "text-teal-600 bg-teal-50 border-teal-200" },
 ];
 
 const RECENT_QUERIES = [
@@ -206,6 +201,15 @@ export default function MainDashboard({
   const blockingMcqCount = analyticsSummary?.blocking_mcq_count || 0;
   const symbolicValidatedCount =
     analyticsSummary?.symbolic_validated_question_count || 0;
+  const popularTopics = Object.entries(analyticsSummary?.topic_counts ?? {})
+    .filter(([, count]) => Number(count) > 0)
+    .sort(([, firstCount], [, secondCount]) => Number(secondCount) - Number(firstCount))
+    .slice(0, 4)
+    .map(([name, count], index) => ({
+      name: name === "unknown" ? "Chưa phân loại" : name,
+      count: Number(count).toLocaleString("vi-VN"),
+      color: TOPIC_COLORS[index % TOPIC_COLORS.length],
+    }));
 
   const statusCards = [
     {
@@ -594,8 +598,12 @@ export default function MainDashboard({
                   <span className="text-[12px] font-bold text-slate-700">Thao tác nhanh</span>
                 </div>
                 <div className="p-2.5 grid grid-cols-2 gap-2">
-                  {QUICK_ACTIONS.map((a, i) => (
-                    <button key={i} className={`flex flex-col items-center gap-1.5 py-3 rounded-lg border text-[10px] font-semibold transition-all hover:scale-[1.02] ${a.color}`}>
+                  {filterNavigationItems(QUICK_ACTIONS, currentUser?.role).map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => onNavigate(a.id)}
+                      className={`flex flex-col items-center gap-1.5 py-3 rounded-lg border text-[10px] font-semibold transition-all hover:scale-[1.02] ${a.color}`}
+                    >
                       <a.icon size={16} />
                       {a.label}
                     </button>
@@ -610,11 +618,26 @@ export default function MainDashboard({
                     <BookOpen size={13} className="text-blue-600" />
                     <span className="text-[12px] font-bold text-slate-700">Chủ đề phổ biến</span>
                   </div>
-                  <button className="text-[10px] text-blue-500 font-medium">Taxonomy →</button>
+                  <button
+                    onClick={() => onNavigate("taxonomy")}
+                    className="text-[10px] text-blue-500 font-medium"
+                  >
+                    Taxonomy →
+                  </button>
                 </div>
                 <div className="px-3 py-2 space-y-0.5">
-                  {TOPICS.map((t, i) => (
-                    <div key={i} className="flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-all">
+                  {popularTopics.length === 0 && (
+                    <div className="px-1.5 py-2 text-[11px] text-slate-400">
+                      Chưa có dữ liệu chủ đề.
+                    </div>
+                  )}
+
+                  {popularTopics.map((t) => (
+                    <div
+                      key={t.name}
+                      onClick={() => onNavigate("taxonomy")}
+                      className="flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-all"
+                    >
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: t.color }} />
                       <span className="text-[11px] text-slate-600 flex-1">{t.name}</span>
                       <span className="text-[10px] text-slate-400 font-medium">{t.count}</span>
