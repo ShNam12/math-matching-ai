@@ -12,8 +12,10 @@ import { listDocuments } from "../services/ingestionApi";
 import { getQuestion } from "../services/questionApi";
 import { getAnalyticsSummary } from "../services/analyticsApi";
 import { getRecentQuestionIds } from "../services/recentQuestions";
+import { filterNavigationItems } from "../auth/navigation";
 import LatexInline from "../components/LatexInline";
 import MathText from "../components/MathText";
+import UserMenu from "../components/UserMenu";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -66,7 +68,12 @@ const dotColor = {
   red: "bg-red-500",
 };
 
-export default function MainDashboard({ activePage = "dashboard", onNavigate = () => {} }) {
+export default function MainDashboard({
+  activePage = "dashboard",
+  onNavigate = () => {},
+  currentUser = null,
+  onLogout = () => {},
+}) {
   const [query, setQuery] = useState("");
   const [starred, setStarred] = useState({});
   const [health, setHealth] = useState(null);
@@ -78,6 +85,7 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
   const [recentQuestions, setRecentQuestions] = useState([]);
   const [recentLoading, setRecentLoading] = useState(false);
   const [recentError, setRecentError] = useState(null);
+  const isAdmin = currentUser?.role === "admin";
 
   useEffect(() => {
     let cancelled = false;
@@ -87,17 +95,17 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
       setSystemError(null);
 
       try {
-        const [
-          healthData,
-          readinessData,
-          documentData,
-          analyticsData,
-        ] = await Promise.all([
+        const [healthData, readinessData] = await Promise.all([
           getHealth(),
           getReadiness(),
-          listDocuments(),
-          getAnalyticsSummary().catch(() => null),
         ]);
+
+        const [documentData, analyticsData] = isAdmin
+          ? await Promise.all([
+              listDocuments(),
+              getAnalyticsSummary().catch(() => null),
+            ])
+          : [[], null];
 
         if (!cancelled) {
           setHealth(healthData);
@@ -121,7 +129,7 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
     return () => {
       cancelled = true;
     };
-  }, []);  
+  }, [isAdmin]);  
 
   useEffect(() => {
     let cancelled = false;
@@ -332,7 +340,7 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
 
         <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-2 mb-1.5">Chức năng</p>
-          {NAV.map((item) => {
+          {filterNavigationItems(NAV, currentUser?.role).map((item) => {
   const isActive = activePage === item.id;
 
   return (
@@ -366,13 +374,7 @@ export default function MainDashboard({ activePage = "dashboard", onNavigate = (
         </nav>
 
         <div className="px-2 pb-3 border-t border-slate-100 pt-2">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-            <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">N</div>
-            <div>
-              <p className="text-[11px] font-semibold text-slate-700">Sái Hoài Nam</p>
-              <p className="text-[10px] text-slate-400">Administrator</p>
-            </div>
-          </div>
+          <UserMenu currentUser={currentUser} onLogout={onLogout} />
         </div>
       </aside>
 

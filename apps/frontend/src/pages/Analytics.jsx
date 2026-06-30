@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 
 import { getAnalyticsSummary } from "../services/analyticsApi";
+import { filterNavigationItems } from "../auth/navigation";
+import UserMenu from "../components/UserMenu";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -106,7 +108,12 @@ function Donut({ data, totalLabel = "12,847" }) {
   );
 }
 
-export default function Analytics({ activePage = "analytics", onNavigate = () => {} }) {
+export default function Analytics({
+  activePage = "analytics",
+  onNavigate = () => {},
+  currentUser = null,
+  onLogout = () => {},
+}) {
   const [period, setPeriod] = useState("7d");
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -427,7 +434,7 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
         </div>
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-2 mb-1.5">Chức năng</p>
-          {NAV.map((item) => {
+          {filterNavigationItems(NAV, currentUser?.role).map((item) => {
             const isActive = activePage === item.id;
             return (
             <div key={item.id} onClick={() => onNavigate(item.id)} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all ${isActive ? "bg-blue-50 ring-1 ring-blue-100" : "hover:bg-slate-50"}`}>
@@ -442,10 +449,7 @@ export default function Analytics({ activePage = "analytics", onNavigate = () =>
           })}
         </nav>
         <div className="px-2 pb-3 border-t border-slate-100 pt-2">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-            <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold">N</div>
-            <div><p className="text-[11px] font-semibold text-slate-700">Sái Hoài Nam</p><p className="text-[10px] text-slate-400">Administrator</p></div>
-          </div>
+          <UserMenu currentUser={currentUser} onLogout={onLogout} />
         </div>
       </aside>
 

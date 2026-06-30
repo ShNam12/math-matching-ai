@@ -14,8 +14,10 @@ import {
 } from "../services/questionApi";
 import { searchQuestions } from "../services/searchApi";
 import { rememberRecentQuestion } from "../services/recentQuestions";
+import { filterNavigationItems } from "../auth/navigation";
 import LatexInline from "../components/LatexInline";
 import MathText from "../components/MathText";
+import UserMenu from "../components/UserMenu";
 
 const NAV = [
   { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
@@ -109,6 +111,8 @@ function getChoiceDisplayText(choice) {
 export default function ProblemDetail({
   activePage = "detail",
   onNavigate = () => {},
+  currentUser = null,
+  onLogout = () => {},
   selectedQuestionId = null,
   onOpenQuestionDetail = () => {},
   onOpenGeneration = () => {},
@@ -142,6 +146,7 @@ export default function ProblemDetail({
   const [similarLoading, setSimilarLoading] = useState(false);
   const [similarError, setSimilarError] = useState(null);
   const similarPanelRef = useRef(null);
+  const isAdmin = currentUser?.role === "admin";
 
   const handleCopy = () => {
     setCopiedLatex(true);
@@ -415,7 +420,7 @@ export default function ProblemDetail({
         </div>
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-2 mb-1.5">Chức năng</p>
-          {NAV.map((item) => {
+          {filterNavigationItems(NAV, currentUser?.role).map((item) => {
             const isActive = activePage === item.id;
             return (
             <div key={item.id} onClick={() => onNavigate(item.id)} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all ${isActive ? "bg-blue-50 ring-1 ring-blue-100" : "hover:bg-slate-50"}`}>
@@ -430,13 +435,7 @@ export default function ProblemDetail({
           })}
         </nav>
         <div className="px-2 pb-3 border-t border-slate-100 pt-2">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-            <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold">N</div>
-            <div>
-              <p className="text-[11px] font-semibold text-slate-700">Sái Hoài Nam</p>
-              <p className="text-[10px] text-slate-400">Administrator</p>
-            </div>
-          </div>
+          <UserMenu currentUser={currentUser} onLogout={onLogout} />
         </div>
       </aside>
 
@@ -628,9 +627,9 @@ export default function ProblemDetail({
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={!displayProblem.id}
+                disabled={!displayProblem.id || !isAdmin}
                 onClick={() => onOpenGeneration(displayProblem.id)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60"
+                className={`flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-[12px] font-semibold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60 ${isAdmin ? "" : "hidden"}`}
               >
                 <Zap size={13} /> Sinh biến thể từ bài này
               </button>
@@ -822,13 +821,13 @@ export default function ProblemDetail({
                     </p>
                   </div>
 
-                  {classificationError && (
+                  {classificationError && isAdmin && (
                     <p className="text-[10px] text-red-600">
                       {classificationError}
                     </p>
                   )}
 
-                  {classificationMessage && (
+                  {classificationMessage && isAdmin && (
                     <p className="text-[10px] text-emerald-600">
                       {classificationMessage}
                     </p>
@@ -836,14 +835,14 @@ export default function ProblemDetail({
 
                   <button
                     type="button"
-                    disabled={classifying || !question?.id}
+                    disabled={classifying || !question?.id || !isAdmin}
                     onClick={handleClassifyQuestion}
-                    className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                    className={`w-full rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 ${isAdmin ? "" : "hidden"}`}
                   >
                     {classifying ? "Đang AI Matching..." : "AI Matching lại"}
                   </button>
 
-                  {taxonomyQualityError && (
+                  {taxonomyQualityError && isAdmin && (
                     <p className="text-[10px] text-red-600">
                       {taxonomyQualityError}
                     </p>
@@ -851,9 +850,9 @@ export default function ProblemDetail({
 
                   <button
                     type="button"
-                    disabled={taxonomyChecking || !question?.id}
+                    disabled={taxonomyChecking || !question?.id || !isAdmin}
                     onClick={handleCheckTaxonomyQuality}
-                    className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+                    className={`w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60 ${isAdmin ? "" : "hidden"}`}
                   >
                     {taxonomyChecking ? "Đang kiểm định..." : "Kiểm định taxonomy"}
                   </button>
@@ -861,7 +860,7 @@ export default function ProblemDetail({
                 </div>
               )}
 
-              {question && (
+              {question && isAdmin && (
                 <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
                   <p className="text-[11px] font-bold text-slate-700">
                     Sửa metadata

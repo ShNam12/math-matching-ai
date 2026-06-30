@@ -2,12 +2,17 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.v1.services.auth import get_current_user
 from infra.db.repositories.questions import QuestionRepository
 from infra.db.session import get_db_session
 from modules.taxonomy import TaxonomyDefinition, load_taxonomy
 
 
-router = APIRouter(prefix="/taxonomy", tags=["taxonomy"])
+router = APIRouter(
+    prefix="/taxonomy",
+    tags=["taxonomy"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 class TaxonomyStatsItem(BaseModel):

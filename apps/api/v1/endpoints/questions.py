@@ -19,6 +19,7 @@ from apps.api.v1.models.questions import (
     TaxonomyQualityIssueResponse,
     TaxonomyQualityReportResponse,
 )
+from apps.api.v1.services.auth import get_current_user, require_admin
 
 from modules.question_quality import TaxonomyClassificationQualityService
 from modules.taxonomy import load_validated_taxonomy
@@ -31,7 +32,11 @@ from apps.api.v1.services.question_vector_sync import (
     try_sync_question_classification_payload,
 )
 
-router = APIRouter(prefix="/questions", tags=["questions"])
+router = APIRouter(
+    prefix="/questions",
+    tags=["questions"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 def to_choice_items(
@@ -286,6 +291,7 @@ async def list_questions(
 async def update_question(
     question_id: str,
     payload: QuestionUpdateRequest,
+    _admin=Depends(require_admin),
     session: AsyncSession = Depends(get_db_session),
 ) -> QuestionResponse:
     repository = QuestionRepository(session)
@@ -312,6 +318,7 @@ async def update_question(
 async def update_question_review_status(
     question_id: str,
     payload: QuestionReviewStatusUpdateRequest,
+    _admin=Depends(require_admin),
     session: AsyncSession = Depends(get_db_session),
 ) -> QuestionResponse:
     repository = QuestionRepository(session)
@@ -341,6 +348,7 @@ async def update_question_review_status(
 @router.post("/{question_id}/classify", response_model=QuestionResponse)
 async def classify_question(
     question_id: str,
+    _admin=Depends(require_admin),
     session: AsyncSession = Depends(get_db_session),
 ) -> QuestionResponse:
     repository = QuestionRepository(session)

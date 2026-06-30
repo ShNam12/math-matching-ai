@@ -25,6 +25,10 @@ class Settings(BaseSettings):
 
     max_upload_size_mb: int = 40
 
+    jwt_secret_key: str = "change-me-for-demo"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 480
+
     @property
     def cors_origins(self) -> list[str]:
         return [

@@ -30,6 +30,7 @@ from apps.api.v1.endpoints.questions import to_question_response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.v1.services.documents import DocumentService
+from apps.api.v1.services.auth import require_admin
 from core.config.settings import settings
 from infra.db.repositories.documents import DocumentRepository
 from infra.db.repositories.questions import QuestionRepository
@@ -43,7 +44,11 @@ from modules.question_catalog import QuestionCatalogService
 from modules.question_storage.service import QuestionStorageService
 
 
-router = APIRouter(prefix="/documents", tags=["documents"])
+router = APIRouter(
+    prefix="/documents",
+    tags=["documents"],
+    dependencies=[Depends(require_admin)],
+)
 
 async def run_ingestion_background(
     document_id: str,

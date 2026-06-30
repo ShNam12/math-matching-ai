@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getTaxonomy, getTaxonomyStats } from "../services/taxonomyApi";
+import { filterNavigationItems } from "../auth/navigation";
+import UserMenu from "../components/UserMenu";
 import {
   Hash, Upload, Search, BookOpen, CheckSquare, Bell,
   Settings, BarChart2, FileText, Sparkles, ChevronDown,
@@ -83,6 +85,8 @@ const FALLBACK_CHAPTERS = [
 export default function CalculusTaxonomy({
   activePage = "taxonomy",
   onNavigate = () => {},
+  currentUser = null,
+  onLogout = () => {},
   onOpenSearchWithFilters = () => {},
 }) {
   const [openChapters, setOpenChapters] = useState([]);
@@ -92,6 +96,7 @@ export default function CalculusTaxonomy({
   const [error, setError] = useState(null);
   const [selectedProblemType, setSelectedProblemType] = useState(null);
   const [taxonomyStats, setTaxonomyStats] = useState([]);
+  const initializedTaxonomyView = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,26 +203,34 @@ export default function CalculusTaxonomy({
   })();
 
   useEffect(() => {
-    if (!taxonomy?.chapters || chapters.length === 0) {
+    if (
+      !taxonomy?.chapters ||
+      chapters.length === 0 ||
+      initializedTaxonomyView.current
+    ) {
       return;
     }
 
-    queueMicrotask(() => {
-      const firstChapter = chapters[0];
-      const firstTopic = firstChapter.topics?.[0];
+    initializedTaxonomyView.current = true;
 
-      if (openChapters.length === 0) {
-        setOpenChapters([firstChapter.code]);
-      }
+    const firstChapter = chapters[0];
+    const firstTopic = firstChapter.topics?.[0];
 
-      if (!selectedTopic && firstTopic) {
-        setSelectedTopic({
+    setOpenChapters((current) =>
+      current.length === 0 ? [firstChapter.code] : current
+    );
+
+    setSelectedTopic((current) => {
+      if (!current && firstTopic) {
+        return {
           chapterCode: firstChapter.code,
           topicCode: firstTopic.code,
-        });
+        };
       }
+
+      return current;
     });
-  }, [taxonomy, chapters, openChapters.length, selectedTopic]);
+  }, [taxonomy, chapters]);
 
   const toggleChapter = (id) =>
     setOpenChapters((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);
@@ -247,7 +260,7 @@ export default function CalculusTaxonomy({
         </div>
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-2 mb-1.5">Chức năng</p>
-          {NAV.map((item) => {
+          {filterNavigationItems(NAV, currentUser?.role).map((item) => {
             const isActive = activePage === item.id;
             return (
             <div key={item.id} onClick={() => onNavigate(item.id)} className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all ${isActive ? "bg-blue-50 ring-1 ring-blue-100" : "hover:bg-slate-50"}`}>
@@ -262,13 +275,7 @@ export default function CalculusTaxonomy({
           })}
         </nav>
         <div className="px-2 pb-3 border-t border-slate-100 pt-2">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-            <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold">N</div>
-            <div>
-              <p className="text-[11px] font-semibold text-slate-700">Sái Hoài Nam</p>
-              <p className="text-[10px] text-slate-400">Administrator</p>
-            </div>
-          </div>
+          <UserMenu currentUser={currentUser} onLogout={onLogout} />
         </div>
       </aside>
 

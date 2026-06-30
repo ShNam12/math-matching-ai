@@ -13,6 +13,7 @@ from apps.api.v1.endpoints.questions import (
     to_choice_items,
     to_validation_report_item,
 )
+from apps.api.v1.services.auth import get_current_user
 from core.config.settings import settings
 from infra.db.repositories.questions import QuestionRepository
 from infra.db.session import get_db_session
@@ -26,7 +27,11 @@ from modules.semantic_search import (
     SemanticSearchService,
 )
 
-router = APIRouter(prefix="/search", tags=["search"])
+router = APIRouter(
+    prefix="/search",
+    tags=["search"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.post("/questions", response_model=QuestionSearchResponse)

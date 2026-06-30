@@ -3,11 +3,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.v1.models.analytics import AnalyticsSummaryResponse
+from apps.api.v1.services.auth import require_admin
 from infra.db.models import Document, Question
 from infra.db.session import get_db_session
 
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(
+    prefix="/analytics",
+    tags=["analytics"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 DISTRACTOR_ISSUE_CODES = {

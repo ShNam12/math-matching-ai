@@ -24,6 +24,7 @@ from apps.api.v1.endpoints.questions import (
     to_choice_items,
     to_validation_report_item,
 )
+from apps.api.v1.services.auth import require_admin
 
 from core.config.settings import settings
 from infra.db.repositories.questions import QuestionRepository
@@ -45,7 +46,11 @@ from modules.neuro_symbolic.solver_registry import CALCULUS_1_SOLVER_CODES
 from modules.question_quality import QuestionQualityService, QuestionValidationReport
 from modules.semantic_search import SemanticSearchService
 
-router = APIRouter(prefix="/generation", tags=["generation"])
+router = APIRouter(
+    prefix="/generation",
+    tags=["generation"],
+    dependencies=[Depends(require_admin)],
+)
 
 def create_question_generation_service(
     session: AsyncSession,
