@@ -7,7 +7,7 @@ import QARules from "./pages/QARules.jsx"
 import ProblemDetail from "./pages/ProblemDetail.jsx"
 import GenVariants from "./pages/GenVariants.jsx"
 import Analytics from "./pages/Analytics.jsx"
-import SettingsPage from "./pages/Settings.jsx"
+import SettingsPage from "./pages/SystemSettings.jsx"
 import Login from "./pages/Login.jsx"
 import { canAccessPage } from "./auth/navigation"
 import {
