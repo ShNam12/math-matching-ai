@@ -28,13 +28,6 @@ const NAV = [
   { icon: Settings, label: "Cài đặt", sub: "System", id: "settings" },
 ];
 
-const ACTIVITIES = [
-  { dot: "amber", action: "Upload", detail: "Calculus_VNU.tex đang xử lý 67%", time: "14:32" },
-  { dot: "green", action: "Gen", detail: "3 biến thể ∫x²eˣdx đã tạo xong", time: "13:17" },
-  { dot: "red", action: "QA Scan", detail: "36 vấn đề cần xử lý", time: "11:45" },
-  { dot: "green", action: "Upload", detail: "HUST_GT2.pdf hoàn thành, 2,103 bài", time: "09:22" },
-];
-
 const TOPIC_COLORS = ["#185FA5", "#534AB7", "#0F6E56", "#854F0B"];
 
 const QUICK_ACTIONS = [
@@ -61,7 +54,37 @@ const dotColor = {
   green: "bg-emerald-500",
   amber: "bg-amber-400",
   red: "bg-red-500",
+  blue: "bg-blue-500",
 };
+
+const documentStatusDot = {
+  completed: "green",
+  processing: "amber",
+  uploaded: "blue",
+  failed: "red",
+};
+
+const documentStatusLabel = {
+  completed: "hoàn thành",
+  processing: "đang xử lý",
+  uploaded: "đã upload",
+  failed: "lỗi xử lý",
+};
+
+function formatActivityTime(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function MainDashboard({
   activePage = "dashboard",
@@ -210,6 +233,28 @@ export default function MainDashboard({
       count: Number(count).toLocaleString("vi-VN"),
       color: TOPIC_COLORS[index % TOPIC_COLORS.length],
     }));
+  const recentActivities = documents
+    .slice()
+    .sort((firstDoc, secondDoc) => {
+      const firstTime = new Date(firstDoc.updated_at || firstDoc.created_at).getTime();
+      const secondTime = new Date(secondDoc.updated_at || secondDoc.created_at).getTime();
+
+      return secondTime - firstTime;
+    })
+    .slice(0, 4)
+    .map((doc) => {
+      const status = doc.status || "uploaded";
+      const statusText = documentStatusLabel[status] || status;
+      const detail = doc.message || `${doc.filename} ${statusText}`;
+
+      return {
+        id: doc.id,
+        dot: documentStatusDot[status] || "blue",
+        action: "Upload",
+        detail,
+        time: formatActivityTime(doc.updated_at || doc.created_at),
+      };
+    });
 
   const statusCards = [
     {
@@ -410,7 +455,8 @@ export default function MainDashboard({
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
-          {/* ① Hero Search */}
+          {/* ① Hero Search - tạm ẩn vì chưa dùng chức năng này trên Dashboard */}
+          {false && (
           <div className="bg-white border border-slate-100 rounded-xl p-4">
             <div className="flex items-end justify-between mb-2.5">
               <div>
@@ -464,6 +510,7 @@ export default function MainDashboard({
               ))}
             </div>
           </div>
+          )}
 
           {/* ② Corpus Health */}
           <div className="grid grid-cols-4 gap-2.5">
@@ -653,8 +700,20 @@ export default function MainDashboard({
                   <span className="text-[12px] font-bold text-slate-700">Hoạt động gần đây</span>
                 </div>
                 <div className="divide-y divide-slate-50">
-                  {ACTIVITIES.map((a, i) => (
-                    <div key={i} className="flex items-start gap-2.5 px-3.5 py-2.5">
+                  {systemLoading && (
+                    <div className="px-3.5 py-3 text-[11px] text-slate-400">
+                      Đang tải hoạt động gần đây...
+                    </div>
+                  )}
+
+                  {!systemLoading && recentActivities.length === 0 && (
+                    <div className="px-3.5 py-3 text-[11px] text-slate-400">
+                      Chưa có hoạt động gần đây.
+                    </div>
+                  )}
+
+                  {!systemLoading && recentActivities.map((a) => (
+                    <div key={a.id} className="flex items-start gap-2.5 px-3.5 py-2.5">
                       <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${dotColor[a.dot]}`} />
                       <div className="flex-1 min-w-0">
                         <span className="text-[11px] font-semibold text-slate-700">{a.action}</span>
