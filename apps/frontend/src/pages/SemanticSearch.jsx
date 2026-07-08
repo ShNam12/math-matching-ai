@@ -625,7 +625,7 @@ export default function SemanticSearch({
                       )}
 
                       <p className={`text-[11px] text-slate-600 leading-relaxed ${!isExp ? "line-clamp-2" : ""}`}>
-                        {p.statement}
+                        <MathText value={p.statement} />
                       </p>
 
                       {p.questionType === "multiple_choice" && p.choices.length > 0 && (
