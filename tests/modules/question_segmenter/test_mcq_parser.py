@@ -116,3 +116,20 @@ D. $2$
         "choice",
         "choice",
     ]
+
+def test_parse_six_choice_mcq() -> None:
+    parsed = parse_mcq(
+        """
+Tính giới hạn.
+A. 1
+B. 2
+C. 3
+D. 4
+E. 5
+F. 6
+"""
+    )
+
+    assert parsed is not None
+    assert [choice.key for choice in parsed.choices] == ["A", "B", "C", "D", "E", "F"]
+    assert parsed.choices[5].text == "6"

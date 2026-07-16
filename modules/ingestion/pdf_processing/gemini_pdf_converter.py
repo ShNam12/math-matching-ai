@@ -20,6 +20,10 @@ Requirements:
 - Do not omit content.
 - Do not add explanations outside the converted document.
 - Return only Markdown.
+- Format question markers as plain text lines, for example: "Câu 1: ...".
+- Do not wrap question markers in bold or italic markdown.
+- Preserve multiple-choice options as separate lines: A. ..., B. ..., C. ...
+
 """.strip()
 
 

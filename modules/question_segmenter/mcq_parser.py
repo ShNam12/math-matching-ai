@@ -8,9 +8,9 @@ CHOICE_LINE_RE = re.compile(
     r"""
     ^[ \t]*
     (?:
-        (?P<paren>\([A-D]\))
+        (?P<paren>\([A-F]\))
         |
-        (?P<plain>[A-D])[\.)]
+        (?P<plain>[A-F])[\.)]
     )
     [ \t]+
     (?P<text>.*)
@@ -33,7 +33,7 @@ ANSWER_LINE_RE = re.compile(
     (?:\*\*|__)?
     [ \t]*[:\-][ \t]*
     (?:\*\*|__)?
-    (?P<answer>[A-D])
+    (?P<answer>[A-F])
     (?:[\.)])?
     (?:\*\*|__)?
     [ \t]*$
@@ -63,7 +63,7 @@ def _extract_answer(text: str | None) -> str | None:
         return match.group("answer").upper()
 
     stripped = text.strip().upper()
-    if re.fullmatch(r"[A-D][\.)]?", stripped):
+    if re.fullmatch(r"[A-F][\.)]?", stripped):
         return stripped[0]
 
     return None
@@ -89,9 +89,14 @@ def parse_mcq(
         for match in matches
     ]
 
-    if keys != ["A", "B", "C", "D"]:
-        return None
+    valid_key_sets = [
+        ["A", "B", "C", "D"],
+        ["A", "B", "C", "D", "E", "F"],
+    ]
 
+    if keys not in valid_key_sets:
+        return None
+    
     stem = cleaned_statement[:matches[0].start()].strip()
     choices: list[SegmentedChoice] = []
 

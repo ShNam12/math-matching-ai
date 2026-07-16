@@ -67,3 +67,18 @@ Bài 27. Viết các số phức sau dưới dạng lượng giác:
     assert "(a)" in question.statement
     assert "(b)" in question.statement
     assert len(question.formulas) == 2
+
+def test_segment_questions_from_bold_question_marker() -> None:
+    markdown = """
+**Câu 1:** Tính $1+1$.
+A. 1
+B. 2
+C. 3
+D. 4
+"""
+
+    result = segment_questions(markdown)
+
+    assert len(result.questions) == 1
+    assert result.questions[0].marker == "Câu"
+    assert result.questions[0].marker_number == "1"
