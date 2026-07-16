@@ -13,7 +13,10 @@ import {
   updateQuestion,
 } from "../services/questionApi";
 import { searchQuestions } from "../services/searchApi";
-import { rememberRecentQuestion } from "../services/recentQuestions";
+import {
+  getRecentQuestionIds,
+  rememberRecentQuestion,
+} from "../services/recentQuestions";
 import { filterNavigationItems } from "../auth/navigation";
 import LatexInline from "../components/LatexInline";
 import MathText from "../components/MathText";
@@ -29,51 +32,6 @@ const NAV = [
   { icon: Sparkles, label: "Sinh biến thể", sub: "Gen AI", id: "gen" },
   { icon: BarChart2, label: "Analytics", sub: "Thống kê", id: "analytics" },
   { icon: Settings, label: "Cài đặt", sub: "System", id: "settings" },
-];
-
-const PROBLEM = {
-  id: "BK-2023-M1-042",
-  topic: "Tích phân",
-  subtopic: "Tích phân từng phần",
-  chapter: "Chương 3",
-  difficulty: "Khó",
-  skill: "Tính toán",
-  source: "Giải tích 1 — BK 2023",
-  addedBy: "Sái Hoài Nam",
-  addedDate: "05/05/2026",
-  latex: "\\int x^2 e^x \\, dx",
-  statement:
-    "Tính tích phân bất định ∫ x²·eˣ dx bằng phương pháp tích phân từng phần (integration by parts). Yêu cầu viết đầy đủ các bước trung gian, chỉ rõ việc chọn u và dv ở mỗi lần áp dụng công thức, và kiểm tra lại kết quả bằng cách lấy đạo hàm của biểu thức tìm được.",
-  tags: ["Giải tích 1", "Đề thi HK2", "Integration by parts"],
-  similarCount: 18,
-  variantCount: 5,
-};
-
-const STEPS = [
-  {
-    num: 1,
-    title: "Áp dụng tích phân từng phần lần 1",
-    content: "Đặt u = x², dv = eˣ dx. Suy ra du = 2x dx và v = eˣ. Áp dụng công thức ∫u dv = uv − ∫v du:",
-    latex: "\\int x^2 e^x \\, dx = x^2 e^x - \\int 2x \\cdot e^x \\, dx",
-  },
-  {
-    num: 2,
-    title: "Áp dụng tích phân từng phần lần 2",
-    content: "Tiếp tục xử lý ∫ 2xeˣ dx. Đặt u = 2x, dv = eˣ dx → du = 2 dx, v = eˣ:",
-    latex: "\\int 2x e^x \\, dx = 2x e^x - \\int 2e^x \\, dx = 2xe^x - 2e^x",
-  },
-  {
-    num: 3,
-    title: "Ghép kết quả & rút gọn",
-    content: "Thay kết quả bước 2 vào bước 1, nhóm và rút gọn các hạng tử:",
-    latex: "\\int x^2 e^x \\, dx = x^2 e^x - 2xe^x + 2e^x + C = e^x(x^2 - 2x + 2) + C",
-  },
-  {
-    num: 4,
-    title: "Kiểm tra bằng đạo hàm",
-    content: "Lấy đạo hàm của F(x) = eˣ(x²−2x+2) theo quy tắc tích số:",
-    latex: "F'(x) = e^x(x^2 - 2x + 2) + e^x(2x - 2) = e^x \\cdot x^2 = x^2 e^x \\checkmark",
-  },
 ];
 
 function getChoiceValue(choice, field) {
@@ -124,6 +82,8 @@ export default function ProblemDetail({
   const [question, setQuestion] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [recentQuestions, setRecentQuestions] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
 
   const [metadataForm, setMetadataForm] = useState({
     subject: "",
@@ -235,6 +195,8 @@ export default function ProblemDetail({
     if (!selectedQuestionId) {
       queueMicrotask(() => {
         setQuestion(null);
+        setLoading(false);
+        setError(null);
       });
       return;
     }
@@ -244,6 +206,7 @@ export default function ProblemDetail({
     async function loadQuestion() {
       setLoading(true);
       setError(null);
+      setQuestion(null);
 
       try {
         const data = await getQuestion(selectedQuestionId);
@@ -265,6 +228,43 @@ export default function ProblemDetail({
     }
 
     loadQuestion();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedQuestionId]);
+
+  useEffect(() => {
+    if (selectedQuestionId) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function loadRecentQuestions() {
+      const ids = getRecentQuestionIds();
+
+      if (ids.length === 0) {
+        setRecentQuestions([]);
+        setRecentLoading(false);
+        return;
+      }
+
+      setRecentLoading(true);
+
+      const results = await Promise.allSettled(ids.map((id) => getQuestion(id)));
+
+      if (!cancelled) {
+        setRecentQuestions(
+          results
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value),
+        );
+        setRecentLoading(false);
+      }
+    }
+
+    loadRecentQuestions();
 
     return () => {
       cancelled = true;
@@ -374,10 +374,10 @@ export default function ProblemDetail({
         problemTypeCode: question.problem_type_code,
 
       }
-    : PROBLEM;
+    : null;
 
-  const isMultipleChoice = displayProblem.questionType === "multiple_choice";
-  const validationReport = displayProblem.validationReport || getValidationReport(null);
+  const isMultipleChoice = displayProblem?.questionType === "multiple_choice";
+  const validationReport = displayProblem?.validationReport || getValidationReport(null);
   const validationWarnings = Array.isArray(validationReport.warnings)
     ? validationReport.warnings
     : [];
@@ -403,7 +403,7 @@ export default function ProblemDetail({
           latex: "",
         },
       ].filter(Boolean)
-    : STEPS;
+    : [];
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
@@ -449,30 +449,41 @@ export default function ProblemDetail({
               onClick={() => onNavigate("search")}
               className="flex items-center gap-1.5 text-[11px] text-blue-600 hover:text-blue-800 font-semibold bg-blue-50 px-2.5 py-1.5 rounded-lg transition-all"
             >
-              <ArrowLeft size={12} /> Quay lại kết quả
+              {selectedQuestionId ? <ArrowLeft size={12} /> : <Search size={12} />}
+              {selectedQuestionId ? "Quay lại kết quả" : "Tìm bài tập"}
             </button>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-              <span>Semantic Search</span>
-              <ChevronRight size={11} />
-              <span className="font-mono font-semibold text-slate-600">
-                {displayProblem.id}
-              </span>
+              {question ? (
+                <>
+                  <span>Semantic Search</span>
+                  <ChevronRight size={11} />
+                  <span className="font-mono font-semibold text-slate-600">
+                    {displayProblem.id}
+                  </span>
+                </>
+              ) : (
+                <span className="font-semibold text-slate-500">Chưa chọn bài tập</span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setStarred((s) => !s)}
-              className={`p-2 rounded-lg transition-all ${starred ? "text-amber-500 bg-amber-50" : "text-slate-400 hover:bg-slate-50"}`}>
-              <Star size={14} fill={starred ? "currentColor" : "none"} />
-            </button>
-            <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-all">
-              <Share2 size={14} />
-            </button>
-            <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-all">
-              <Printer size={14} />
-            </button>
-            <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-all">
-              <Download size={14} />
-            </button>
+            {question && (
+              <>
+                <button onClick={() => setStarred((s) => !s)}
+                  className={`p-2 rounded-lg transition-all ${starred ? "text-amber-500 bg-amber-50" : "text-slate-400 hover:bg-slate-50"}`}>
+                  <Star size={14} fill={starred ? "currentColor" : "none"} />
+                </button>
+                <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-all">
+                  <Share2 size={14} />
+                </button>
+                <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-all">
+                  <Printer size={14} />
+                </button>
+                <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-all">
+                  <Download size={14} />
+                </button>
+              </>
+            )}
             <button className="relative p-2 rounded-lg hover:bg-slate-50 text-slate-400 ml-1">
               <Bell size={14} />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -482,19 +493,90 @@ export default function ProblemDetail({
         </header>
 
         <div className="flex-1 overflow-y-auto p-5 flex gap-5">
+          {!selectedQuestionId && (
+            <section className="flex-1 w-full max-w-5xl mx-auto py-10">
+              <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                  <FileText size={27} />
+                </div>
+                <h1 className="mt-5 text-xl font-bold text-slate-800">Chưa chọn bài tập</h1>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                  Chọn một bài từ Semantic Search để xem đề bài, lời giải chi tiết
+                  và các thông tin liên quan.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("search")}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                >
+                  <Search size={15} />
+                  Tìm bài tập
+                </button>
+              </div>
 
-          {loading && (
-            <div className="absolute inset-x-0 top-16 mx-auto w-fit rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-semibold text-blue-700">
-              Đang tải chi tiết câu hỏi...
-            </div>
+              <div className="mt-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-slate-700">Bài tập đã xem gần đây</h2>
+                  <span className="text-xs text-slate-400">Tối đa 5 bài</span>
+                </div>
+
+                {recentLoading && (
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                    Đang tải bài tập gần đây...
+                  </div>
+                )}
+
+                {!recentLoading && recentQuestions.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                    Bạn chưa xem bài tập nào. Hãy bắt đầu từ Semantic Search.
+                  </div>
+                )}
+
+                {!recentLoading && recentQuestions.length > 0 && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {recentQuestions.map((recent) => (
+                      <button
+                        key={recent.id}
+                        type="button"
+                        onClick={() => onOpenQuestionDetail(recent.id)}
+                        className="rounded-xl border border-slate-200 bg-white p-4 text-left transition-all hover:border-blue-300 hover:shadow-sm"
+                      >
+                        <p className="font-mono text-xs font-bold text-blue-600">{recent.id}</p>
+                        <div className="mt-2 h-11 overflow-hidden text-sm leading-5 text-slate-700">
+                          <MathText value={recent.statement || "Không có nội dung đề bài."} />
+                        </div>
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500">
+                            {recent.difficulty || "Chưa rõ độ khó"}
+                          </span>
+                          <span className="truncate text-[10px] text-slate-400">
+                            {recent.skills?.[0] || "Chưa gắn kỹ năng"}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           )}
 
-          {error && (
-            <div className="absolute inset-x-0 top-16 mx-auto w-fit rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">
-              {error}
-            </div>
-          )}
+          {selectedQuestionId && (
+            <>
+              {loading && (
+                <div className="absolute inset-x-0 top-16 mx-auto w-fit rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[12px] font-semibold text-blue-700">
+                  Đang tải chi tiết câu hỏi...
+                </div>
+              )}
 
+              {error && (
+                <div className="absolute inset-x-0 top-16 mx-auto w-fit rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">
+                  {error}
+                </div>
+              )}
+
+              {question && (
+                <>
           {/* Left — problem + solution */}
           <div className="flex-1 min-w-0 space-y-4">
             {/* Hero card */}
@@ -996,6 +1078,10 @@ export default function ProblemDetail({
                 </div>
             </div>
           </div>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

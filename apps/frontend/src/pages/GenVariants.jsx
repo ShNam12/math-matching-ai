@@ -34,18 +34,38 @@ const NAV = [
   { icon: Settings, label: "Cài đặt", sub: "System", id: "settings" },
 ];
 
-const ORIGINAL = {
-  id: "BK-2023-M1-042",
-  latex: "\\int x^2 e^x \\, dx",
-  topic: "Tích phân từng phần",
-  difficulty: "Khó",
+const GENERATION_MODES = [
+  { id: "ai", label: "Sinh trắc nghiệm bằng AI" },
+  { id: "symbolic", label: "Sinh theo bộ giải toán" },
+  { id: "convert", label: "Chuyển bài gốc thành trắc nghiệm" },
+];
+
+const SOLVER_LABELS = {
+  DERIV_COMPOSITE: "Đạo hàm hàm hợp",
+  DERIV_MONOMIAL: "Đạo hàm hàm lũy thừa",
+  INT_MONOMIAL: "Tích phân hàm lũy thừa",
+  INT_RATIONAL: "Tích phân hàm hữu tỉ",
+  INT_XN_EXP: "Tích phân xⁿeˣ",
+  INT_XN_LN: "Tích phân xⁿln(x)",
+  LIMIT_ZERO_ZERO: "Giới hạn dạng vô định 0/0",
 };
 
-const GENERATION_MODES = [
-  { id: "ai", label: "AI MCQ" },
-  { id: "symbolic", label: "Symbolic MCQ" },
-  { id: "convert", label: "Convert from source" },
-];
+const GENERATION_METHOD_LABELS = {
+  ai: "Sinh bằng AI",
+  symbolic: "Sinh bằng bộ giải toán",
+  convert: "Chuyển từ bài gốc",
+  ai_symbolic: "AI kết hợp bộ giải toán",
+};
+
+function getSolverLabel(solver) {
+  const code = typeof solver === "string" ? solver : solver?.code;
+
+  return SOLVER_LABELS[code] || solver?.name || code || "Không xác định";
+}
+
+function getGenerationMethodLabel(method) {
+  return GENERATION_METHOD_LABELS[method] || method || "Không xác định";
+}
 
 function getValidationReport(candidate) {
   return candidate?.validation_report || {
@@ -212,7 +232,10 @@ export default function GenVariants({
   };
 
   const handleGen = async () => {
-    if (!sourceQuestionId) {
+    if (!hasLoadedSource) {
+      setGenerationError(
+        "Hãy chọn và tải thành công câu hỏi nguồn trước khi sinh biến thể.",
+      );
       return;
     }
 
@@ -239,7 +262,7 @@ export default function GenVariants({
         });
       } else if (generationMode === "symbolic") {
         if (!selectedSolverCode) {
-          throw new Error("Chua co solver symbolic kha dung");
+          throw new Error("Chưa có bộ giải toán khả dụng.");
         }
 
         data = await previewSymbolicMCQ({
@@ -284,7 +307,7 @@ export default function GenVariants({
   const handleSaveSelected = async () => {
     const selectedVariants = variants.filter((variant) => variant.selected);
 
-    if (!sourceQuestionId || selectedVariants.length === 0) {
+    if (!hasLoadedSource || selectedVariants.length === 0) {
       return;
     }
 
@@ -393,6 +416,11 @@ export default function GenVariants({
     if (!sourceQuestionId) {
       queueMicrotask(() => {
         setSourceQuestion(null);
+        setSourceLoading(false);
+        setSourceError(null);
+        setVariants([]);
+        setGenerationError(null);
+        setSaveMessage(null);
       });
       return;
     }
@@ -400,8 +428,12 @@ export default function GenVariants({
     let cancelled = false;
 
     async function loadSourceQuestion() {
+      setSourceQuestion(null);
       setSourceLoading(true);
       setSourceError(null);
+      setVariants([]);
+      setGenerationError(null);
+      setSaveMessage(null);
 
       try {
         const data = await getQuestion(sourceQuestionId);
@@ -436,9 +468,22 @@ export default function GenVariants({
         difficulty: sourceQuestion.difficulty || "Chưa rõ",
         statement: sourceQuestion.statement,
       }
-    : ORIGINAL;
+    : null;
 
-  const hasSourceQuestion = Boolean(sourceQuestionId);
+  const hasLoadedSource = Boolean(
+    sourceQuestion &&
+    sourceQuestion.id === sourceQuestionId &&
+    !sourceLoading &&
+    !sourceError,
+  );
+
+  const sourceBreadcrumb = hasLoadedSource
+    ? sourceQuestion.id
+    : sourceLoading
+      ? "Đang tải bài gốc..."
+      : sourceError
+        ? "Không tải được bài gốc"
+        : "Chưa chọn bài gốc";
 
   const selectedCount = variants.filter((v) => v.selected).length;
 
@@ -484,7 +529,7 @@ export default function GenVariants({
               <ArrowLeft size={12} /> Chi tiết bài tập
             </button>
             <div className="flex items-center gap-1 text-[11px] text-slate-400">
-              <span>{sourceQuestionId || displayOriginal.id}</span>
+              <span>{sourceBreadcrumb}</span>
               <ChevronRight size={11} />
               <span className="text-slate-600 font-semibold">Sinh biến thể</span>
             </div>
@@ -511,44 +556,48 @@ export default function GenVariants({
                 <p className="text-[10px] font-bold text-blue-700 mb-1.5 uppercase tracking-wide">Bài gốc</p>
 
                 {!sourceQuestionId && (
-                  <p className="text-[10px] text-amber-600 mb-2">
+                  <p className="text-[10px] text-amber-600 leading-relaxed">
                     Chưa chọn câu hỏi nguồn. Hãy chọn một câu hỏi từ Semantic Search hoặc Chi tiết bài tập.
                   </p>
                 )}
 
-                {sourceLoading && (
-                  <p className="text-[10px] text-blue-600 mb-2">
+                {sourceQuestionId && sourceLoading && (
+                  <p className="text-[10px] text-blue-600">
                     Đang tải câu hỏi nguồn...
                   </p>
                 )}
 
-                {sourceError && (
-                  <p className="text-[10px] text-red-600 mb-2">
-                    {sourceError}
+                {sourceQuestionId && !sourceLoading && sourceError && (
+                  <p className="text-[10px] text-red-600 leading-relaxed">
+                    Không thể tải câu hỏi nguồn: {sourceError}
                   </p>
                 )}
 
-                <p className="text-[10px] text-blue-600 font-mono break-all mb-2">
-                  {sourceQuestionId || "Chưa chọn câu hỏi nguồn"}
-                </p>
-                <div className="text-[13px] text-blue-800 font-bold block mb-1">
-                  <LatexInline value={displayOriginal.latex} />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
-                    {displayOriginal.topic}
-                  </span>
-                  <span className="text-[10px] text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
-                    {displayOriginal.difficulty}
-                  </span>
-                </div>
+                {hasLoadedSource && (
+                  <>
+                    <p className="text-[10px] text-blue-600 font-mono break-all mb-2">
+                      {displayOriginal.id}
+                    </p>
+                    <div className="text-[13px] text-blue-800 font-bold block mb-1">
+                      <LatexInline value={displayOriginal.latex} />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded">
+                        {displayOriginal.topic}
+                      </span>
+                      <span className="text-[10px] text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                        {displayOriginal.difficulty}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Form fields */}
               <div className="space-y-3">
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
-                    Che do sinh trac nghiem
+                    Chế độ sinh trắc nghiệm
                   </label>
                   <div className="grid grid-cols-1 gap-1.5">
                     {GENERATION_MODES.map((mode) => (
@@ -574,7 +623,7 @@ export default function GenVariants({
                 {generationMode === "symbolic" && (
                   <div>
                     <label className="text-[11px] font-semibold text-slate-600 block mb-1.5">
-                      Calculus 1 symbolic solver
+                      Bộ giải toán giải tích 1
                     </label>
                     <select
                       value={selectedSolverCode}
@@ -582,11 +631,11 @@ export default function GenVariants({
                       className="w-full px-2.5 py-2 border border-slate-200 rounded-lg text-[11px] bg-slate-50 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                     >
                       {solvers.length === 0 ? (
-                        <option value="">Chua co solver</option>
+                        <option value="">Chưa có bộ giải toán</option>
                       ) : (
                         solvers.map((solver) => (
                           <option key={solver.code} value={solver.code}>
-                            {solver.code}
+                            {getSolverLabel(solver)}
                           </option>
                         ))
                       )}
@@ -653,9 +702,9 @@ export default function GenVariants({
               <button
                 type="button"
                 onClick={handleGen}
-                disabled={!hasSourceQuestion || sourceLoading || generating}
+                disabled={!hasLoadedSource || generating}
                 className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-xl transition-all ${
-                  !hasSourceQuestion || sourceLoading || generating
+                  !hasLoadedSource || generating
                     ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
@@ -681,10 +730,10 @@ export default function GenVariants({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {selectedCount > 0 && (
+                {hasLoadedSource && selectedCount > 0 && (
                   <>
                     <button className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-all">
-                      <Download size={12} /> Export LaTeX ({selectedCount})
+                      <Download size={12} /> Xuất LaTeX ({selectedCount})
                     </button>
                     <button
                       type="button"
@@ -716,14 +765,20 @@ export default function GenVariants({
               </div>
             )}
 
-            {!hasSourceQuestion ? (
+            {!hasLoadedSource ? (
               <div className="bg-white border border-dashed border-slate-200 rounded-xl p-8 text-center">
                 <Sparkles size={24} className="text-slate-300 mx-auto mb-3" />
                 <p className="text-[13px] font-bold text-slate-700">
-                  Hãy chọn một câu hỏi nguồn để sinh biến thể
+                  {sourceLoading
+                    ? "Đang tải câu hỏi nguồn"
+                    : sourceError
+                      ? "Không thể tải câu hỏi nguồn"
+                      : "Hãy chọn một câu hỏi nguồn để sinh biến thể"}
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Vào Semantic Search hoặc Chi tiết bài tập, sau đó bấm Sinh biến thể.
+                  {sourceError
+                    ? "Hãy quay lại Semantic Search hoặc Chi tiết bài tập để chọn một bài hợp lệ."
+                    : "Vào Semantic Search hoặc Chi tiết bài tập, sau đó bấm Sinh biến thể."}
                 </p>
               </div>
             ) : variants.length === 0 ? (
@@ -759,12 +814,12 @@ export default function GenVariants({
                           <DiffIcon size={10} /> {v.difficulty}
                         </span>
                         <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
-                          {v.generationMethod || v.mode}
+                          {getGenerationMethodLabel(v.generationMethod || v.mode)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-400">QA:</span>
+                          <span className="text-[10px] text-slate-400">Kiểm định:</span>
                           <span className={`text-[11px] font-bold ${v.qaScore >= 96 ? "text-emerald-600" : "text-amber-600"}`}>{v.qaScore}%</span>
                           <div className="w-10 h-1 rounded-full bg-slate-100 overflow-hidden">
                             <div className={`h-full rounded-full ${v.qaScore >= 96 ? "bg-emerald-500" : "bg-amber-400"}`} style={{ width: `${v.qaScore}%` }} />
@@ -855,7 +910,7 @@ export default function GenVariants({
                       <div className="mb-2 flex flex-wrap items-center gap-1.5">
                         {v.correctChoice && (
                           <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
-                            Correct: {v.correctChoice}
+                            Đáp án đúng: {v.correctChoice}
                           </span>
                         )}
                         <span
@@ -865,15 +920,15 @@ export default function GenVariants({
                               : "text-red-700 bg-red-50 border-red-100"
                           }`}
                         >
-                          Validation: {validationCanSave ? "pass" : "blocked"}
+                          Kiểm định: {validationCanSave ? "Đạt" : "Không thể lưu"}
                         </span>
                         {v.solverCode && (
                           <span className="text-[10px] font-semibold text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded">
-                            Solver: {v.solverCode}
+                            Bộ giải: {getSolverLabel(v.solverCode)}
                           </span>
                         )}
                         <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
-                          Method: {v.generationMethod || v.mode || "ai"}
+                          Cách sinh: {getGenerationMethodLabel(v.generationMethod || v.mode || "ai")}
                         </span>
                       </div>
 
@@ -884,7 +939,7 @@ export default function GenVariants({
                               key={`block-${v.id}-${issueIndex}`}
                               className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-[10px] text-red-700"
                             >
-                              Block: {getIssueCode(issue)}
+                              Lỗi: {getIssueCode(issue)}
                             </div>
                           ))}
                           {warnings.map((issue, issueIndex) => (
@@ -892,7 +947,7 @@ export default function GenVariants({
                               key={`warn-${v.id}-${issueIndex}`}
                               className="rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] text-amber-700"
                             >
-                              Warning: {getIssueCode(issue)}
+                              Cảnh báo: {getIssueCode(issue)}
                             </div>
                           ))}
                         </div>
@@ -916,7 +971,7 @@ export default function GenVariants({
                           Đã lưu: <span className="font-mono">{v.savedQuestionId}</span>
                           {v.embeddingStatus && (
                             <span className="ml-2 text-emerald-600">
-                              embedding: {v.embeddingStatus}
+                              Trạng thái embedding: {v.embeddingStatus}
                             </span>
                           )}
                         </div>
