@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 
 @dataclass(frozen=True)
@@ -71,11 +71,28 @@ class SemanticDuplicateHit:
 
 
 @dataclass(frozen=True)
+class QualityRuleResult:
+    """A presentation-friendly outcome for one candidate quality rule.
+
+    This is derived from the existing warnings/blocking issues.  It does not
+    participate in the decision of whether a question may be saved.
+    """
+
+    rule_id: str
+    title: str
+    category: str
+    status: Literal["pass", "warn", "fail", "skipped"]
+    issues: list[QualityIssue] = field(default_factory=list)
+    check_codes: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class QuestionQualityReport:
     warnings: list[QualityIssue] = field(default_factory=list)
     blocking_issues: list[QualityIssue] = field(default_factory=list)
     semantic_duplicates: list[SemanticDuplicateHit] = field(default_factory=list)
     symbolic_checks: list[SymbolicCheckResult] = field(default_factory=list)
+    rule_results: list[QualityRuleResult] = field(default_factory=list)
 
     @property
     def quality_warnings(self) -> list[str]:

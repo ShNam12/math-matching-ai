@@ -1,5 +1,6 @@
 from modules.question_quality.schemas import (
     QualityIssue,
+    QualityRuleResult,
     QuestionQualityReport,
     QuestionValidationReport,
     SemanticDuplicateHit,
@@ -8,6 +9,7 @@ from modules.question_quality.schemas import (
 )
 __all__ = [
     "QualityIssue",
+    "QualityRuleResult",
     "QuestionQualityReport",
     "QuestionQualityService",
     "QuestionValidationReport",

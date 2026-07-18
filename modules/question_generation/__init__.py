@@ -5,7 +5,10 @@ from modules.question_generation.schemas import (
     MultipleChoiceOption,
     QuestionGenerationPreview,
 )
-from modules.question_generation.service import QuestionGenerationService
+from modules.question_generation.service import (
+    QuestionGenerationService,
+    QuestionQualityCheckError,
+)
 from modules.question_generation.symbolic_mcq_generator import SymbolicMCQGenerator
 
 __all__ = [
@@ -15,5 +18,6 @@ __all__ = [
     "MultipleChoiceOption",
     "QuestionGenerationPreview",
     "QuestionGenerationService",
+    "QuestionQualityCheckError",
     "SymbolicMCQGenerator",
 ]

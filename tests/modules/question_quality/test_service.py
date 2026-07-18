@@ -126,6 +126,9 @@ def test_assess_candidate_allows_valid_candidate() -> None:
     assert report.can_save is True
     assert report.blocking_issues == []
     assert report.quality_warnings == []
+    rule_statuses = {item.rule_id: item.status for item in report.rule_results}
+    assert rule_statuses["statement_required"] == "pass"
+    assert rule_statuses["exact_duplicate"] == "pass"
 
 
 def test_assess_candidate_blocks_exact_duplicate_statement() -> None:
@@ -143,6 +146,14 @@ def test_assess_candidate_blocks_exact_duplicate_statement() -> None:
 
     assert report.can_save is False
     assert "exact_duplicate_statement" in report.quality_warnings
+    duplicate_rule = next(
+        item for item in report.rule_results
+        if item.rule_id == "exact_duplicate"
+    )
+    assert duplicate_rule.status == "fail"
+    assert [issue.code for issue in duplicate_rule.issues] == [
+        "exact_duplicate_statement"
+    ]
 
 
 def test_assess_candidate_blocks_invalid_formula_payload() -> None:
@@ -186,6 +197,11 @@ def test_assess_candidate_warns_missing_solution_and_answer() -> None:
     assert report.can_save is True
     assert "missing_solution" in report.quality_warnings
     assert "missing_answer" in report.quality_warnings
+    solution_rule = next(
+        item for item in report.rule_results
+        if item.rule_id == "solution_answer"
+    )
+    assert solution_rule.status == "warn"
 
 
 def test_assess_candidate_warns_difficulty_mismatch() -> None:

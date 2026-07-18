@@ -8,6 +8,7 @@ from apps.api.v1.models.generation import (
     GeneratedQuestionCandidateItem,
     GenerationConstraintsRequest,
     QualityIssueItem,
+    QualityRuleResultItem,
     QuestionGenerationPreviewRequest,
     QuestionGenerationPreviewResponse,
     QuestionGenerationQualityRequest,
@@ -38,12 +39,17 @@ from modules.question_generation import (
     GenerationConstraints,
     MultipleChoiceOption,
     QuestionGenerationService,
+    QuestionQualityCheckError,
     SymbolicMCQGenerator,
 )
 
 from modules.neuro_symbolic import SolverRegistry
 from modules.neuro_symbolic.solver_registry import CALCULUS_1_SOLVER_CODES
-from modules.question_quality import QuestionQualityService, QuestionValidationReport
+from modules.question_quality import (
+    QuestionQualityReport,
+    QuestionQualityService,
+    QuestionValidationReport,
+)
 from modules.semantic_search import SemanticSearchService
 
 router = APIRouter(
@@ -366,6 +372,52 @@ def _to_quality_issue_item(issue) -> QualityIssueItem:
         field=issue.field,
     )
 
+
+def _to_quality_response(
+    report: QuestionQualityReport,
+) -> QuestionGenerationQualityResponse:
+    return QuestionGenerationQualityResponse(
+        can_save=report.can_save,
+        quality_warnings=report.quality_warnings,
+        warnings=[
+            _to_quality_issue_item(issue)
+            for issue in report.warnings
+        ],
+        blocking_issues=[
+            _to_quality_issue_item(issue)
+            for issue in report.blocking_issues
+        ],
+        symbolic_checks=[
+            to_validation_report_item(
+                {"symbolic_checks": [check.to_dict()]}
+            ).symbolic_checks[0]
+            for check in report.symbolic_checks
+        ],
+        semantic_duplicates=[
+            SemanticDuplicateItem(
+                question_id=duplicate.question_id,
+                document_id=duplicate.document_id,
+                score=duplicate.score,
+                statement=duplicate.statement,
+            )
+            for duplicate in report.semantic_duplicates
+        ],
+        rule_results=[
+            QualityRuleResultItem(
+                rule_id=result.rule_id,
+                title=result.title,
+                category=result.category,
+                status=result.status,
+                issues=[
+                    _to_quality_issue_item(issue)
+                    for issue in result.issues
+                ],
+                check_codes=result.check_codes,
+            )
+            for result in report.rule_results
+        ],
+    )
+
 @router.post(
     "/questions/quality",
     response_model=QuestionGenerationQualityResponse,
@@ -403,33 +455,7 @@ async def assess_generated_question_quality(
             requested_difficulty=request.requested_difficulty,
         )
 
-        return QuestionGenerationQualityResponse(
-            can_save=report.can_save,
-            quality_warnings=report.quality_warnings,
-            warnings=[
-                _to_quality_issue_item(issue)
-                for issue in report.warnings
-            ],
-            blocking_issues=[
-                _to_quality_issue_item(issue)
-                for issue in report.blocking_issues
-            ],
-            symbolic_checks=[
-                to_validation_report_item(
-                    {"symbolic_checks": [check.to_dict()]}
-                ).symbolic_checks[0]
-                for check in report.symbolic_checks
-            ],
-            semantic_duplicates=[
-                SemanticDuplicateItem(
-                    question_id=duplicate.question_id,
-                    document_id=duplicate.document_id,
-                    score=duplicate.score,
-                    statement=duplicate.statement,
-                )
-                for duplicate in report.semantic_duplicates
-            ],
-        )
+        return _to_quality_response(report)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -466,6 +492,15 @@ async def save_generated_question(
         await session.refresh(saved_question)
 
         return _to_save_response(saved_question)
+    except QuestionQualityCheckError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "quality_check_failed",
+                "message": str(exc),
+                "quality_report": _to_quality_response(exc.report).model_dump(),
+            },
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -502,6 +537,15 @@ async def save_symbolic_mcq(
         await session.refresh(saved_question)
 
         return _to_save_response(saved_question)
+    except QuestionQualityCheckError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "quality_check_failed",
+                "message": str(exc),
+                "quality_report": _to_quality_response(exc.report).model_dump(),
+            },
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -542,6 +586,15 @@ async def save_convert_to_mcq(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
+        ) from exc
+    except QuestionQualityCheckError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "quality_check_failed",
+                "message": str(exc),
+                "quality_report": _to_quality_response(exc.report).model_dump(),
+            },
         ) from exc
     except ValueError as exc:
         raise HTTPException(

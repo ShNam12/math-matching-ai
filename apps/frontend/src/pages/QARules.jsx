@@ -4,7 +4,7 @@ import {
   Settings, BarChart2, FileText, Sparkles,
   CheckCircle, XCircle, AlertTriangle, RefreshCw,
   Play, Download, Clock, Info,
-  Shield, Code2, Copy, Layers, AlertCircle, Eye, LayoutDashboard
+  Shield, Code2, Copy, Layers, AlertCircle, Eye, LayoutDashboard, ArrowLeft
 } from "lucide-react";
 import { filterNavigationItems } from "../auth/navigation";
 import UserMenu from "../components/UserMenu";
@@ -320,6 +320,8 @@ const catColor = {
   Taxonomy: "bg-purple-50 text-purple-700 border-purple-200",
   Semantic: "bg-amber-50 text-amber-700 border-amber-200",
   Policy: "bg-slate-50 text-slate-700 border-slate-200",
+  "Bộ giải toán": "bg-cyan-50 text-cyan-700 border-cyan-200",
+  "Công thức": "bg-indigo-50 text-indigo-700 border-indigo-200",
 };
 
 export default function QARules({
@@ -332,11 +334,21 @@ export default function QARules({
   const [filterStatus, setFilterStatus] = useState("all");
   const [selected, setSelected] = useState(null);
   const [running, setRunning] = useState(false);
+  const [qualityStage, setQualityStage] = useState("pre_save");
 
-  const hasQualityContext = Boolean(selectedQualityContext?.quality);
+  const previewQuality =
+    selectedQualityContext?.previewQuality || selectedQualityContext?.quality;
+  const preSaveQuality = selectedQualityContext?.preSaveQuality || null;
+  const hasPreSaveQuality = Boolean(preSaveQuality);
+  const hasQualityContext = Boolean(previewQuality || preSaveQuality);
   const isTaxonomyQualityContext = selectedQualityContext?.type === "taxonomy";
+  const canReturnToGeneration =
+    selectedQualityContext?.origin === "gen";
 
-  const qualityResult = selectedQualityContext?.quality;
+  const qualityResult =
+    qualityStage === "pre_save" && preSaveQuality
+      ? preSaveQuality
+      : previewQuality;
   const candidate = selectedQualityContext?.candidate;
   const question = selectedQualityContext?.question;
 
@@ -345,7 +357,71 @@ export default function QARules({
   const semanticDuplicates = qualityResult?.semantic_duplicates || [];
   const symbolicChecks = qualityResult?.symbolic_checks || [];
 
-  const qualityRules = hasQualityContext
+  const candidateQualityRules = qualityResult?.rule_results?.length
+    ? qualityResult.rule_results.map((rule) => ({
+        id: rule.rule_id,
+        title: rule.title,
+        desc:
+          rule.status === "pass"
+            ? "Đạt kiểm định."
+            : rule.status === "skipped"
+              ? "Không áp dụng cho dạng câu hỏi này."
+              : "Có kết quả cần xem chi tiết.",
+        category: rule.category,
+        status:
+          rule.status === "pass"
+            ? "ok"
+            : rule.status === "fail"
+              ? "error"
+              : rule.status === "warn"
+                ? "warn"
+                : "idle",
+        passRate:
+          rule.status === "pass"
+            ? 100
+            : rule.status === "warn"
+              ? 85
+              : rule.status === "fail"
+                ? 60
+                : 0,
+        issues: rule.issues?.length || 0,
+        issueDetails: rule.issues || [],
+        codes: rule.check_codes || [],
+        lastRun:
+          qualityStage === "pre_save"
+            ? "Ngay trước khi lưu"
+            : "Lúc xem trước",
+        icon: Shield,
+        affectedIds: [selectedQualityContext?.variantId].filter(Boolean),
+      }))
+    : [
+        {
+          id: "QA-CANDIDATE",
+          title: "Kiểm định candidate sinh biến thể",
+          desc: qualityResult?.can_save
+            ? "Candidate đạt điều kiện lưu vào corpus."
+            : "Candidate có vấn đề chặn lưu vào corpus.",
+          category: "Nội dung",
+          status: qualityResult?.blocking_issues?.length
+            ? "error"
+            : qualityResult?.warnings?.length
+              ? "warn"
+              : "ok",
+          passRate: qualityResult?.blocking_issues?.length
+            ? 60
+            : qualityResult?.warnings?.length
+              ? 85
+              : 100,
+          issues:
+            (qualityResult?.warnings?.length || 0) +
+            (qualityResult?.blocking_issues?.length || 0),
+          lastRun: "Vừa kiểm định",
+          icon: Shield,
+          affectedIds: [selectedQualityContext?.variantId].filter(Boolean),
+        },
+      ];
+
+  const baseQualityRules = hasQualityContext
     ? [
         isTaxonomyQualityContext
           ? {
@@ -405,6 +481,11 @@ export default function QARules({
         affectedIds: [],
       }));
 
+  const qualityRules =
+    hasQualityContext && !isTaxonomyQualityContext
+      ? candidateQualityRules
+      : baseQualityRules;
+
   const filtered = qualityRules.filter((r) =>
     filterStatus === "all" ? true : r.status === filterStatus
   );
@@ -463,6 +544,19 @@ export default function QARules({
         {/* Header */}
         <header className="bg-white border-b border-slate-100 px-5 py-3 flex items-center justify-between flex-shrink-0">
           <div>
+
+            {canReturnToGeneration && (
+              <button
+                type="button"
+                onClick={() => onNavigate("gen")}
+                title="Quay lại Sinh biến thể"
+                aria-label="Quay lại Sinh biến thể"
+                className="p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <ArrowLeft size={17} />
+              </button>
+            )}
+
             <h1 className="text-sm font-bold text-slate-800">QA Rules — Kiểm định chất lượng</h1>
             <p className="text-[11px] text-slate-400">
               Lần quét gần nhất: 07/05/2026 14:30 ·&nbsp;
@@ -548,7 +642,7 @@ export default function QARules({
                     </div>
                   </div>
                   {/* Progress bar */}
-                  <div className="mt-2.5 ml-11 w-full h-1 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="mt-2.5 ml-11 h-1 rounded-full bg-slate-100 overflow-hidden">
                     <div className={`h-full rounded-full transition-all ${rule.status === "ok"
                       ? "bg-emerald-500"
                       : rule.status === "warn"
@@ -578,6 +672,46 @@ export default function QARules({
                       <p className="text-[13px] font-bold text-slate-800 mb-1">{selectedRule.title}</p>
                       <p className="text-[11px] text-slate-600 leading-relaxed">{selectedRule.desc}</p>
                     </div>
+
+                    {hasQualityContext && !isTaxonomyQualityContext && (
+                      <div className="rounded-xl border border-slate-100 bg-slate-50 p-2">
+                        <p className="mb-2 text-[10px] font-bold text-slate-500">
+                          Mốc kiểm định
+                        </p>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQualityStage("preview");
+                              setSelected(null);
+                            }}
+                            className={`flex-1 rounded-md px-2 py-1.5 text-[10px] font-semibold ${
+                              qualityStage === "preview"
+                                ? "bg-white text-blue-700 shadow-sm"
+                                : "text-slate-500"
+                            }`}
+                          >
+                            Lúc xem trước
+                          </button>
+                          {hasPreSaveQuality && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQualityStage("pre_save");
+                                setSelected(null);
+                              }}
+                              className={`flex-1 rounded-md px-2 py-1.5 text-[10px] font-semibold ${
+                                qualityStage === "pre_save"
+                                  ? "bg-red-50 text-red-700 shadow-sm"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              Trước khi lưu
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {hasQualityContext && candidate && (
                       <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
@@ -677,6 +811,29 @@ export default function QARules({
                             >
                               {code}
                             </code>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRule.issueDetails?.length > 0 && (
+                      <div className="rounded-xl border border-slate-100 bg-white p-3">
+                        <p className="mb-2 text-[11px] font-bold text-slate-600">
+                          Kết quả của rule này
+                        </p>
+                        <div className="space-y-1.5">
+                          {selectedRule.issueDetails.map((issue) => (
+                            <div
+                              key={`${issue.code}-${issue.field || "general"}`}
+                              className="rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2"
+                            >
+                              <p className="text-[10px] font-bold text-slate-700">
+                                {issue.code}
+                              </p>
+                              <p className="text-[10px] leading-relaxed text-slate-600">
+                                {issue.message}
+                              </p>
+                            </div>
                           ))}
                         </div>
                       </div>

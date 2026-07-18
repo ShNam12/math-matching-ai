@@ -6,6 +6,7 @@ from apps.api.main import app
 from apps.api.v1.endpoints import generation as generation_endpoint
 from modules.question_quality.schemas import (
     QualityIssue,
+    QualityRuleResult,
     QuestionQualityReport,
     SymbolicCheckResult,
 )
@@ -58,6 +59,22 @@ class FakeQualityService:
             ],
             blocking_issues=[],
             semantic_duplicates=[],
+            rule_results=[
+                QualityRuleResult(
+                    rule_id="solution_answer",
+                    title="Has solution and answer",
+                    category="Content",
+                    status="warn",
+                    issues=[
+                        QualityIssue(
+                            code="missing_solution",
+                            message="Generated question does not include a solution",
+                            severity="warning",
+                            field="solution",
+                        )
+                    ],
+                )
+            ],
         )
 
 
@@ -139,6 +156,9 @@ def test_generation_quality_endpoint_returns_report(monkeypatch) -> None:
     assert payload["warnings"][0]["field"] == "solution"
     assert payload["blocking_issues"] == []
     assert payload["semantic_duplicates"] == []
+    assert payload["rule_results"][0]["rule_id"] == "solution_answer"
+    assert payload["rule_results"][0]["status"] == "warn"
+    assert payload["rule_results"][0]["issues"][0]["code"] == "missing_solution"
 
 
 def test_generation_quality_endpoint_returns_mcq_field_errors(

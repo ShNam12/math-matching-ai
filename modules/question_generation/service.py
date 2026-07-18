@@ -26,6 +26,17 @@ from modules.question_quality.schemas import (
 )
 
 
+class QuestionQualityCheckError(ValueError):
+    """Raised when the final, pre-save quality validation blocks a candidate."""
+
+    def __init__(self, report: QuestionQualityReport) -> None:
+        self.report = report
+        codes = ", ".join(report.quality_warnings)
+        super().__init__(
+            f"Generated question failed quality checks: {codes}"
+        )
+
+
 class TextQuestionGenerator(Protocol):
     def generate_text(self, prompt: str) -> str:
         ...
@@ -422,10 +433,7 @@ class QuestionGenerationService:
         )
 
         if not quality_report.can_save:
-            blocking_codes = ", ".join(quality_report.quality_warnings)
-            raise ValueError(
-                f"Generated question failed quality checks: {blocking_codes}"
-            )
+            raise QuestionQualityCheckError(quality_report)
 
         validation_report = _to_validation_report(quality_report)
 

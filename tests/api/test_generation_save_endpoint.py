@@ -4,6 +4,12 @@ from fastapi.testclient import TestClient
 
 from apps.api.main import app
 from apps.api.v1.endpoints import generation as generation_endpoint
+from modules.question_generation.service import QuestionQualityCheckError
+from modules.question_quality.schemas import (
+    QualityIssue,
+    QuestionQualityReport,
+    QualityRuleResult,
+)
 
 
 class FakeQdrantClient:
@@ -256,6 +262,63 @@ def test_generation_save_endpoint_returns_400_for_service_error(
     assert response.status_code == 400
     assert response.json()["detail"] == (
         "Generated question failed quality checks: exact_duplicate_statement"
+    )
+    assert fake_client.closed is True
+
+
+def test_generation_save_endpoint_returns_structured_quality_report(
+    monkeypatch,
+) -> None:
+    fake_client = FakeQdrantClient()
+
+    class ErrorGenerationService:
+        async def save_generated_question(self, **kwargs):
+            report = QuestionQualityReport(
+                blocking_issues=[
+                    QualityIssue(
+                        code="exact_duplicate_statement",
+                        message="Generated statement duplicates an existing question",
+                        severity="error",
+                        field="statement",
+                    )
+                ],
+                rule_results=[
+                    QualityRuleResult(
+                        rule_id="exact_duplicate",
+                        title="No exact duplicate",
+                        category="Duplicate",
+                        status="fail",
+                    )
+                ],
+            )
+            raise QuestionQualityCheckError(report)
+
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_qdrant_client",
+        lambda: fake_client,
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_question_generation_service",
+        lambda session: ErrorGenerationService(),
+    )
+
+    client = TestClient(app)
+    response = client.post(
+        "/generation/questions/save",
+        json={
+            "source_question_id": "source-id",
+            "candidate": {"statement": "Tinh x", "formulas": []},
+        },
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "quality_check_failed"
+    assert detail["quality_report"]["can_save"] is False
+    assert detail["quality_report"]["rule_results"][0]["rule_id"] == (
+        "exact_duplicate"
     )
     assert fake_client.closed is True
 

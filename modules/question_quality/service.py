@@ -13,6 +13,7 @@ from modules.question_quality.schemas import (
     QualityIssue,
     QuestionQualityReport,
     QuestionValidationReport,
+    QualityRuleResult,
     SemanticDuplicateHit,
     SymbolicCheckResult,
     TaxonomyQualityReport,
@@ -31,6 +32,97 @@ from modules.neuro_symbolic.symbolic_validator import SymbolicMCQValidator
 VALID_FORMULA_SOURCES = {"statement", "solution", "answer", "choice"}
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 VALID_MCQ_KEYS = {"A", "B", "C", "D"}
+
+CANDIDATE_RULE_DEFINITIONS = (
+    {
+        "rule_id": "statement_required",
+        "title": "Nội dung đề bài không được rỗng",
+        "category": "Nội dung",
+        "codes": {"empty_statement"},
+    },
+    {
+        "rule_id": "exact_duplicate",
+        "title": "Không trùng hoàn toàn với bài đã có",
+        "category": "Trùng lặp",
+        "codes": {"exact_duplicate_statement"},
+    },
+    {
+        "rule_id": "mcq_structure",
+        "title": "Cấu trúc câu hỏi trắc nghiệm",
+        "category": "Trắc nghiệm",
+        "mcq_only": True,
+        "codes": {
+            "mcq_missing_choices",
+            "mcq_invalid_choice_count",
+            "mcq_invalid_choice_key",
+            "mcq_duplicate_choice_key",
+            "mcq_empty_choice_text",
+            "mcq_missing_correct_choice",
+            "mcq_correct_choice_not_found",
+            "mcq_multiple_correct_choices",
+            "mcq_no_correct_choice_flagged",
+        },
+    },
+    {
+        "rule_id": "mcq_distractors",
+        "title": "Các phương án nhiễu hợp lệ",
+        "category": "Trắc nghiệm",
+        "mcq_only": True,
+        "codes": {
+            "mcq_duplicate_choice_content",
+            "mcq_distractor_equals_correct_answer",
+            "mcq_all_choices_too_similar",
+        },
+    },
+    {
+        "rule_id": "solver_domain",
+        "title": "Bộ giải phù hợp miền kiến thức",
+        "category": "Bộ giải toán",
+        "mcq_only": True,
+        "codes": {"solver_domain_mismatch"},
+    },
+    {
+        "rule_id": "symbolic_validation",
+        "title": "Kiểm chứng bằng bộ giải ký hiệu",
+        "category": "Bộ giải toán",
+        "mcq_only": True,
+        "codes": {
+            "solver_not_available",
+            "symbolic_correct_answer_mismatch",
+            "symbolic_distractor_equals_correct",
+            "symbolic_distractor_duplicate",
+            "symbolic_parse_failed",
+        },
+    },
+    {
+        "rule_id": "formula_payload",
+        "title": "Dữ liệu công thức hợp lệ",
+        "category": "Công thức",
+        "codes": {
+            "no_formula_detected",
+            "invalid_formula_payload",
+            "formula_payload_mismatch",
+        },
+    },
+    {
+        "rule_id": "difficulty",
+        "title": "Độ khó phù hợp yêu cầu",
+        "category": "Metadata",
+        "codes": {"invalid_difficulty", "difficulty_mismatch"},
+    },
+    {
+        "rule_id": "solution_answer",
+        "title": "Có lời giải và đáp án",
+        "category": "Nội dung",
+        "codes": {"missing_solution", "missing_answer"},
+    },
+    {
+        "rule_id": "semantic_duplicate",
+        "title": "Không quá tương đồng về ngữ nghĩa",
+        "category": "Trùng lặp",
+        "codes": {"semantic_duplicate_candidate"},
+    },
+)
 
 class TaxonomyClassificationQualityService:
     def __init__(
@@ -520,12 +612,83 @@ class QuestionQualityService:
                 )
             )
 
+        rule_results = self._build_rule_results(
+            candidate=candidate,
+            warnings=warnings,
+            blocking_issues=blocking_issues,
+            symbolic_checks=symbolic_checks,
+        )
+
         return QuestionQualityReport(
             warnings=warnings,
             blocking_issues=blocking_issues,
             semantic_duplicates=semantic_duplicates,
             symbolic_checks=symbolic_checks,
+            rule_results=rule_results,
         )
+
+    def _build_rule_results(
+        self,
+        *,
+        candidate: GeneratedQuestionCandidate,
+        warnings: list[QualityIssue],
+        blocking_issues: list[QualityIssue],
+        symbolic_checks: list[SymbolicCheckResult],
+    ) -> list[QualityRuleResult]:
+        """Expose existing validation outcomes rule by rule without changing them."""
+        warning_codes = {issue.code for issue in warnings}
+        blocking_codes = {issue.code for issue in blocking_issues}
+        all_issues = [*blocking_issues, *warnings]
+        results: list[QualityRuleResult] = []
+
+        for definition in CANDIDATE_RULE_DEFINITIONS:
+            if (
+                definition.get("mcq_only")
+                and candidate.question_type != "multiple_choice"
+            ):
+                results.append(
+                    QualityRuleResult(
+                        rule_id=definition["rule_id"],
+                        title=definition["title"],
+                        category=definition["category"],
+                        status="skipped",
+                    )
+                )
+                continue
+
+            matched_issues = [
+                issue for issue in all_issues
+                if issue.code in definition["codes"]
+            ]
+
+            if any(issue.code in blocking_codes for issue in matched_issues):
+                rule_status = "fail"
+            elif any(issue.code in warning_codes for issue in matched_issues):
+                rule_status = "warn"
+            else:
+                rule_status = "pass"
+
+            check_codes: list[str] = []
+            if definition["rule_id"] == "symbolic_validation":
+                check_codes = [check.code for check in symbolic_checks]
+                if (
+                    rule_status != "fail"
+                    and any(not check.passed for check in symbolic_checks)
+                ):
+                    rule_status = "warn"
+
+            results.append(
+                QualityRuleResult(
+                    rule_id=definition["rule_id"],
+                    title=definition["title"],
+                    category=definition["category"],
+                    status=rule_status,
+                    issues=matched_issues,
+                    check_codes=check_codes,
+                )
+            )
+
+        return results
 
     def _validate_mcq_symbolically(
         self,

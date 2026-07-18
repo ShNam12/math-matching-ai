@@ -34,9 +34,14 @@ export async function apiRequest(path, options = {}) {
     const message =
       typeof detail === "string"
         ? detail
-        : JSON.stringify(detail);
+        : typeof detail?.message === "string"
+          ? detail.message
+          : JSON.stringify(detail);
 
-    throw new Error(message || "Request failed");
+    const error = new Error(message || "Request failed");
+    error.status = response.status;
+    error.detail = detail;
+    throw error;
   }
 
   return data;

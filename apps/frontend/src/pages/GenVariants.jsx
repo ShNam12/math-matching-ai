@@ -314,11 +314,14 @@ export default function GenVariants({
     setSaving(true);
     setGenerationError(null);
     setSaveMessage(null);
+    let savingVariantId = null;
 
     try {
       const savedResults = [];
 
       for (const variant of selectedVariants) {
+        savingVariantId = variant.id;
+
         if (variant.canSave === false) {
           throw new Error(`Biến thể ${variant.id} chưa đạt chất lượng để lưu`);
         }
@@ -367,6 +370,27 @@ export default function GenVariants({
         `Đã lưu ${savedResults.length} biến thể vào corpus`
       );
     } catch (requestError) {
+      const preSaveQuality = requestError.detail?.quality_report;
+
+      if (preSaveQuality && savingVariantId) {
+        setVariants((currentVariants) =>
+          currentVariants.map((variant) => {
+            if (variant.id !== savingVariantId) {
+              return variant;
+            }
+
+            return {
+              ...variant,
+              previewQuality: variant.previewQuality ?? variant.quality,
+              preSaveQuality,
+              quality: preSaveQuality,
+              canSave: preSaveQuality.can_save,
+              qaScore: getQualityScore(preSaveQuality),
+            };
+          })
+        );
+      }
+
       setGenerationError(requestError.message);
     } finally {
       setSaving(false);
@@ -844,10 +868,13 @@ export default function GenVariants({
                           type="button"
                           onClick={() =>
                             onOpenQualityContext({
+                              origin: "gen",
                               sourceQuestionId,
                               variantId: v.id,
                               candidate: v.candidate,
                               quality: v.quality,
+                              previewQuality: v.previewQuality ?? v.quality,
+                              preSaveQuality: v.preSaveQuality ?? null,
                             })
                           }
                           disabled={!v.quality}

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -143,6 +143,15 @@ class SemanticDuplicateItem(BaseModel):
     statement: str
 
 
+class QualityRuleResultItem(BaseModel):
+    rule_id: str
+    title: str
+    category: str
+    status: Literal["pass", "warn", "fail", "skipped"]
+    issues: list[QualityIssueItem] = Field(default_factory=list)
+    check_codes: list[str] = Field(default_factory=list)
+
+
 class QuestionGenerationQualityResponse(BaseModel):
     can_save: bool
     quality_warnings: list[str]
@@ -150,3 +159,4 @@ class QuestionGenerationQualityResponse(BaseModel):
     blocking_issues: list[QualityIssueItem]
     symbolic_checks: list[SymbolicCheckResultItem] = Field(default_factory=list)
     semantic_duplicates: list[SemanticDuplicateItem]
+    rule_results: list[QualityRuleResultItem] = Field(default_factory=list)

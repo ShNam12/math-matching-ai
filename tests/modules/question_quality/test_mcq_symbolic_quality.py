@@ -98,6 +98,11 @@ def test_mcq_with_solver_and_wrong_answer_fails() -> None:
 
     assert report.can_save is False
     assert "symbolic_correct_answer_mismatch" in report.quality_warnings
+    symbolic_rule = next(
+        item for item in report.rule_results
+        if item.rule_id == "symbolic_validation"
+    )
+    assert symbolic_rule.status == "fail"
 
 
 def test_mcq_without_solver_only_warns() -> None:
@@ -105,6 +110,11 @@ def test_mcq_without_solver_only_warns() -> None:
 
     assert report.can_save is True
     assert "solver_not_available" in report.quality_warnings
+    symbolic_rule = next(
+        item for item in report.rule_results
+        if item.rule_id == "symbolic_validation"
+    )
+    assert symbolic_rule.status == "warn"
 
 
 def test_mcq_distractor_equal_to_solver_answer_fails() -> None:
