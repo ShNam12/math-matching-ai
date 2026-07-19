@@ -138,7 +138,7 @@ class SymbolicMCQGenerator:
         option_payloads: list[dict[str, Any]] = [
             {
                 "text": output.answer,
-                "latex": output.answer,
+                "latex": output.answer_latex or output.answer,
                 "is_correct": True,
                 "distractor_type": None,
                 "rationale": None,
@@ -152,7 +152,7 @@ class SymbolicMCQGenerator:
         option_payloads.extend(
             {
                 "text": distractor.text,
-                "latex": distractor.value,
+                "latex": distractor.latex or distractor.value,
                 "is_correct": False,
                 "distractor_type": distractor.error_type,
                 "rationale": distractor.rationale,

@@ -341,6 +341,54 @@ def test_search_questions_reranks_by_hybrid_score() -> None:
     assert results[0].taxonomy_score == 1.0
 
 
+def test_exact_statement_match_ranks_first_despite_pending_taxonomy() -> None:
+    generated_question = make_question(question_id="generated-question-id")
+    generated_question.statement = (
+        "Tinh dao ham cua ham so "
+        "$y=\\sin{\\left(\\sin{\\left(5 x \\right)} \\right)}$."
+    )
+    generated_question.chapter_code = None
+    generated_question.topic_code = None
+    generated_question.problem_type_code = None
+    generated_question.classification_status = "pending"
+
+    classified_question = make_question(question_id="classified-question-id")
+    vector_repository = FakeVectorRepository(
+        [
+            QuestionSearchVectorHit(
+                question_id="classified-question-id",
+                document_id="document-id",
+                score=0.90,
+            ),
+            QuestionSearchVectorHit(
+                question_id="generated-question-id",
+                document_id="document-id",
+                score=0.79,
+            ),
+        ]
+    )
+    service = SemanticSearchService(
+        question_repository=FakeQuestionRepository(
+            [generated_question, classified_question]
+        ),
+        vector_repository=vector_repository,
+        embedder=FakeEmbedder(),
+    )
+
+    results = asyncio.run(
+        service.search_questions(
+            query="Tinh dao ham cua ham so y = sin ( sin ( 5 x ) )",
+            limit=2,
+            filters=QuestionSearchFilters(
+                problem_type_code="GT1_C1_08_T04_Chain_Rule",
+            ),
+        )
+    )
+
+    assert results[0].question_id == "generated-question-id"
+    assert results[0].score == 1.0
+
+
 def test_search_questions_filters_by_question_type() -> None:
     mcq_question = make_question(
         question_id="mcq",

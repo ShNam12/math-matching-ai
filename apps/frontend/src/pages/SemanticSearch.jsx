@@ -143,6 +143,24 @@ export default function SemanticSearch({
     return map[value] || null;
   };
 
+  const getDisplayAnswer = (item) => {
+    const correctKey = String(item.correct_choice || "")
+      .trim()
+      .toUpperCase();
+    const correctChoice = (item.choices || []).find(
+      (choice) =>
+        String(choice.key || "").trim().toUpperCase() === correctKey,
+    );
+
+    return (
+      correctChoice?.latex ||
+      correctChoice?.text ||
+      item.answer ||
+      item.marker ||
+      "Question"
+    );
+  };
+
   function mapQuestionToResult(item, score = null) {
     return {
       id: item.question_id || item.id,
@@ -166,7 +184,7 @@ export default function SemanticSearch({
       formulaScore: toPercent(item.formula_score),
       difficultyScore: toPercent(item.difficulty_score),
       skillScore: toPercent(item.skill_score),
-      latex: item.answer || item.marker || "Question",
+      latex: getDisplayAnswer(item),
       statement: item.statement,
       solution: item.solution,
       answer: item.answer,

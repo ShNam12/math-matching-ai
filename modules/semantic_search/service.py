@@ -1,4 +1,6 @@
 import asyncio
+import re
+import unicodedata
 from typing import Protocol
 
 from infra.db.repositories.questions import QuestionRepository
@@ -70,6 +72,23 @@ def _choice_answer_type(question) -> str | None:
     return "text"
 
 
+def _normalize_statement_for_exact_match(value: str) -> str:
+    text = str(value or "").lower().replace("đ", "d")
+    text = (
+        text.replace(r"\left", "")
+        .replace(r"\right", "")
+        .replace(r"\,", "")
+        .replace(r"\!", "")
+        .replace("{", "(")
+        .replace("}", ")")
+        .replace("\\", "")
+    )
+    text = unicodedata.normalize("NFKD", text)
+    text = text.encode("ascii", "ignore").decode("ascii")
+
+    return re.sub(r"[^a-z0-9]+", "", text)
+
+
 class TextEmbedder(Protocol):
     def embed_text(self, text: str) -> list[float]:
         ...
@@ -122,6 +141,9 @@ class SemanticSearchService:
             raise ValueError("Search limit must be between 1 and 50")
 
         filters = filters or QuestionSearchFilters()
+        exact_query_key = _normalize_statement_for_exact_match(
+            normalized_query
+        )
 
         hybrid_context = HybridMatchingContext(
             chapter_code=filters.chapter_code,
@@ -217,11 +239,21 @@ class SemanticSearchService:
                 ),
             )            
 
+            is_exact_statement_match = (
+                bool(exact_query_key)
+                and exact_query_key
+                == _normalize_statement_for_exact_match(question.statement)
+            )
+
             results.append(
                 QuestionSearchResult(
                     question_id=question.id,
                     document_id=question.document_id,
-                    score=hybrid_score.final_score,
+                    score=(
+                        1.0
+                        if is_exact_statement_match
+                        else hybrid_score.final_score
+                    ),
                     semantic_score=hybrid_score.semantic_score,
                     taxonomy_score=hybrid_score.taxonomy_score,
                     formula_score=hybrid_score.formula_score,

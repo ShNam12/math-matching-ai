@@ -174,7 +174,7 @@ def test_missing_taxonomy_metadata_does_not_crash() -> None:
     )
 
     assert score.taxonomy_score == 0.0
-    assert 0.0 <= score.final_score <= 1.0
+    assert score.final_score == 0.8
 
 def test_no_hybrid_context_keeps_semantic_score_as_final_score() -> None:
     context = HybridMatchingContext()

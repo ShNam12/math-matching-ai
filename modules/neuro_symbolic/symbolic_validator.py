@@ -266,7 +266,7 @@ class SymbolicMCQValidator:
         return None
 
     def _parse_choice(self, choice: MultipleChoiceOption) -> ParsedChoice:
-        raw_value = choice.latex or choice.text
+        raw_value = choice.text or choice.latex
 
         return ParsedChoice(
             choice=choice,

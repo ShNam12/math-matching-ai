@@ -71,6 +71,22 @@ def test_correct_answer_matches_solver_output() -> None:
     assert solver_result.output is not None
     assert candidate.answer == solver_result.output.answer
     assert correct_choice.text == solver_result.output.answer
+    assert correct_choice.latex == solver_result.output.answer_latex
+
+
+def test_symbolic_choices_keep_raw_text_and_display_latex() -> None:
+    candidate = generate(solver_code="DERIV_COMPOSITE", generation_count=1)[0]
+    correct_choice = next(choice for choice in candidate.choices if choice.is_correct)
+    distractors = [
+        choice
+        for choice in candidate.choices
+        if not choice.is_correct
+    ]
+
+    assert "*" in correct_choice.text
+    assert r"\cos" in (correct_choice.latex or "")
+    assert all(choice.latex for choice in distractors)
+    assert all("*" not in (choice.latex or "") for choice in distractors)
 
 
 def test_distractors_do_not_duplicate_correct_answer() -> None:

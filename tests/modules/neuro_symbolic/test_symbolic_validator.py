@@ -9,11 +9,13 @@ def make_choice(
     key: str,
     text: str,
     *,
+    latex: str | None = None,
     is_correct: bool = False,
 ) -> MultipleChoiceOption:
     return MultipleChoiceOption(
         key=key,
         text=text,
+        latex=latex,
         is_correct=is_correct,
     )
 
@@ -68,6 +70,27 @@ def test_correct_choice_matching_solver_passes() -> None:
     assert report.quality_warnings == []
     assert report.symbolic_checks[0].code == "symbolic_correct_answer_verified"
     assert report.symbolic_checks[0].passed is True
+
+
+def test_validator_parses_raw_text_when_display_latex_is_present() -> None:
+    report = validate(
+        make_candidate(
+            [
+                make_choice("A", "x^2 + C", latex=r"x^2 + C"),
+                make_choice(
+                    "B",
+                    "x^3 + C",
+                    latex=r"x^3 + C",
+                    is_correct=True,
+                ),
+                make_choice("C", "3*x^3 + C", latex=r"3x^3 + C"),
+                make_choice("D", "-x^3 + C", latex=r"-x^3 + C"),
+            ]
+        )
+    )
+
+    assert report.can_save is True
+    assert report.symbolic_checks[0].code == "symbolic_correct_answer_verified"
 
 
 def test_wrong_correct_choice_is_blocking() -> None:

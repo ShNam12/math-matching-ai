@@ -188,14 +188,57 @@ def calculate_hybrid_score(
         candidate=candidate,
     )
 
-    final_score = (
-        0.45 * semantic_score
-        + 0.20 * taxonomy_score
-        + 0.15 * formula_score
-        + 0.10 * difficulty_score
-        + 0.05 * skill_score
-        + 0.05 * choice_structure_score
+    weighted_scores: list[tuple[float, float]] = [
+        (0.45, semantic_score),
+    ]
+
+    taxonomy_requested = any(
+        [
+            context.chapter_code,
+            context.topic_code,
+            context.problem_type_code,
+        ]
     )
+    candidate_has_taxonomy = any(
+        [
+            candidate.chapter_code,
+            candidate.topic_code,
+            candidate.problem_type_code,
+        ]
+    )
+
+    if taxonomy_requested and candidate_has_taxonomy:
+        weighted_scores.append((0.20, taxonomy_score))
+
+    if context.difficulty and candidate.difficulty:
+        weighted_scores.append((0.10, difficulty_score))
+
+    if context.skills and candidate.skills:
+        weighted_scores.append((0.05, skill_score))
+
+    choice_structure_requested = any(
+        [
+            context.question_type,
+            context.choice_count is not None,
+            context.answer_type,
+        ]
+    )
+    candidate_has_choice_structure = any(
+        [
+            candidate.question_type,
+            candidate.choice_count is not None,
+            candidate.answer_type,
+        ]
+    )
+
+    if choice_structure_requested and candidate_has_choice_structure:
+        weighted_scores.append((0.05, choice_structure_score))
+
+    total_weight = sum(weight for weight, _ in weighted_scores)
+    final_score = sum(
+        weight * score
+        for weight, score in weighted_scores
+    ) / total_weight
 
     return HybridScoreBreakdown(
         semantic_score=semantic_score,
