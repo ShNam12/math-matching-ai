@@ -36,6 +36,7 @@ function App() {
   const [activePage, setActivePage] = useState("dashboard")
   const [selectedQuestionId, setSelectedQuestionId] = useState(null)
   const [sourceQuestionId, setSourceQuestionId] = useState(null)
+  const [generationSession, setGenerationSession] = useState(null)
   const [selectedQualityContext, setSelectedQualityContext] = useState(null)
   const [initialSearchFilters, setInitialSearchFilters] = useState(null)
 
@@ -96,6 +97,10 @@ function App() {
       return
     }
 
+    if (questionId !== sourceQuestionId) {
+      setGenerationSession(null)
+    }
+
     setSourceQuestionId(questionId)
     setActivePage("gen")
   }
@@ -104,6 +109,10 @@ function App() {
     if (!canAccessPage("qa", currentRole)) {
       setActivePage("dashboard")
       return
+    }
+
+    if (context.origin === "gen" && context.generationSession) {
+      setGenerationSession(context.generationSession)
     }
 
     setSelectedQualityContext(context)
@@ -131,6 +140,7 @@ function App() {
     setActivePage("dashboard")
     setSelectedQuestionId(null)
     setSourceQuestionId(null)
+    setGenerationSession(null)
     setSelectedQualityContext(null)
     setInitialSearchFilters(null)
   }
@@ -164,6 +174,7 @@ function App() {
       onLogout={handleLogout}
       selectedQuestionId={selectedQuestionId}
       sourceQuestionId={sourceQuestionId}
+      generationSession={generationSession}
       selectedQualityContext={selectedQualityContext}
       initialSearchFilters={initialSearchFilters}
       onOpenQuestionDetail={handleOpenQuestionDetail}

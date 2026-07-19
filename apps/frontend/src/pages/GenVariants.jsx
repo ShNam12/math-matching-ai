@@ -100,17 +100,41 @@ export default function GenVariants({
   currentUser = null,
   onLogout = () => {},
   sourceQuestionId = null,
+  generationSession = null,
   onOpenQualityContext = () => {},
 }) {
-  const [variants, setVariants] = useState([]);
-  const [generationMode, setGenerationMode] = useState("ai");
+  const restoredSession =
+    generationSession?.sourceQuestionId === sourceQuestionId
+      ? generationSession
+      : null;
+  const getInitialSessionValue = (key, fallback) =>
+    restoredSession?.[key] ?? fallback;
+  const [variants, setVariants] = useState(
+    () => restoredSession?.variants ?? []
+  );
+  const [generationMode, setGenerationMode] = useState(
+    () => restoredSession?.generationMode ?? "ai"
+  );
   const [solvers, setSolvers] = useState([]);
-  const [selectedSolverCode, setSelectedSolverCode] = useState("");
+  const [selectedSolverCode, setSelectedSolverCode] = useState(
+    () => restoredSession?.selectedSolverCode ?? ""
+  );
   const [solverError, setSolverError] = useState(null);
-  const [strategy, setStrategy] = useState("Đổi tham số");
-  const [count, setCount] = useState("1");
-  const [targetDiff, setTargetDiff] = useState("Tương đương");
-  const [note, setNote] = useState("Giữ cấu trúc tích phân từng phần nhưng thay đổi hàm và bậc");
+  const [strategy, setStrategy] = useState(
+    () => getInitialSessionValue("strategy", "Đổi tham số")
+  );
+  const [count, setCount] = useState(
+    () => getInitialSessionValue("count", "1")
+  );
+  const [targetDiff, setTargetDiff] = useState(
+    () => getInitialSessionValue("targetDiff", "Tương đương")
+  );
+  const [note, setNote] = useState(
+    () => getInitialSessionValue(
+      "note",
+      "Giữ cấu trúc tích phân từng phần nhưng thay đổi hàm và bậc"
+    )
+  );
   const [generating, setGenerating] = useState(false);
   const [checkingQuality, setCheckingQuality] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -455,7 +479,12 @@ export default function GenVariants({
       setSourceQuestion(null);
       setSourceLoading(true);
       setSourceError(null);
-      setVariants([]);
+      if (
+        !generationSession ||
+        generationSession.sourceQuestionId !== sourceQuestionId
+      ) {
+        setVariants([]);
+      }
       setGenerationError(null);
       setSaveMessage(null);
 
@@ -482,7 +511,7 @@ export default function GenVariants({
     return () => {
       cancelled = true;
     };
-  }, [sourceQuestionId]);
+  }, [generationSession, sourceQuestionId]);
 
   const displayOriginal = sourceQuestion
     ? {
@@ -875,6 +904,16 @@ export default function GenVariants({
                               quality: v.quality,
                               previewQuality: v.previewQuality ?? v.quality,
                               preSaveQuality: v.preSaveQuality ?? null,
+                              generationSession: {
+                                sourceQuestionId,
+                                variants,
+                                generationMode,
+                                selectedSolverCode,
+                                strategy,
+                                count,
+                                targetDiff,
+                                note,
+                              },
                             })
                           }
                           disabled={!v.quality}
