@@ -32,6 +32,14 @@ class VectorRepository(Protocol):
     ) -> None:
         ...
 
+    async def replace_for_question(
+        self,
+        *,
+        question: QuestionVector,
+        formulas: list[FormulaVector],
+    ) -> None:
+        ...
+
 
 def _choice_value(choice: object, field: str):
     if isinstance(choice, dict):
@@ -225,6 +233,105 @@ class QuestionEmbeddingService:
         except Exception as exc:
             await self.question_repository.mark_embedding_failed_for_document(
                 document_id=document_id,
+                error_message=str(exc),
+            )
+            raise
+
+    async def embed_question(self, question_id: str) -> EmbeddingResult:
+        question = await self.question_repository.get_question(question_id)
+
+        if question is None:
+            raise ValueError(f"Question was not found: {question_id}")
+
+        await self.question_repository.mark_embedding_pending_for_question(
+            question_id
+        )
+
+        try:
+            question_vector = await asyncio.to_thread(
+                self.embedder.embed_text,
+                build_question_embedding_text(question),
+            )
+
+            question_item = QuestionVector(
+                question_id=question.id,
+                document_id=question.document_id,
+                sequence_number=question.sequence_number,
+                marker=question.marker,
+                marker_number=question.marker_number,
+                statement=question.statement,
+                question_type=getattr(
+                    question,
+                    "question_type",
+                    "free_response",
+                ),
+                subject=question.subject,
+                chapter=question.chapter,
+                difficulty=question.difficulty,
+                skills=question.skills,
+                subject_code=question.subject_code,
+                chapter_code=question.chapter_code,
+                chapter_name=question.chapter_name,
+                topic_code=question.topic_code,
+                topic_name=question.topic_name,
+                problem_type_code=question.problem_type_code,
+                problem_type_name=question.problem_type_name,
+                taxonomy_confidence=question.taxonomy_confidence,
+                review_status=question.review_status,
+                classification_status=question.classification_status,
+                vector=question_vector,
+            )
+
+            formula_items = []
+
+            for formula_index, formula in enumerate(
+                _question_formulas(question)
+            ):
+                normalized_latex = formula.get(
+                    "normalized_latex",
+                    "",
+                ).strip()
+
+                if not normalized_latex:
+                    continue
+
+                formula_vector = await asyncio.to_thread(
+                    self.embedder.embed_text,
+                    build_formula_embedding_text(normalized_latex),
+                )
+
+                formula_items.append(
+                    FormulaVector(
+                        question_id=question.id,
+                        document_id=question.document_id,
+                        formula_index=formula_index,
+                        latex=formula.get("latex", normalized_latex),
+                        normalized_latex=normalized_latex,
+                        source=formula.get("source", "statement"),
+                        vector=formula_vector,
+                    )
+                )
+
+            await self.vector_repository.replace_for_question(
+                question=question_item,
+                formulas=formula_items,
+            )
+
+            await self.question_repository.mark_embedding_completed_for_question(
+                question_id=question_id,
+                embedding_model=getattr(self.embedder, "model", "unknown"),
+                embedding_dimension=getattr(self.embedder, "dimension", 0),
+            )
+
+            return EmbeddingResult(
+                document_id=question.document_id,
+                question_count=1,
+                formula_count=len(formula_items),
+            )
+
+        except Exception as exc:
+            await self.question_repository.mark_embedding_failed_for_question(
+                question_id=question_id,
                 error_message=str(exc),
             )
             raise

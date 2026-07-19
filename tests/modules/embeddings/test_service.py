@@ -15,6 +15,9 @@ class FakeQuestionRepository:
         self.embedding_model = None
         self.embedding_dimension = None
         self.error_message = None
+        self.pending_question_id = None
+        self.completed_question_id = None
+        self.failed_question_id = None
 
     async def list_by_document(self, document_id: str):
         return [
@@ -22,6 +25,16 @@ class FakeQuestionRepository:
             for question in self.questions
             if question.document_id == document_id
         ]
+
+    async def get_question(self, question_id: str):
+        return next(
+            (
+                question
+                for question in self.questions
+                if question.id == question_id
+            ),
+            None,
+        )
 
     async def mark_embedding_pending_for_document(
         self,
@@ -49,11 +62,39 @@ class FakeQuestionRepository:
         self.failed_document_id = document_id
         self.error_message = error_message
 
+    async def mark_embedding_pending_for_question(
+        self,
+        question_id: str,
+    ) -> None:
+        self.pending_question_id = question_id
+
+    async def mark_embedding_completed_for_question(
+        self,
+        *,
+        question_id: str,
+        embedding_model: str,
+        embedding_dimension: int,
+    ) -> None:
+        self.completed_question_id = question_id
+        self.embedding_model = embedding_model
+        self.embedding_dimension = embedding_dimension
+
+    async def mark_embedding_failed_for_question(
+        self,
+        *,
+        question_id: str,
+        error_message: str,
+    ) -> None:
+        self.failed_question_id = question_id
+        self.error_message = error_message
+
 class FakeVectorRepository:
     def __init__(self) -> None:
         self.document_id = None
         self.questions = []
         self.formulas = []
+        self.question = None
+        self.question_formulas = []
 
     async def replace_for_document(
         self,
@@ -65,6 +106,15 @@ class FakeVectorRepository:
         self.document_id = document_id
         self.questions = questions
         self.formulas = formulas
+
+    async def replace_for_question(
+        self,
+        *,
+        question,
+        formulas,
+    ) -> None:
+        self.question = question
+        self.question_formulas = formulas
 
 
 class FakeEmbedder:
@@ -136,6 +186,88 @@ def test_embed_document() -> None:
     assert question_repository.embedding_model == "fake-embedding-model"
     assert question_repository.embedding_dimension == 3
     assert question_repository.failed_document_id is None
+
+
+def test_embed_question_only_indexes_requested_question() -> None:
+    first_question = SimpleNamespace(
+        id="first-question-id",
+        document_id="document-id",
+        sequence_number=1,
+        marker="Bai",
+        marker_number="1",
+        statement="Cau hoi cu.",
+        solution=None,
+        answer=None,
+        formulas=[],
+        subject=None,
+        chapter=None,
+        difficulty=None,
+        skills=[],
+        subject_code=None,
+        chapter_code=None,
+        chapter_name=None,
+        topic_code=None,
+        topic_name=None,
+        problem_type_code=None,
+        problem_type_name=None,
+        taxonomy_confidence=None,
+        review_status=None,
+        classification_status="completed",
+    )
+    generated_question = SimpleNamespace(
+        id="generated-question-id",
+        document_id="document-id",
+        sequence_number=2,
+        marker="Generated",
+        marker_number="2",
+        statement="Cau hoi moi $x^2$.",
+        solution=None,
+        answer=None,
+        formulas=[
+            {
+                "latex": "x^2",
+                "normalized_latex": "x^2",
+                "source": "statement",
+            }
+        ],
+        subject="Calculus 1",
+        chapter="Chuong 1",
+        difficulty="medium",
+        skills=["derivative"],
+        subject_code=None,
+        chapter_code=None,
+        chapter_name=None,
+        topic_code=None,
+        topic_name=None,
+        problem_type_code=None,
+        problem_type_name=None,
+        taxonomy_confidence=None,
+        review_status="validated",
+        classification_status="pending",
+    )
+    question_repository = FakeQuestionRepository(
+        [first_question, generated_question]
+    )
+    vector_repository = FakeVectorRepository()
+    embedder = FakeEmbedder()
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=vector_repository,
+        embedder=embedder,
+    )
+
+    result = asyncio.run(service.embed_question("generated-question-id"))
+
+    assert result.document_id == "document-id"
+    assert result.question_count == 1
+    assert result.formula_count == 1
+    assert vector_repository.document_id is None
+    assert vector_repository.question.question_id == "generated-question-id"
+    assert len(vector_repository.question_formulas) == 1
+    assert len(embedder.texts) == 2
+    assert question_repository.pending_question_id == "generated-question-id"
+    assert question_repository.completed_question_id == "generated-question-id"
+    assert question_repository.failed_question_id is None
 
 
 def test_embed_document_includes_mcq_choices_in_question_text() -> None:
@@ -302,3 +434,44 @@ def test_mark_failed_when_embedding_fails() -> None:
     assert question_repository.pending_document_id == "document-id"
     assert question_repository.failed_document_id == "document-id"
     assert question_repository.error_message == "embedding failed"
+
+
+def test_embed_question_marks_only_requested_question_as_failed() -> None:
+    question = SimpleNamespace(
+        id="question-id",
+        document_id="document-id",
+        sequence_number=1,
+        marker="Bai",
+        marker_number="1",
+        statement="Tinh x.",
+        solution=None,
+        answer=None,
+        formulas=[],
+        subject=None,
+        chapter=None,
+        difficulty=None,
+        skills=[],
+        subject_code=None,
+        chapter_code=None,
+        chapter_name=None,
+        topic_code=None,
+        topic_name=None,
+        problem_type_code=None,
+        problem_type_name=None,
+        taxonomy_confidence=None,
+        review_status=None,
+        classification_status="pending",
+    )
+    question_repository = FakeQuestionRepository([question])
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=FakeVectorRepository(),
+        embedder=FailingEmbedder(),
+    )
+
+    with pytest.raises(RuntimeError, match="embedding failed"):
+        asyncio.run(service.embed_question("question-id"))
+
+    assert question_repository.pending_question_id == "question-id"
+    assert question_repository.failed_question_id == "question-id"
+    assert question_repository.failed_document_id is None

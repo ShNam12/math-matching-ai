@@ -2,6 +2,7 @@ import asyncio
 from types import SimpleNamespace
 
 from infra.vector_db.repositories.embeddings import EmbeddingVectorRepository
+from modules.embeddings.schemas import FormulaVector, QuestionVector
 from modules.semantic_search import QuestionSearchFilters
 
 
@@ -18,6 +19,8 @@ class FakeQdrantClient:
         self.payload = None
         self.payload_points = None
         self.payload_wait = None
+        self.delete_calls = []
+        self.upsert_calls = []
 
     async def collection_exists(self, collection_name: str) -> bool:
         return True
@@ -63,6 +66,36 @@ class FakeQdrantClient:
         self.payload = payload
         self.payload_points = points
         self.payload_wait = wait
+
+    async def delete(
+        self,
+        *,
+        collection_name,
+        points_selector,
+        wait,
+    ):
+        self.delete_calls.append(
+            {
+                "collection_name": collection_name,
+                "points_selector": points_selector,
+                "wait": wait,
+            }
+        )
+
+    async def upsert(
+        self,
+        *,
+        collection_name,
+        points,
+        wait,
+    ):
+        self.upsert_calls.append(
+            {
+                "collection_name": collection_name,
+                "points": points,
+                "wait": wait,
+            }
+        )
 
 
 def test_search_questions_calls_qdrant_with_filters() -> None:
@@ -144,3 +177,76 @@ def test_update_question_classification_payload_updates_qdrant_payload() -> None
         "GT1_C1_08_T01_Basic_Derivative"
     )
     assert client.payload["classification_status"] == "completed"
+
+
+def test_replace_for_question_only_replaces_requested_question_points() -> None:
+    client = FakeQdrantClient()
+    repository = EmbeddingVectorRepository(
+        client=client,
+        dimension=3,
+        question_collection="question_embeddings",
+        formula_collection="formula_embeddings",
+    )
+    question = QuestionVector(
+        question_id="generated-id",
+        document_id="document-id",
+        sequence_number=3,
+        marker="Generated",
+        marker_number="3",
+        statement="Tinh x.",
+        question_type="multiple_choice",
+        subject="Calculus 1",
+        chapter="Chuong 1",
+        difficulty="medium",
+        skills=["derivative"],
+        subject_code=None,
+        chapter_code=None,
+        chapter_name=None,
+        topic_code=None,
+        topic_name=None,
+        problem_type_code=None,
+        problem_type_name=None,
+        taxonomy_confidence=None,
+        review_status="validated",
+        classification_status="pending",
+        vector=[0.1, 0.2, 0.3],
+    )
+    formula = FormulaVector(
+        question_id="generated-id",
+        document_id="document-id",
+        formula_index=0,
+        latex="x^2",
+        normalized_latex="x^2",
+        source="statement",
+        vector=[0.3, 0.2, 0.1],
+    )
+
+    asyncio.run(
+        repository.replace_for_question(
+            question=question,
+            formulas=[formula],
+        )
+    )
+
+    assert [
+        call["collection_name"] for call in client.delete_calls
+    ] == ["question_embeddings", "formula_embeddings"]
+    assert all(call["wait"] is True for call in client.delete_calls)
+    assert all(
+        call["points_selector"].filter.must[0].key == "question_id"
+        for call in client.delete_calls
+    )
+    assert all(
+        call["points_selector"].filter.must[0].match.value
+        == "generated-id"
+        for call in client.delete_calls
+    )
+    assert [
+        call["collection_name"] for call in client.upsert_calls
+    ] == ["question_embeddings", "formula_embeddings"]
+    assert client.upsert_calls[0]["points"][0].payload["question_id"] == (
+        "generated-id"
+    )
+    assert client.upsert_calls[1]["points"][0].payload["question_id"] == (
+        "generated-id"
+    )

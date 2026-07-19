@@ -104,10 +104,10 @@ class FakeGenerationService:
 
 class FakeEmbeddingService:
     def __init__(self) -> None:
-        self.document_ids = []
+        self.question_ids = []
 
-    async def embed_document(self, document_id: str):
-        self.document_ids.append(document_id)
+    async def embed_question(self, question_id: str):
+        self.question_ids.append(question_id)
 
 
 def symbolic_candidate_payload():
@@ -260,7 +260,7 @@ def test_symbolic_mcq_save_endpoint_saves_candidate(monkeypatch) -> None:
     assert payload["solver_code"] == "INT_XN_EXP"
     assert payload["embedding_status"] == "completed"
     assert fake_generation_service.calls[0]["source_question_id"] == "source-id"
-    assert fake_embedding_service.document_ids == ["document-id"]
+    assert fake_embedding_service.question_ids == ["generated-id"]
     assert fake_client.closed is True
 
 

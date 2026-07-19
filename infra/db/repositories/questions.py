@@ -316,6 +316,57 @@ class QuestionRepository:
         )
         await self.session.commit()
 
+    async def mark_embedding_pending_for_question(
+        self,
+        question_id: str,
+    ) -> None:
+        await self.session.execute(
+            update(Question)
+            .where(Question.id == question_id)
+            .values(
+                embedding_status="pending",
+                embedding_error=None,
+                embedded_at=None,
+            )
+        )
+        await self.session.commit()
+
+    async def mark_embedding_completed_for_question(
+        self,
+        *,
+        question_id: str,
+        embedding_model: str,
+        embedding_dimension: int,
+    ) -> None:
+        await self.session.execute(
+            update(Question)
+            .where(Question.id == question_id)
+            .values(
+                embedding_status="completed",
+                embedding_model=embedding_model,
+                embedding_dimension=embedding_dimension,
+                embedding_error=None,
+                embedded_at=datetime.now(UTC),
+            )
+        )
+        await self.session.commit()
+
+    async def mark_embedding_failed_for_question(
+        self,
+        *,
+        question_id: str,
+        error_message: str,
+    ) -> None:
+        await self.session.execute(
+            update(Question)
+            .where(Question.id == question_id)
+            .values(
+                embedding_status="failed",
+                embedding_error=error_message[:4000],
+            )
+        )
+        await self.session.commit()
+
     async def count_by_embedding_status(
         self,
         document_id: str,

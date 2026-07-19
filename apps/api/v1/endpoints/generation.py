@@ -488,7 +488,7 @@ async def save_generated_question(
             client=client,
         )
 
-        await embedding_service.embed_document(saved_question.document_id)
+        await embedding_service.embed_question(saved_question.id)
         await session.refresh(saved_question)
 
         return _to_save_response(saved_question)
@@ -533,7 +533,7 @@ async def save_symbolic_mcq(
             client=client,
         )
 
-        await embedding_service.embed_document(saved_question.document_id)
+        await embedding_service.embed_question(saved_question.id)
         await session.refresh(saved_question)
 
         return _to_save_response(saved_question)
@@ -578,7 +578,7 @@ async def save_convert_to_mcq(
             client=client,
         )
 
-        await embedding_service.embed_document(saved_question.document_id)
+        await embedding_service.embed_question(saved_question.id)
         await session.refresh(saved_question)
 
         return _to_save_response(saved_question)

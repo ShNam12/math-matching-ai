@@ -66,13 +66,13 @@ class FakeGenerationService:
 
 class FakeEmbeddingService:
     def __init__(self) -> None:
-        self.document_ids = []
+        self.question_ids = []
 
-    async def embed_document(self, document_id: str):
-        self.document_ids.append(document_id)
+    async def embed_question(self, question_id: str):
+        self.question_ids.append(question_id)
 
 
-def test_generation_save_endpoint_saves_candidate_and_embeds_document(
+def test_generation_save_endpoint_saves_candidate_and_embeds_question(
     monkeypatch,
 ) -> None:
     fake_client = FakeQdrantClient()
@@ -140,7 +140,7 @@ def test_generation_save_endpoint_saves_candidate_and_embeds_document(
     assert payload["embedding_status"] == "completed"
     assert fake_generation_service.calls[0]["source_question_id"] == "source-id"
     assert fake_generation_service.calls[0]["candidate"].statement == "Tinh $x+1$."
-    assert fake_embedding_service.document_ids == ["document-id"]
+    assert fake_embedding_service.question_ids == ["generated-id"]
     assert fake_client.closed is True
 
 
@@ -208,7 +208,7 @@ def test_generation_save_endpoint_returns_mcq_fields(monkeypatch) -> None:
     assert fake_generation_service.calls[0]["candidate"].question_type == (
         "multiple_choice"
     )
-    assert fake_embedding_service.document_ids == ["document-id"]
+    assert fake_embedding_service.question_ids == ["generated-id"]
 
 
 def test_generation_save_endpoint_returns_400_for_service_error(

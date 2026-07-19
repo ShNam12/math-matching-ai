@@ -22,10 +22,10 @@ class FakeQdrantClient:
 
 class FakeEmbeddingService:
     def __init__(self) -> None:
-        self.document_ids = []
+        self.question_ids = []
 
-    async def embed_document(self, document_id: str):
-        self.document_ids.append(document_id)
+    async def embed_question(self, question_id: str):
+        self.question_ids.append(question_id)
 
 
 def make_candidate() -> GeneratedQuestionCandidate:
@@ -205,7 +205,7 @@ def test_convert_to_mcq_save_endpoint_saves_and_embeds(monkeypatch) -> None:
     assert fake_generation_service.save_calls[0]["source_question_id"] == (
         "source-id"
     )
-    assert fake_embedding_service.document_ids == ["document-id"]
+    assert fake_embedding_service.question_ids == ["converted-id"]
     assert fake_client.closed is True
 
 
