@@ -10,6 +10,7 @@ import { searchFormulas, searchQuestions } from "../services/searchApi";
 import { listQuestionsByTaxonomy } from "../services/questionApi";
 import { filterNavigationItems } from "../auth/navigation";
 import MathText from "../components/MathText";
+import LatexInline from "../components/LatexInline";
 import UserMenu from "../components/UserMenu";
 
 const NAV = [
@@ -61,6 +62,17 @@ const getChoiceDisplayText = (choice) => {
 
   if (latex) return `$${latex}$`;
   return String(text || "").trim();
+};
+
+const formatFormulaSource = (source) => {
+  const labels = {
+    statement: "Đề bài",
+    solution: "Lời giải",
+    answer: "Đáp án",
+    choice: "Lựa chọn",
+  };
+
+  return labels[source] || "Không xác định";
 };
 
 export default function SemanticSearch({
@@ -274,23 +286,27 @@ export default function SemanticSearch({
 
         if (searchMode === "formula") {
           setResults(
-            data.results.map((item) => ({
-              id: `${item.question_id}-${item.formula_index}`,
-              questionId: item.question_id,
-              documentId: item.document_id,
-              topic: "Công thức",
-              subtopic: item.source || "unknown",
-              difficulty: "Chưa rõ",
-              skill: "Công thức",
-              match: Math.round(item.score * 100),
-              latex: item.latex || item.normalized_latex,
-              statement: item.normalized_latex,
-              formulaSource: item.source,
-              formulaIndex: item.formula_index,
-              normalizedLatex: item.normalized_latex,
-              tags: [item.source || "formula"],
-              starred: false,
-            })),
+            data.results.map((item) => {
+              const formulaLatex = item.latex || item.normalized_latex || "";
+
+              return {
+                id: `${item.question_id}-${item.formula_index}`,
+                questionId: item.question_id,
+                documentId: item.document_id,
+                topic: "Công thức",
+                subtopic: item.source || "unknown",
+                difficulty: "Chưa rõ",
+                skill: "Công thức",
+                match: Math.round(item.score * 100),
+                latex: formulaLatex,
+                statement: "",
+                formulaSource: item.source,
+                formulaIndex: item.formula_index,
+                normalizedLatex: item.normalized_latex,
+                tags: [item.source || "formula"],
+                starred: false,
+              };
+            }),
           );
         } else {
           setResults(
@@ -624,27 +640,33 @@ export default function SemanticSearch({
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold" style={{ fontSize: 9 }}>∫</span>
+                      {/* Keep the formula preview for Formula Search only.
+                          In Question Search it can reveal the correct MCQ answer. */}
+                      {searchMode === "formula" && (
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold" style={{ fontSize: 9 }}>∫</span>
+                          </div>
+                          <div className="min-w-0 flex-1 overflow-x-auto rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1 text-[13px] text-blue-800">
+                            <LatexInline value={p.latex} />
+                          </div>
+                          <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
+                            <Copy size={11} />
+                          </button>
                         </div>
-                        <code className="text-[11px] font-mono text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 flex-1 truncate">
-                          {p.latex}
-                        </code>
-                        <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
-                          <Copy size={11} />
-                        </button>
-                      </div>
+                      )}
 
                       {searchMode === "formula" && (
                         <p className="mt-1 mb-2 text-[10px] text-slate-400">
-                          Formula #{p.formulaIndex} · source: {p.formulaSource || "unknown"}
+                          Công thức #{p.formulaIndex + 1} · Nguồn: {formatFormulaSource(p.formulaSource)}
                         </p>
                       )}
 
-                      <p className={`text-[11px] text-slate-600 leading-relaxed ${!isExp ? "line-clamp-2" : ""}`}>
-                        <MathText value={p.statement} />
-                      </p>
+                      {searchMode !== "formula" && (
+                        <p className={`text-[11px] text-slate-600 leading-relaxed ${!isExp ? "line-clamp-2" : ""}`}>
+                          <MathText value={p.statement} />
+                        </p>
+                      )}
 
                       {p.questionType === "multiple_choice" && p.choices.length > 0 && (
                         <div className={`mt-2 grid grid-cols-1 gap-1.5 ${!isExp ? "max-h-24 overflow-hidden" : ""}`}>
