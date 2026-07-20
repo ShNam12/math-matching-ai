@@ -28,6 +28,15 @@ class FakeEmbeddingService:
         self.question_ids.append(question_id)
 
 
+async def fake_classify_saved_question(*, question, session):
+    question.classification_status = "completed"
+    question.classification_error = None
+    question.chapter_code = "GT1_C1_Differential_Calculus_One_Variable"
+    question.topic_code = "GT1_C1_08_Derivatives_Differentials"
+    question.problem_type_code = "GT1_C1_08_T04_Chain_Rule"
+    return question
+
+
 def make_candidate() -> GeneratedQuestionCandidate:
     return GeneratedQuestionCandidate(
         statement="Chon ket qua cua $1+1$.",
@@ -188,6 +197,11 @@ def test_convert_to_mcq_save_endpoint_saves_and_embeds(monkeypatch) -> None:
         "refresh",
         lambda self, question: fake_refresh(question),
     )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "classify_saved_question",
+        fake_classify_saved_question,
+    )
 
     client = TestClient(app)
 
@@ -202,6 +216,8 @@ def test_convert_to_mcq_save_endpoint_saves_and_embeds(monkeypatch) -> None:
     assert payload["question_type"] == "multiple_choice"
     assert payload["correct_choice"] == "B"
     assert payload["embedding_status"] == "completed"
+    assert payload["classification_status"] == "completed"
+    assert payload["problem_type_code"] == "GT1_C1_08_T04_Chain_Rule"
     assert fake_generation_service.save_calls[0]["source_question_id"] == (
         "source-id"
     )

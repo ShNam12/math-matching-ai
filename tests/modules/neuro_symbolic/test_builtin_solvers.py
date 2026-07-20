@@ -76,6 +76,9 @@ def test_deriv_composite_renders_concrete_statement():
     assert "g=" not in output.statement
     assert "y=" in output.statement
     assert "x" in output.statement
+    assert "Tính đạo hàm" in output.statement
+    assert "Áp dụng quy tắc dây chuyền" in output.solution
+    assert "*" not in output.solution
 
 def test_limit_zero_zero_renders_concrete_fraction():
     registry = SolverRegistry()

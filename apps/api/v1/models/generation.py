@@ -122,6 +122,11 @@ class QuestionGenerationSaveResponse(BaseModel):
     skills: list[str]
     formulas: list[GeneratedFormulaItem]
     embedding_status: str
+    classification_status: str
+    classification_error: str | None = None
+    chapter_code: str | None = None
+    topic_code: str | None = None
+    problem_type_code: str | None = None
 
 class QuestionGenerationQualityRequest(BaseModel):
     source_question_id: str = Field(min_length=1)

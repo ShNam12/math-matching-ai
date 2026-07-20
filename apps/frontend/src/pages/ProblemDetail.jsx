@@ -388,18 +388,29 @@ export default function ProblemDetail({
     ? validationReport.symbolic_checks
     : [];
 
+  const correctChoice = question?.question_type === "multiple_choice"
+    ? (question.choices || []).find(
+        (choice) => choice?.is_correct || choice?.key === question.correct_choice
+      )
+    : null;
+  const displayAnswerLatex =
+    getChoiceValue(correctChoice, "latex") || question?.answer || "";
+  const displayAnswerText = correctChoice
+    ? getChoiceDisplayText(correctChoice)
+    : question?.answer || "";
+
   const solutionBlocks = question
     ? [
         question.solution && {
           num: 1,
           title: "Lời giải",
           content: question.solution,
-          latex: question.answer || "",
+          latex: displayAnswerLatex,
         },
         question.answer && {
           num: 2,
           title: "Đáp án",
-          content: question.answer,
+          content: displayAnswerText,
           latex: "",
         },
       ].filter(Boolean)

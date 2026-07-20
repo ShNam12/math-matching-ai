@@ -312,13 +312,20 @@ class DistractorService:
 
     def _rationale(self, error_type: str) -> str:
         rationales = {
-            "sign_error": "Wrong sign in the final expression.",
-            "coefficient_error": "Incorrect coefficient carried through the computation.",
-            "missing_bound": "Forgot or misapplied an integration bound.",
-            "adjacent_param": "Solved a nearby parameter variant instead of the original.",
-            "random_variation": "Plausible nearby numerical or symbolic variation.",
-            "partial_result": "Stopped at a partial intermediate result.",
-            "swap_operands": "Swapped numerator and denominator or operand order.",
+            "sign_error": "Sai dấu ở biểu thức kết quả.",
+            "coefficient_error": "Sai hệ số trong quá trình tính.",
+            "missing_bound": "Kết quả bị sai hệ số.",
+            "adjacent_param": (
+                "Đã tính cho bộ tham số gần với đề bài thay vì bộ tham số gốc."
+            ),
+            "random_variation": (
+                "Một biến thể số hoặc biểu thức gần đúng nhưng không chính xác."
+            ),
+            "partial_result": "Dừng lại ở một kết quả trung gian.",
+            "swap_operands": "Đã hoán đổi tử–mẫu hoặc thứ tự toán hạng.",
         }
 
-        return rationales.get(error_type, "Plausible distractor.")
+        return rationales.get(
+            error_type,
+            "Đáp án nhiễu có dạng gần đúng nhưng không chính xác.",
+        )

@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +28,9 @@ from apps.api.v1.endpoints.questions import (
     to_validation_report_item,
 )
 from apps.api.v1.services.auth import require_admin
+from apps.api.v1.services.question_vector_sync import (
+    try_sync_question_classification_payload,
+)
 
 from core.config.settings import settings
 from infra.db.repositories.questions import QuestionRepository
@@ -41,6 +46,10 @@ from modules.question_generation import (
     QuestionGenerationService,
     QuestionQualityCheckError,
     SymbolicMCQGenerator,
+)
+from modules.question_classification import (
+    GeminiQuestionClassifier,
+    QuestionClassificationService,
 )
 
 from modules.neuro_symbolic import SolverRegistry
@@ -65,6 +74,41 @@ def create_question_generation_service(
         question_repository=QuestionRepository(session),
         generator=GeminiQuestionGenerator(),
     )
+
+
+def create_question_classification_service() -> QuestionClassificationService:
+    return QuestionClassificationService(
+        classifier=GeminiQuestionClassifier(),
+    )
+
+
+async def classify_saved_question(
+    *,
+    question,
+    session: AsyncSession,
+):
+    repository = QuestionRepository(session)
+    classification_service = create_question_classification_service()
+
+    try:
+        result = await asyncio.to_thread(
+            classification_service.classify_question,
+            question,
+        )
+        updated_question = await repository.update_classification(
+            question,
+            result=result,
+            classification_model=settings.gemini_model,
+        )
+    except Exception as exc:
+        updated_question = await repository.mark_classification_failed(
+            question,
+            error_message=str(exc),
+            classification_model=settings.gemini_model,
+        )
+
+    await try_sync_question_classification_payload(updated_question)
+    return updated_question
 
 
 def create_symbolic_mcq_generator() -> SymbolicMCQGenerator:
@@ -238,6 +282,23 @@ def _to_save_response(saved_question) -> QuestionGenerationSaveResponse:
             for formula in saved_question.formulas
         ],
         embedding_status=saved_question.embedding_status,
+        classification_status=getattr(
+            saved_question,
+            "classification_status",
+            "pending",
+        ),
+        classification_error=getattr(
+            saved_question,
+            "classification_error",
+            None,
+        ),
+        chapter_code=getattr(saved_question, "chapter_code", None),
+        topic_code=getattr(saved_question, "topic_code", None),
+        problem_type_code=getattr(
+            saved_question,
+            "problem_type_code",
+            None,
+        ),
     )
 
 
@@ -490,6 +551,10 @@ async def save_generated_question(
 
         await embedding_service.embed_question(saved_question.id)
         await session.refresh(saved_question)
+        saved_question = await classify_saved_question(
+            question=saved_question,
+            session=session,
+        )
 
         return _to_save_response(saved_question)
     except QuestionQualityCheckError as exc:
@@ -535,6 +600,10 @@ async def save_symbolic_mcq(
 
         await embedding_service.embed_question(saved_question.id)
         await session.refresh(saved_question)
+        saved_question = await classify_saved_question(
+            question=saved_question,
+            session=session,
+        )
 
         return _to_save_response(saved_question)
     except QuestionQualityCheckError as exc:
@@ -580,6 +649,10 @@ async def save_convert_to_mcq(
 
         await embedding_service.embed_question(saved_question.id)
         await session.refresh(saved_question)
+        saved_question = await classify_saved_question(
+            question=saved_question,
+            session=session,
+        )
 
         return _to_save_response(saved_question)
     except LookupError as exc:

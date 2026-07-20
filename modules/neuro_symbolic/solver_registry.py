@@ -49,10 +49,11 @@ def solve_int_monomial(params: dict[str, object]) -> SolverOutput:
     answer = _format_integral_answer(coefficient, power)
 
     return SolverOutput(
-        statement=f"Tinh tich phan bat dinh $\\int {integrand}\\,dx$.",
+        statement=f"Tính tích phân bất định $\\int {integrand}\\,dx$.",
         solution=(
-            f"Ap dung cong thuc \\int ax^n dx = "
-            f"a x^(n+1)/(n+1) + C voi n != -1. Ket qua la {answer}."
+            f"Áp dụng công thức $\\int ax^n\\,dx = "
+            f"\\frac{{a x^{{n+1}}}}{{n+1}} + C$ với $n \\ne -1$. "
+            f"Kết quả là ${answer}$.",
         ),
         answer=answer,
         answer_latex=answer,
@@ -72,10 +73,10 @@ def solve_derivative_monomial(params: dict[str, object]) -> SolverOutput:
     answer = _format_polynomial_term(derivative_coefficient, derivative_power)
 
     return SolverOutput(
-        statement=f"Tinh dao ham cua ham so $y={expression}$.",
+        statement=f"Tính đạo hàm của hàm số $y={expression}$.",
         solution=(
-            "Ap dung cong thuc (ax^n)' = anx^(n-1). "
-            f"Ket qua la {answer}."
+            "Áp dụng công thức $(ax^n)' = anx^{n-1}$. "
+            f"Kết quả là ${answer}$.",
         ),
         answer=answer,
         answer_latex=answer,
@@ -123,12 +124,12 @@ def solve_int_xn_exp(params: dict[str, object]) -> SolverOutput:
 
     return _sympy_output(
         statement=(
-            f"Tinh tich phan $\\int_{{{lower}}}^{{{upper}}} "
+            f"Tính tích phân $\\int_{{{lower}}}^{{{upper}}} "
             f"x^{{{n}}}e^{{{a}x}}\\,dx$."
         ),
         solution=(
-            "Su dung tich phan tung phan hoac SymPy de tinh "
-            f"\\int x^{n}e^({a}x) dx tren [{lower}, {upper}]."
+            "Sử dụng tích phân từng phần hoặc SymPy để tính "
+            f"$\\int x^{{{n}}}e^{{{a}x}}\\,dx$ trên $[{lower}, {upper}]$."
         ),
         result=result,
         metadata={"n": n, "a": a, "lower": lower, "upper": upper},
@@ -152,8 +153,8 @@ def solve_int_xn_ln(params: dict[str, object]) -> SolverOutput:
         upper = upper_int
 
     return _sympy_output(
-        statement=f"Tinh tich phan $\\int{bounds_text} x^{{{n}}}\\ln(x)\\,dx$.",
-        solution="Su dung tich phan tung phan cho x^n ln(x).",
+        statement=f"Tính tích phân $\\int{bounds_text} x^{{{n}}}\\ln(x)\\,dx$.",
+        solution="Sử dụng tích phân từng phần cho $x^n\\ln(x)$.",
         result=result,
         metadata={"n": n, "lower": lower, "upper": upper},
     )
@@ -180,10 +181,10 @@ def solve_int_rational(params: dict[str, object]) -> SolverOutput:
 
     return _sympy_output(
         statement=(
-            f"Tinh tich phan $\\int{bounds_text} "
+            f"Tính tích phân $\\int{bounds_text} "
             f"\\frac{{{a}x+{b}}}{{{c}x+{d}}}\\,dx$."
         ),
-        solution="Phan tich ham huu ti roi tinh tich phan.",
+        solution="Phân tích hàm hữu tỉ rồi tính tích phân.",
         result=result,
         metadata={
             "a": a,
@@ -205,11 +206,11 @@ def solve_det_2x2(params: dict[str, object]) -> SolverOutput:
 
     return _sympy_output(
         statement=(
-            "Tinh dinh thuc $D = "
+            "Tính định thức $D = "
             f"\\begin{{vmatrix}} {a11} & {a12} \\\\ {a21} & {a22} "
             "\\end{vmatrix}$."
         ),
-        solution="Dung cong thuc det = a11*a22 - a12*a21.",
+        solution="Dùng công thức $\\det = a_{11}a_{22} - a_{12}a_{21}$.",
         result=matrix.det(),
         metadata={"matrix": [[a11, a12], [a21, a22]]},
     )
@@ -240,13 +241,13 @@ def solve_det_3x3(params: dict[str, object]) -> SolverOutput:
 
     return _sympy_output(
         statement=(
-            "Tinh dinh thuc ma tran 3x3 "
+            "Tính định thức ma trận $3 \\times 3$ "
             f"$\\begin{{vmatrix}} {values['a11']} & {values['a12']} & {values['a13']} "
             f"\\\\ {values['a21']} & {values['a22']} & {values['a23']} "
             f"\\\\ {values['a31']} & {values['a32']} & {values['a33']} "
             "\\end{vmatrix}$."
         ),
-        solution="Dung khai trien dinh thuc hoac bien doi hang.",
+        solution="Dùng khai triển định thức hoặc biến đổi hàng.",
         result=matrix.det(),
         metadata={"matrix": matrix.tolist()},
     )
@@ -297,12 +298,12 @@ def solve_limit_zero_zero(params: dict[str, object]) -> SolverOutput:
 
     return _sympy_output(
         statement=(
-            f"Tinh gioi han $\\lim_{{x\\to {approach}}} "
+            f"Tính giới hạn $\\lim_{{x\\to {approach}}} "
             f"\\frac{{{numerator_text}}}{{{denominator_text}}}$."
         ),
         solution=(
-            "Rut gon bieu thuc hoac su dung cac gioi han co ban de tinh "
-            "gioi han dang vo dinh."
+            "Rút gọn biểu thức hoặc sử dụng các giới hạn cơ bản để tính "
+            "giới hạn dạng vô định."
         ),
         result=result,
         metadata={
@@ -346,8 +347,11 @@ def solve_deriv_composite(params: dict[str, object]) -> SolverOutput:
         result = result.subs(x, int(point))
 
     return _sympy_output(
-        statement=f"Tinh dao ham cua ham so $y={expression_latex}$.",
-        solution="Ap dung quy tac day chuyen: (f(g(x)))' = f'(g(x))*g'(x).",
+        statement=f"Tính đạo hàm của hàm số $y={expression_latex}$.",
+        solution=(
+            "Áp dụng quy tắc dây chuyền: "
+            "$[f(g(x))]' = f'(g(x))g'(x)$."
+        ),
         result=result,
         metadata={
             "f_type": f_type,
@@ -380,8 +384,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
                 "upper": {"type": "integer", "default": 1},
             }
         ),
-        statement_template="Tinh $\\int_{lower}^{upper} x^{n}e^{a x}\\,dx$.",
-        solution_template="Use integration by parts or symbolic integration.",
+        statement_template="Tính $\\int_{lower}^{upper} x^{n}e^{a x}\\,dx$.",
+        solution_template="Sử dụng tích phân từng phần hoặc tích phân ký hiệu.",
         answer_expression="integrate(x**n * exp(a*x), (x, lower, upper))",
         test_cases=[
             {
@@ -406,8 +410,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
                 "upper": {"type": "integer", "default": 2},
             }
         ),
-        statement_template="Tinh $\\int_{lower}^{upper} x^{n}\\ln(x)\\,dx$.",
-        solution_template="Use integration by parts.",
+        statement_template="Tính $\\int_{lower}^{upper} x^{n}\\ln(x)\\,dx$.",
+        solution_template="Sử dụng tích phân từng phần.",
         answer_expression="integrate(x**n * log(x), (x, lower, upper))",
         test_cases=[
             {
@@ -435,8 +439,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
                 "upper": {"type": "integer", "default": 1},
             }
         ),
-        statement_template="Tinh $\\int_{lower}^{upper} (a x+b)/(c x+d)\\,dx$.",
-        solution_template="Integrate the rational expression symbolically.",
+        statement_template="Tính $\\int_{lower}^{upper} (a x+b)/(c x+d)\\,dx$.",
+        solution_template="Tính tích phân biểu thức hữu tỉ bằng phương pháp ký hiệu.",
         answer_expression="integrate((a*x+b)/(c*x+d), (x, lower, upper))",
         test_cases=[
             {
@@ -462,8 +466,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
                 "a22": {"type": "integer"},
             }
         ),
-        statement_template="Tinh dinh thuc ma tran 2x2.",
-        solution_template="Use a11*a22 - a12*a21.",
+        statement_template="Tính định thức ma trận $2 \\times 2$.",
+        solution_template="Dùng công thức $a_{11}a_{22} - a_{12}a_{21}$.",
         answer_expression="Matrix([[a11,a12],[a21,a22]]).det()",
         test_cases=[
             {
@@ -494,8 +498,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
                 "a33": {"type": "integer"},
             }
         ),
-        statement_template="Tinh dinh thuc ma tran 3x3.",
-        solution_template="Use determinant expansion or row operations.",
+        statement_template="Tính định thức ma trận $3 \\times 3$.",
+        solution_template="Dùng khai triển định thức hoặc biến đổi hàng.",
         answer_expression="Matrix(3x3).det()",
         test_cases=[
             {
@@ -554,8 +558,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
                 "approach": {"type": "integer", "default": 0},
             }
         ),
-        statement_template="Tinh gioi han dang 0/0.",
-        solution_template="Use standard limits or L'Hopital.",
+        statement_template="Tính giới hạn dạng $0/0$.",
+        solution_template="Dùng các giới hạn cơ bản hoặc quy tắc L'Hôpital.",
         answer_expression="limit(numerator/denominator, x, approach)",
         test_cases=[
             {
@@ -592,8 +596,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
                 "b": {"type": "integer", "minimum": -5, "maximum": 5},
             }
         ),
-        statement_template="Tinh dao ham ham hop f(g(x)).",
-        solution_template="Use the chain rule.",
+        statement_template="Tính đạo hàm hàm hợp $f(g(x))$.",
+        solution_template="Dùng quy tắc dây chuyền.",
         answer_expression="diff(f(g(x)), x)",
         test_cases=[
             {
@@ -619,8 +623,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
             },
             "required": ["coefficient", "power"],
         },
-        statement_template="Tinh tich phan bat dinh $\\int {coefficient}x^{power}\\,dx$.",
-        solution_template="Use the power rule for indefinite integrals.",
+        statement_template="Tính tích phân bất định $\\int {coefficient}x^{power}\\,dx$.",
+        solution_template="Dùng quy tắc lũy thừa cho tích phân bất định.",
         answer_expression="{coefficient}/{power_plus_one} x^{power_plus_one} + C",
         solve=solve_int_monomial,
     ),
@@ -636,8 +640,8 @@ BUILTIN_SOLVERS: tuple[SolverDefinition, ...] = (
             },
             "required": ["coefficient", "power"],
         },
-        statement_template="Tinh dao ham cua ham so $y={coefficient}x^{power}$.",
-        solution_template="Use the power rule for derivatives.",
+        statement_template="Tính đạo hàm của hàm số $y={coefficient}x^{power}$.",
+        solution_template="Dùng quy tắc lũy thừa để tính đạo hàm.",
         answer_expression="{coefficient}*{power} x^{power_minus_one}",
         solve=solve_derivative_monomial,
     ),

@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -72,6 +73,72 @@ class FakeEmbeddingService:
         self.question_ids.append(question_id)
 
 
+async def fake_classify_saved_question(*, question, session):
+    question.classification_status = "completed"
+    question.classification_error = None
+    question.chapter_code = "GT1_C1_Differential_Calculus_One_Variable"
+    question.topic_code = "GT1_C1_08_Derivatives_Differentials"
+    question.problem_type_code = "GT1_C1_08_T04_Chain_Rule"
+    return question
+
+
+def test_classify_saved_question_keeps_corpus_record_when_matching_fails(
+    monkeypatch,
+) -> None:
+    question = SimpleNamespace(
+        id="generated-id",
+        embedding_status="completed",
+    )
+    sync_calls = []
+
+    class FailingClassificationService:
+        def classify_question(self, _question):
+            raise RuntimeError("classification quota exhausted")
+
+    class FakeRepository:
+        async def mark_classification_failed(
+            self,
+            question,
+            *,
+            error_message,
+            classification_model,
+        ):
+            question.classification_status = "failed"
+            question.classification_error = error_message
+            question.classification_model = classification_model
+            return question
+
+    async def fake_sync(updated_question):
+        sync_calls.append(updated_question.id)
+
+    monkeypatch.setattr(
+        generation_endpoint,
+        "QuestionRepository",
+        lambda session: FakeRepository(),
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "create_question_classification_service",
+        lambda: FailingClassificationService(),
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "try_sync_question_classification_payload",
+        fake_sync,
+    )
+
+    updated_question = asyncio.run(
+        generation_endpoint.classify_saved_question(
+            question=question,
+            session=object(),
+        )
+    )
+
+    assert updated_question.classification_status == "failed"
+    assert "quota exhausted" in updated_question.classification_error
+    assert sync_calls == ["generated-id"]
+
+
 def test_generation_save_endpoint_saves_candidate_and_embeds_question(
     monkeypatch,
 ) -> None:
@@ -101,6 +168,11 @@ def test_generation_save_endpoint_saves_candidate_and_embeds_question(
         generation_endpoint.AsyncSession,
         "refresh",
         lambda self, question: fake_refresh(question),
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "classify_saved_question",
+        fake_classify_saved_question,
     )
 
     client = TestClient(app)
@@ -138,6 +210,8 @@ def test_generation_save_endpoint_saves_candidate_and_embeds_question(
     assert payload["marker_number"] == "3"
     assert payload["statement"] == "Tinh $x+1$."
     assert payload["embedding_status"] == "completed"
+    assert payload["classification_status"] == "completed"
+    assert payload["problem_type_code"] == "GT1_C1_08_T04_Chain_Rule"
     assert fake_generation_service.calls[0]["source_question_id"] == "source-id"
     assert fake_generation_service.calls[0]["candidate"].statement == "Tinh $x+1$."
     assert fake_embedding_service.question_ids == ["generated-id"]
@@ -171,6 +245,11 @@ def test_generation_save_endpoint_returns_mcq_fields(monkeypatch) -> None:
         generation_endpoint.AsyncSession,
         "refresh",
         lambda self, question: fake_refresh(question),
+    )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "classify_saved_question",
+        fake_classify_saved_question,
     )
 
     client = TestClient(app)

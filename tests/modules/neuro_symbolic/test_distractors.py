@@ -66,6 +66,20 @@ def test_coefficient_error_creates_non_correct_answer() -> None:
     assert len(distractors) == 1
     assert distractors[0].error_type == "coefficient_error"
     assert_not_equivalent(distractors[0].value, "x + 1")
+    assert distractors[0].rationale == "Sai hệ số trong quá trình tính."
+
+
+def test_distractor_rationales_are_vietnamese_and_context_neutral() -> None:
+    service = DistractorService()
+
+    distractors = service.generate(
+        correct_answer="x + 1",
+        params={"a": 3},
+        strategies=["missing_bound"],
+        count=1,
+    )
+
+    assert distractors[0].rationale == "Kết quả bị sai hệ số."
 
 
 def test_adjacent_param_uses_solver_func() -> None:

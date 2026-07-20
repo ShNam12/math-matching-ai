@@ -110,6 +110,15 @@ class FakeEmbeddingService:
         self.question_ids.append(question_id)
 
 
+async def fake_classify_saved_question(*, question, session):
+    question.classification_status = "completed"
+    question.classification_error = None
+    question.chapter_code = "GT1_C1_Differential_Calculus_One_Variable"
+    question.topic_code = "GT1_C1_08_Derivatives_Differentials"
+    question.problem_type_code = "GT1_C1_08_T04_Chain_Rule"
+    return question
+
+
 def symbolic_candidate_payload():
     return {
         "statement": "Tinh $1+1$.",
@@ -242,6 +251,11 @@ def test_symbolic_mcq_save_endpoint_saves_candidate(monkeypatch) -> None:
         "refresh",
         lambda self, question: fake_refresh(question),
     )
+    monkeypatch.setattr(
+        generation_endpoint,
+        "classify_saved_question",
+        fake_classify_saved_question,
+    )
     client = TestClient(app)
 
     response = client.post(
@@ -259,6 +273,8 @@ def test_symbolic_mcq_save_endpoint_saves_candidate(monkeypatch) -> None:
     assert payload["generation_method"] == "symbolic"
     assert payload["solver_code"] == "INT_XN_EXP"
     assert payload["embedding_status"] == "completed"
+    assert payload["classification_status"] == "completed"
+    assert payload["problem_type_code"] == "GT1_C1_08_T04_Chain_Rule"
     assert fake_generation_service.calls[0]["source_question_id"] == "source-id"
     assert fake_embedding_service.question_ids == ["generated-id"]
     assert fake_client.closed is True

@@ -386,6 +386,9 @@ export default function GenVariants({
             selected: false,
             savedQuestionId: savedResult.saved.question_id,
             embeddingStatus: savedResult.saved.embedding_status,
+            classificationStatus: savedResult.saved.classification_status,
+            classificationError: savedResult.saved.classification_error,
+            problemTypeCode: savedResult.saved.problem_type_code,
           };
         })
       );
@@ -1038,6 +1041,24 @@ export default function GenVariants({
                           {v.embeddingStatus && (
                             <span className="ml-2 text-emerald-600">
                               Trạng thái embedding: {v.embeddingStatus}
+                            </span>
+                          )}
+                          {v.classificationStatus === "completed" && (
+                            <span className="ml-2 text-emerald-600">
+                              AI Matching: hoàn tất
+                            </span>
+                          )}
+                          {v.classificationStatus === "pending" && (
+                            <span className="ml-2 text-amber-600">
+                              AI Matching: đang chờ
+                            </span>
+                          )}
+                          {v.classificationStatus === "failed" && (
+                            <span
+                              className="ml-2 text-red-600"
+                              title={v.classificationError || ""}
+                            >
+                              AI Matching: thất bại
                             </span>
                           )}
                         </div>
