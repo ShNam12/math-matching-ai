@@ -44,3 +44,5 @@ class EmbeddingResult:
     document_id: str
     question_count: int
     formula_count: int
+    failed_question_ids: tuple[str, ...] = ()
+    pending_question_count: int = 0

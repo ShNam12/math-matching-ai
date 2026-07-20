@@ -219,6 +219,12 @@ async def store_document(
             formula_count=result.formula_count,
             classification_success_count=result.classification_success_count,
             classification_failed_count=result.classification_failed_count,
+            embedding_success_count=result.embedding_success_count,
+            embedding_failed_count=len(result.embedding_failed_question_ids),
+            embedding_pending_count=result.embedding_pending_count,
+            embedding_failed_question_ids=list(
+                result.embedding_failed_question_ids
+            ),
         )
     except ValueError as exc:
         raise HTTPException(

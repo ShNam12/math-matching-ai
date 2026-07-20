@@ -51,3 +51,7 @@ class DocumentStoreResponse(BaseModel):
     formula_count: int = Field(ge=0)
     classification_success_count: int = Field(default=0, ge=0)
     classification_failed_count: int = Field(default=0, ge=0)
+    embedding_success_count: int = Field(default=0, ge=0)
+    embedding_failed_count: int = Field(default=0, ge=0)
+    embedding_pending_count: int = Field(default=0, ge=0)
+    embedding_failed_question_ids: list[str] = Field(default_factory=list)

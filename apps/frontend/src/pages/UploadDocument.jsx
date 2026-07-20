@@ -536,12 +536,22 @@ export default function UploadDocument({
                   </div>
 
                   {storeResults[doc.id] && (
-                    <p className="mt-1 text-[10px] font-semibold text-emerald-600">
-                      Đã tách: {storeResults[doc.id].question_count} câu hỏi ·{" "}
-                      Match thành công: {storeResults[doc.id].classification_success_count ?? 0} ·{" "}
-                      Match lỗi: {storeResults[doc.id].classification_failed_count ?? 0} ·{" "}
-                      {storeResults[doc.id].formula_count} công thức
-                    </p>
+                    <>
+                      <p className="mt-1 text-[10px] font-semibold text-emerald-600">
+                        Đã tách: {storeResults[doc.id].question_count} câu hỏi ·{" "}
+                        Match thành công: {storeResults[doc.id].classification_success_count ?? 0} ·{" "}
+                        Match lỗi: {storeResults[doc.id].classification_failed_count ?? 0} ·{" "}
+                        Embedding: {storeResults[doc.id].embedding_success_count ?? 0} câu
+                      </p>
+
+                      {((storeResults[doc.id].embedding_failed_count ?? 0) > 0
+                        || (storeResults[doc.id].embedding_pending_count ?? 0) > 0) && (
+                        <p className="mt-1 text-[10px] font-semibold text-amber-600">
+                          Embedding tạm dừng do giới hạn API: {storeResults[doc.id].embedding_failed_count ?? 0} lỗi,
+                          {" "}{storeResults[doc.id].embedding_pending_count ?? 0} câu chờ. Bấm Match lại sau ít phút để tiếp tục.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 

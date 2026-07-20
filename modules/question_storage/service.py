@@ -15,6 +15,9 @@ class QuestionStorageResult:
     formula_count: int
     classification_success_count: int
     classification_failed_count: int
+    embedding_success_count: int
+    embedding_failed_question_ids: tuple[str, ...]
+    embedding_pending_count: int
 
 
 class QuestionStorageService:
@@ -37,9 +40,15 @@ class QuestionStorageService:
         self,
         document_id: str,
     ) -> QuestionStorageResult:
-        questions = await self.question_catalog_service.segment_document(
+        existing_questions = await self.question_repository.list_by_document(
             document_id
         )
+        questions = existing_questions
+
+        if not questions:
+            questions = await self.question_catalog_service.segment_document(
+                document_id
+            )
 
         if not questions:
             raise ValueError(
@@ -49,7 +58,14 @@ class QuestionStorageService:
         classification_success_count = 0
         classification_failed_count = 0
 
-        for question in questions:
+        questions_to_classify = [
+            question
+            for question in questions
+            if getattr(question, "classification_status", "pending")
+            != "completed"
+        ]
+
+        for question in questions_to_classify:
             try:
                 result = await asyncio.to_thread(
                     self.classification_service.classify_question,
@@ -79,4 +95,9 @@ class QuestionStorageService:
             formula_count=embedding_result.formula_count,
             classification_success_count=classification_success_count,
             classification_failed_count=classification_failed_count,
+            embedding_success_count=embedding_result.question_count,
+            embedding_failed_question_ids=(
+                embedding_result.failed_question_ids
+            ),
+            embedding_pending_count=embedding_result.pending_question_count,
         )

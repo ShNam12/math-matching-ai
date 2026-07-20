@@ -45,9 +45,13 @@ class FakeClassificationService:
 
 
 class FakeQuestionRepository:
-    def __init__(self) -> None:
+    def __init__(self, questions=None) -> None:
+        self.questions = questions or []
         self.updated = []
         self.failed = []
+
+    async def list_by_document(self, document_id: str):
+        return self.questions
 
     async def update_classification(
         self,
@@ -269,3 +273,29 @@ def test_store_document_rejects_document_without_questions() -> None:
     assert question_repository.updated == []
     assert question_repository.failed == []
     assert embedding_service.document_id is None
+
+
+def test_store_document_reuses_existing_questions_and_skips_completed_match() -> None:
+    existing_question = SimpleNamespace(
+        id="q-existing",
+        classification_status="completed",
+    )
+    catalog_service = FakeQuestionCatalogService()
+    classification_service = FakeClassificationService()
+    question_repository = FakeQuestionRepository([existing_question])
+    embedding_service = FakeEmbeddingService()
+
+    service = make_service(
+        catalog_service=catalog_service,
+        classification_service=classification_service,
+        question_repository=question_repository,
+        embedding_service=embedding_service,
+    )
+
+    result = asyncio.run(service.store_document("document-id"))
+
+    assert catalog_service.document_id is None
+    assert classification_service.question_ids == []
+    assert embedding_service.document_id == "document-id"
+    assert result.question_count == 1
+    assert result.classification_success_count == 0

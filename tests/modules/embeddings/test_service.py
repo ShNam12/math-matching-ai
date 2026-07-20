@@ -67,6 +67,8 @@ class FakeQuestionRepository:
         question_id: str,
     ) -> None:
         self.pending_question_id = question_id
+        question = await self.get_question(question_id)
+        question.embedding_status = "pending"
 
     async def mark_embedding_completed_for_question(
         self,
@@ -78,6 +80,8 @@ class FakeQuestionRepository:
         self.completed_question_id = question_id
         self.embedding_model = embedding_model
         self.embedding_dimension = embedding_dimension
+        question = await self.get_question(question_id)
+        question.embedding_status = "completed"
 
     async def mark_embedding_failed_for_question(
         self,
@@ -87,6 +91,8 @@ class FakeQuestionRepository:
     ) -> None:
         self.failed_question_id = question_id
         self.error_message = error_message
+        question = await self.get_question(question_id)
+        question.embedding_status = "failed"
 
 class FakeVectorRepository:
     def __init__(self) -> None:
@@ -95,6 +101,7 @@ class FakeVectorRepository:
         self.formulas = []
         self.question = None
         self.question_formulas = []
+        self.question_calls = []
 
     async def replace_for_document(
         self,
@@ -115,6 +122,7 @@ class FakeVectorRepository:
     ) -> None:
         self.question = question
         self.question_formulas = formulas
+        self.question_calls.append((question, formulas))
 
 
 class FakeEmbedder:
@@ -127,6 +135,39 @@ class FakeEmbedder:
     def embed_text(self, text: str) -> list[float]:
         self.texts.append(text)
         return [0.1, 0.2, 0.3]
+
+
+def make_question(
+    question_id: str,
+    *,
+    embedding_status: str = "pending",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=question_id,
+        document_id="document-id",
+        sequence_number=1,
+        marker="Bai",
+        marker_number="1",
+        statement=f"Cau hoi {question_id}.",
+        solution=None,
+        answer=None,
+        formulas=[],
+        subject=None,
+        chapter=None,
+        difficulty=None,
+        skills=[],
+        subject_code=None,
+        chapter_code=None,
+        chapter_name=None,
+        topic_code=None,
+        topic_name=None,
+        problem_type_code=None,
+        problem_type_name=None,
+        taxonomy_confidence=None,
+        review_status=None,
+        classification_status="completed",
+        embedding_status=embedding_status,
+    )
 
 
 def test_embed_document() -> None:
@@ -176,16 +217,17 @@ def test_embed_document() -> None:
     assert result.document_id == "document-id"
     assert result.question_count == 1
     assert result.formula_count == 1
-    assert vector_repository.document_id == "document-id"
-    assert len(vector_repository.questions) == 1
-    assert len(vector_repository.formulas) == 1
+    assert vector_repository.document_id is None
+    assert len(vector_repository.question_calls) == 1
+    assert vector_repository.question.question_id == "question-id"
+    assert len(vector_repository.question_formulas) == 1
     assert len(embedder.texts) == 2
 
-    assert question_repository.pending_document_id == "document-id"
-    assert question_repository.completed_document_id == "document-id"
+    assert question_repository.pending_question_id == "question-id"
+    assert question_repository.completed_question_id == "question-id"
     assert question_repository.embedding_model == "fake-embedding-model"
     assert question_repository.embedding_dimension == 3
-    assert question_repository.failed_document_id is None
+    assert question_repository.failed_question_id is None
 
 
 def test_embed_question_only_indexes_requested_question() -> None:
@@ -378,11 +420,11 @@ def test_embed_document_indexes_formulas_from_mcq_choices() -> None:
     assert result.formula_count == 4
     assert [
         formula.normalized_latex
-        for formula in vector_repository.formulas
+        for formula in vector_repository.question_formulas
     ] == ["0", r"\frac{1}{2}", "1", "2"]
     assert all(
         formula.source == "choice"
-        for formula in vector_repository.formulas
+        for formula in vector_repository.question_formulas
     )
 
 
@@ -428,11 +470,12 @@ def test_mark_failed_when_embedding_fails() -> None:
         embedder=FailingEmbedder(),
     )
 
-    with pytest.raises(RuntimeError, match="embedding failed"):
-        asyncio.run(service.embed_document("document-id"))
+    result = asyncio.run(service.embed_document("document-id"))
 
-    assert question_repository.pending_document_id == "document-id"
-    assert question_repository.failed_document_id == "document-id"
+    assert result.question_count == 0
+    assert result.failed_question_ids == ("question-id",)
+    assert question_repository.pending_question_id == "question-id"
+    assert question_repository.failed_question_id == "question-id"
     assert question_repository.error_message == "embedding failed"
 
 
@@ -475,3 +518,102 @@ def test_embed_question_marks_only_requested_question_as_failed() -> None:
     assert question_repository.pending_question_id == "question-id"
     assert question_repository.failed_question_id == "question-id"
     assert question_repository.failed_document_id is None
+
+
+class QuotaError(RuntimeError):
+    status_code = 429
+
+
+class QuotaAfterFirstQuestionEmbedder(FakeEmbedder):
+    def embed_text(self, text: str) -> list[float]:
+        self.texts.append(text)
+
+        if len(self.texts) > 1:
+            raise QuotaError("RESOURCE_EXHAUSTED")
+
+        return [0.1, 0.2, 0.3]
+
+
+def test_embed_document_keeps_completed_questions_when_quota_stops_run() -> None:
+    first_question = make_question("q1")
+    second_question = make_question("q2")
+    third_question = make_question("q3")
+    question_repository = FakeQuestionRepository(
+        [first_question, second_question, third_question]
+    )
+    vector_repository = FakeVectorRepository()
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=vector_repository,
+        embedder=QuotaAfterFirstQuestionEmbedder(),
+        retry_delays=(),
+    )
+
+    result = asyncio.run(service.embed_document("document-id"))
+
+    assert result.question_count == 1
+    assert result.failed_question_ids == ("q2",)
+    assert result.pending_question_count == 1
+    assert first_question.embedding_status == "completed"
+    assert second_question.embedding_status == "failed"
+    assert third_question.embedding_status == "pending"
+    assert [item[0].question_id for item in vector_repository.question_calls] == [
+        "q1"
+    ]
+
+
+def test_embed_document_skips_completed_questions_when_resuming() -> None:
+    completed_question = make_question(
+        "q-completed",
+        embedding_status="completed",
+    )
+    pending_question = make_question("q-pending")
+    question_repository = FakeQuestionRepository(
+        [completed_question, pending_question]
+    )
+    vector_repository = FakeVectorRepository()
+    embedder = FakeEmbedder()
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=vector_repository,
+        embedder=embedder,
+    )
+
+    result = asyncio.run(service.embed_document("document-id"))
+
+    assert result.question_count == 1
+    assert [item[0].question_id for item in vector_repository.question_calls] == [
+        "q-pending"
+    ]
+    assert len(embedder.texts) == 1
+
+
+class RetryThenSuccessEmbedder(FakeEmbedder):
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls = 0
+
+    def embed_text(self, text: str) -> list[float]:
+        self.calls += 1
+
+        if self.calls < 3:
+            raise QuotaError("429 RESOURCE_EXHAUSTED")
+
+        return [0.1, 0.2, 0.3]
+
+
+def test_embed_question_retries_quota_error_before_failing() -> None:
+    question_repository = FakeQuestionRepository([make_question("q1")])
+    embedder = RetryThenSuccessEmbedder()
+    service = QuestionEmbeddingService(
+        question_repository=question_repository,
+        vector_repository=FakeVectorRepository(),
+        embedder=embedder,
+        retry_delays=(0, 0),
+    )
+
+    result = asyncio.run(service.embed_question("q1"))
+
+    assert result.question_count == 1
+    assert embedder.calls == 3
+    assert question_repository.completed_question_id == "q1"
