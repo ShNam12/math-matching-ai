@@ -4,7 +4,10 @@ from fastapi.testclient import TestClient
 import modules.ingestion.service as ingestion_module
 from core.config.settings import settings
 
-def test_upload_markdown_saves_normalized_content(client: TestClient) -> None:
+def test_upload_markdown_saves_normalized_content(
+    client: TestClient,
+    uploaded_document_ids: list[str],
+) -> None:
     response = client.post(
         "/documents/upload",
         files={
@@ -18,6 +21,7 @@ def test_upload_markdown_saves_normalized_content(client: TestClient) -> None:
 
     assert response.status_code == 201
     document_id = response.json()["id"]
+    uploaded_document_ids.append(document_id)
 
     markdown_response = client.get(f"/documents/{document_id}/markdown")
 
@@ -30,6 +34,7 @@ def test_upload_markdown_saves_normalized_content(client: TestClient) -> None:
 def test_upload_pdf_calls_converter(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
+    uploaded_document_ids: list[str],
 ) -> None:
     async def fake_converter(*, filename: str, content: bytes) -> str:
         assert filename == "sample.pdf"
@@ -49,6 +54,7 @@ def test_upload_pdf_calls_converter(
 
     assert response.status_code == 201
     document_id = response.json()["id"]
+    uploaded_document_ids.append(document_id)
 
     markdown_response = client.get(f"/documents/{document_id}/markdown")
 

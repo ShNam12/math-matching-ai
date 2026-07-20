@@ -1,6 +1,9 @@
 from fastapi.testclient import TestClient
 
-def test_upload_and_fetch_document(client: TestClient) -> None:
+def test_upload_and_fetch_document(
+    client: TestClient,
+    uploaded_document_ids: list[str],
+) -> None:
     upload_response = client.post(
         "/documents/upload",
         files={"file": ("sample.md", b"# Sample\n\nContent", "text/markdown")},
@@ -13,6 +16,7 @@ def test_upload_and_fetch_document(client: TestClient) -> None:
     assert uploaded["size_bytes"] > 0
 
     document_id = uploaded["id"]
+    uploaded_document_ids.append(document_id)
 
     document_response = client.get(f"/documents/{document_id}")
     assert document_response.status_code == 200
