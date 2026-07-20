@@ -18,7 +18,7 @@ export default function Login({ onLogin }) {
       const session = await login({ username, password });
       onLogin(session);
     } catch (requestError) {
-      setError(requestError.message || "Dang nhap khong thanh cong");
+      setError(requestError.message || "Đăng nhập không thành công");
     } finally {
       setLoading(false);
     }
@@ -31,9 +31,9 @@ export default function Login({ onLogin }) {
           <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center mb-3">
             <LockKeyhole size={20} className="text-blue-600" />
           </div>
-          <h1 className="text-lg font-bold text-slate-900">AI Matching</h1>
+          <h1 className="text-lg font-bold text-slate-900">Calculus AI</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Dang nhap bang tai khoan duoc cap.
+            Hãy đăng nhập bằng tài khoản được cấp để sử dụng ứng dụng.
           </p>
         </div>
 
@@ -79,7 +79,7 @@ export default function Login({ onLogin }) {
             disabled={loading}
           >
             <LogIn size={16} />
-            {loading ? "Dang dang nhap" : "Dang nhap"}
+            {loading ? "Đang đăng nhập" : "Đăng nhập"}
           </button>
         </form>
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getTaxonomy, getTaxonomyStats } from "../services/taxonomyApi";
 import { filterNavigationItems } from "../auth/navigation";
 import UserMenu from "../components/UserMenu";
@@ -96,7 +96,6 @@ export default function CalculusTaxonomy({
   const [error, setError] = useState(null);
   const [selectedProblemType, setSelectedProblemType] = useState(null);
   const [taxonomyStats, setTaxonomyStats] = useState([]);
-  const initializedTaxonomyView = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,38 +201,13 @@ export default function CalculusTaxonomy({
     });
   })();
 
-  useEffect(() => {
-    if (
-      !taxonomy?.chapters ||
-      chapters.length === 0 ||
-      initializedTaxonomyView.current
-    ) {
-      return;
-    }
-
-    initializedTaxonomyView.current = true;
-
-    const firstChapter = chapters[0];
-    const firstTopic = firstChapter.topics?.[0];
-
+  const toggleChapter = (id) => {
     setOpenChapters((current) =>
-      current.length === 0 ? [firstChapter.code] : current
+      current.includes(id) ? [] : [id]
     );
-
-    setSelectedTopic((current) => {
-      if (!current && firstTopic) {
-        return {
-          chapterCode: firstChapter.code,
-          topicCode: firstTopic.code,
-        };
-      }
-
-      return current;
-    });
-  }, [taxonomy, chapters]);
-
-  const toggleChapter = (id) =>
-    setOpenChapters((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]);
+    setSelectedTopic(null);
+    setSelectedProblemType(null);
+  };
 
   const selectedChapter = selectedTopic
     ? chapters.find((chapter) => chapter.code === selectedTopic.chapterCode)
@@ -429,10 +403,9 @@ export default function CalculusTaxonomy({
             })}
           </div>
 
-          {/* Detail panel */}
-          <div className="w-64 flex-shrink-0 space-y-3">
-            {selTopic && (
-              <>
+          {/* Show details only after a topic is selected. */}
+          {selTopic && (
+            <div className="w-64 flex-shrink-0 space-y-3">
                 <div className="bg-blue-600 rounded-xl p-4 text-white">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Info size={12} className="opacity-70" />
@@ -556,11 +529,9 @@ export default function CalculusTaxonomy({
                     <Edit3 size={12} /> Chỉnh sửa thông tin
                   </button>
                 </div>
-              </>
-            )}
 
-            {/* Global stats */}
-            <div className="bg-white border border-slate-100 rounded-xl p-4">
+              {/* Global stats */}
+              <div className="bg-white border border-slate-100 rounded-xl p-4">
               <p className="text-[11px] font-bold text-slate-700 mb-3">Tổng quan corpus</p>
                 {[
                   {
@@ -601,8 +572,9 @@ export default function CalculusTaxonomy({
                   <span className="text-[11px] font-bold text-slate-700">{s.val}</span>
                 </div>
               ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

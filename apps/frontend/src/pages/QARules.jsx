@@ -10,15 +10,15 @@ import { filterNavigationItems } from "../auth/navigation";
 import UserMenu from "../components/UserMenu";
 
 const NAV = [
-  { icon: LayoutDashboard, label: "Dashboard", sub: "Tổng quan", id: "dashboard" },
-  { icon: Upload, label: "Upload Document", sub: "Ingestion", id: "upload" },
-  { icon: Search, label: "Semantic Search", sub: "Tìm kiếm", id: "search" },
-  { icon: BookOpen, label: "Calculus Taxonomy", sub: "Phân loại", id: "taxonomy" },
-  { icon: CheckSquare, label: "QA Rules", sub: "Kiểm định", id: "qa" },
+  { icon: LayoutDashboard, label: "Bảng điều khiển", sub: "Tổng quan", id: "dashboard" },
+  { icon: Upload, label: "Tải tài liệu", sub: "Nhập dữ liệu", id: "upload" },
+  { icon: Search, label: "Tìm kiếm ngữ nghĩa", sub: "Tìm kiếm", id: "search" },
+  { icon: BookOpen, label: "Cây tri thức Giải tích", sub: "Phân loại", id: "taxonomy" },
+  { icon: CheckSquare, label: "Quy tắc kiểm định", sub: "Kiểm định", id: "qa" },
   { icon: FileText, label: "Chi tiết bài tập", sub: "Xem & Giải", id: "detail" },
-  { icon: Sparkles, label: "Sinh biến thể", sub: "Gen AI", id: "gen" },
-  { icon: BarChart2, label: "Analytics", sub: "Thống kê", id: "analytics" },
-  { icon: Settings, label: "Cài đặt", sub: "System", id: "settings" },
+  { icon: Sparkles, label: "Sinh biến thể", sub: "AI tạo sinh", id: "gen" },
+  { icon: BarChart2, label: "Phân tích", sub: "Thống kê", id: "analytics" },
+  { icon: Settings, label: "Cài đặt", sub: "Hệ thống", id: "settings" },
 ];
 
 const RULES = [
@@ -124,13 +124,13 @@ const MCQ_RULES = [
   
   {
     id: "MCQ-STRUCT",
-    title: "Structural rules",
-    desc: "MCQ must have exactly 4 choices A/B/C/D, one correct choice, a valid correct_choice key, and no empty option text.",
+    title: "Quy tắc cấu trúc",
+    desc: "Câu hỏi trắc nghiệm phải có đúng 4 lựa chọn A/B/C/D, một đáp án đúng, khóa correct_choice hợp lệ và không có lựa chọn rỗng.",
     category: "Structural",
     status: "ok",
     passRate: 100,
     issues: 0,
-    lastRun: "Theo backend quality service",
+    lastRun: "Theo dịch vụ kiểm định hệ thống",
     icon: CheckSquare,
     affectedIds: [],
     codes: [
@@ -145,22 +145,22 @@ const MCQ_RULES = [
       "mcq_empty_choice_text",
     ],
     checks: [
-      "Question type multiple_choice requires choices.",
-      "Allowed keys are A, B, C, D.",
-      "Exactly one option is marked correct.",
-      "correct_choice must point to the marked correct option.",
+      "Câu hỏi có question_type là multiple_choice phải có các lựa chọn.",
+      "Các khóa lựa chọn hợp lệ là A, B, C, D.",
+      "Chỉ đúng một lựa chọn được đánh dấu là đáp án đúng.",
+      "correct_choice phải trỏ đến lựa chọn đã được đánh dấu đúng.",
     ],
-    savePolicy: "Blocking issue: cannot save until fixed.",
+    savePolicy: "Lỗi chặn lưu: không thể lưu cho đến khi được khắc phục.",
   },
   {
     id: "MCQ-DISTRACTOR",
-    title: "Distractor rules",
-    desc: "Distractors must be distinct from each other and must not duplicate or symbolically equal the correct answer.",
+    title: "Quy tắc phương án nhiễu",
+    desc: "Các phương án nhiễu phải khác nhau và không được trùng hoặc tương đương ký hiệu với đáp án đúng.",
     category: "Distractor",
     status: "ok",
     passRate: 100,
     issues: 0,
-    lastRun: "Theo backend quality service",
+    lastRun: "Theo dịch vụ kiểm định hệ thống",
     icon: Copy,
     affectedIds: [],
     codes: [
@@ -169,22 +169,22 @@ const MCQ_RULES = [
       "mcq_all_choices_too_similar",
     ],
     checks: [
-      "Normalize text, whitespace, and LaTeX before comparison.",
-      "Detect duplicate option content.",
-      "Detect distractors equal to the correct answer.",
-      "Warn when all choices are too similar.",
+      "Chuẩn hóa văn bản, khoảng trắng và LaTeX trước khi so sánh.",
+      "Phát hiện nội dung các lựa chọn bị trùng.",
+      "Phát hiện phương án nhiễu trùng với đáp án đúng.",
+      "Cảnh báo khi tất cả lựa chọn quá giống nhau.",
     ],
-    savePolicy: "Duplicate/equal distractors are blocking; similarity can be reviewed.",
+    savePolicy: "Phương án nhiễu trùng hoặc tương đương là lỗi chặn lưu; trường hợp tương tự cần được xem xét.",
   },
   {
     id: "MCQ-SYMBOLIC",
-    title: "Symbolic rules",
-    desc: "When a solver is available, the correct choice must match the symbolic result and distractors must not be equivalent to it.",
+    title: "Quy tắc kiểm chứng ký hiệu",
+    desc: "Khi có bộ giải, đáp án đúng phải khớp kết quả ký hiệu và các phương án nhiễu không được tương đương với kết quả đó.",
     category: "Symbolic",
     status: "ok",
     passRate: 100,
     issues: 0,
-    lastRun: "Theo SymbolicMCQValidator",
+    lastRun: "Theo bộ kiểm chứng ký hiệu",
     icon: Code2,
     affectedIds: [],
     codes: [
@@ -196,45 +196,45 @@ const MCQ_RULES = [
       "solver_not_available",
     ],
     checks: [
-      "Run solver_code through the solver executor.",
-      "Compare correct answer with solver output using symbolic simplification.",
-      "Compare distractors against solver output and each other.",
-      "Report parser and solver failures without crashing the pipeline.",
+      "Chạy solver_code qua bộ thực thi bộ giải.",
+      "So sánh đáp án đúng với kết quả bộ giải bằng rút gọn ký hiệu.",
+      "So sánh các phương án nhiễu với kết quả bộ giải và với nhau.",
+      "Ghi nhận lỗi bộ phân tích và bộ giải mà không làm dừng luồng xử lý.",
     ],
-    savePolicy: "Mismatch and equivalent distractors block save; missing solver is a warning.",
+    savePolicy: "Đáp án không khớp hoặc phương án nhiễu tương đương sẽ chặn lưu; thiếu bộ giải chỉ là cảnh báo.",
   },
 
   {
     id: "MCQ-SOLVER-DOMAIN",
-    title: "Calculus 1 solver domain",
-    desc: "Only Calculus 1 symbolic solvers are allowed in this system. Linear algebra solvers such as DET_2X2 and DET_3X3 are blocked.",
+    title: "Phạm vi bộ giải Giải tích 1",
+    desc: "Hệ thống chỉ cho phép bộ giải ký hiệu thuộc Giải tích 1. Các bộ giải đại số tuyến tính như DET_2X2 và DET_3X3 bị chặn.",
     category: "Symbolic",
     status: "ok",
     passRate: 100,
     issues: 0,
-    lastRun: "Theo backend quality service",
+    lastRun: "Theo dịch vụ kiểm định hệ thống",
     icon: Shield,
     affectedIds: [],
     codes: [
       "solver_domain_mismatch",
     ],
     checks: [
-      "Symbolic solver must belong to the Calculus 1 solver domain.",
-      "Do not use determinant or matrix solvers in the Calculus 1 question generation pipeline.",
-      "Blocked solvers: DET_2X2, DET_3X3.",
+      "Bộ giải ký hiệu phải thuộc phạm vi bộ giải Giải tích 1.",
+      "Không dùng bộ giải định thức hoặc ma trận trong luồng sinh câu hỏi Giải tích 1.",
+      "Bộ giải bị chặn: DET_2X2, DET_3X3.",
     ],
-    savePolicy: "Wrong-domain solvers are blocking issues and cannot be saved.",
+    savePolicy: "Bộ giải sai phạm vi là lỗi chặn lưu và không thể lưu câu hỏi.",
   },
 
   {
     id: "MCQ-TAXONOMY",
-    title: "Taxonomy rules",
-    desc: "Question metadata must align with the Calculus 1 taxonomy: chapter, topic, problem type, difficulty, and skills.",
+    title: "Quy tắc cây tri thức",
+    desc: "Metadata câu hỏi phải phù hợp với cây tri thức Giải tích 1: chương, chủ đề, dạng bài, độ khó và kỹ năng.",
     category: "Taxonomy",
     status: "ok",
     passRate: 100,
     issues: 0,
-    lastRun: "Theo taxonomy quality endpoint",
+    lastRun: "Theo API kiểm định cây tri thức",
     icon: Layers,
     affectedIds: [],
     codes: [
@@ -244,22 +244,22 @@ const MCQ_RULES = [
       "difficulty_mismatch",
     ],
     checks: [
-      "Validate chapter/topic/problem type codes.",
-      "Surface low-confidence AI Matching results.",
-      "Compare generated difficulty against source and taxonomy context.",
-      "Keep skills consistent with the selected problem type.",
+      "Kiểm tra mã chương, chủ đề và dạng bài.",
+      "Hiển thị kết quả đối sánh AI có độ tin cậy thấp.",
+      "So sánh độ khó được sinh với câu gốc và ngữ cảnh cây tri thức.",
+      "Đảm bảo kỹ năng phù hợp với dạng bài đã chọn.",
     ],
-    savePolicy: "Warnings route the question to review; invalid taxonomy needs correction.",
+    savePolicy: "Cảnh báo đưa câu hỏi vào diện xem xét; cây tri thức không hợp lệ cần được sửa.",
   },
   {
     id: "MCQ-SEMANTIC",
-    title: "Semantic duplicate rules",
-    desc: "Generated MCQs are compared with the existing bank so near-duplicate statements or formulas can be blocked or reviewed.",
+    title: "Quy tắc trùng lặp ngữ nghĩa",
+    desc: "Câu hỏi trắc nghiệm được sinh sẽ được so sánh với ngân hàng hiện có để chặn hoặc yêu cầu xem xét các đề bài, công thức gần trùng.",
     category: "Semantic",
     status: "ok",
     passRate: 100,
     issues: 0,
-    lastRun: "Theo semantic search quality",
+    lastRun: "Theo kiểm định tìm kiếm ngữ nghĩa",
     icon: Shield,
     affectedIds: [],
     codes: [
@@ -268,22 +268,22 @@ const MCQ_RULES = [
       "invalid_formula_payload",
     ],
     checks: [
-      "Compare normalized statement text.",
-      "Use semantic search for near-duplicate candidates.",
-      "Include formula payloads and choice text in duplicate context.",
-      "Show duplicate question ids and similarity scores for review.",
+      "So sánh văn bản đề bài sau khi chuẩn hóa.",
+      "Dùng tìm kiếm ngữ nghĩa để phát hiện ứng viên gần trùng.",
+      "Đưa công thức và nội dung lựa chọn vào ngữ cảnh kiểm tra trùng lặp.",
+      "Hiển thị mã câu hỏi trùng và điểm tương đồng để xem xét.",
     ],
-    savePolicy: "Exact duplicates block save; semantic duplicates require review.",
+    savePolicy: "Trùng lặp hoàn toàn sẽ chặn lưu; trùng lặp ngữ nghĩa cần được xem xét.",
   },
   {
     id: "MCQ-SAVE",
-    title: "Save policy",
-    desc: "The save endpoint persists MCQs only when the merged validation report has no blocking issues.",
+    title: "Chính sách lưu",
+    desc: "API lưu chỉ ghi câu hỏi trắc nghiệm khi báo cáo kiểm định tổng hợp không có lỗi chặn lưu.",
     category: "Policy",
     status: "ok",
     passRate: 100,
     issues: 0,
-    lastRun: "Theo generation save endpoint",
+    lastRun: "Theo API lưu câu hỏi sinh",
     icon: FileText,
     affectedIds: [],
     codes: [
@@ -293,12 +293,12 @@ const MCQ_RULES = [
       "validation_report",
     ],
     checks: [
-      "Merge structural, distractor, symbolic, taxonomy, and semantic findings.",
-      "Block save when blocking_issues is not empty.",
-      "Allow save with warnings but persist validation_report.",
-      "Store choices, correct_choice, solver_code, and generation_method.",
+      "Tổng hợp kết quả cấu trúc, phương án nhiễu, ký hiệu, cây tri thức và ngữ nghĩa.",
+      "Chặn lưu khi blocking_issues không rỗng.",
+      "Cho phép lưu khi có cảnh báo và vẫn lưu validation_report.",
+      "Lưu choices, correct_choice, solver_code và generation_method.",
     ],
-    savePolicy: "Only candidates with can_save=true are stored in the question bank.",
+    savePolicy: "Chỉ ứng viên có can_save=true mới được lưu vào ngân hàng câu hỏi.",
   },
 ];
 
@@ -323,6 +323,35 @@ const catColor = {
   "Bộ giải toán": "bg-cyan-50 text-cyan-700 border-cyan-200",
   "Công thức": "bg-indigo-50 text-indigo-700 border-indigo-200",
 };
+
+const categoryLabels = {
+  Metadata: "Siêu dữ liệu",
+  Vector: "Vector",
+  Structural: "Cấu trúc",
+  Distractor: "Phương án nhiễu",
+  Symbolic: "Ký hiệu",
+  Taxonomy: "Cây tri thức",
+  Semantic: "Ngữ nghĩa",
+  Policy: "Chính sách",
+};
+
+const ruleTitleLabels = {
+  "MCQ-STRUCT": "Quy tắc cấu trúc",
+  "MCQ-DISTRACTOR": "Quy tắc phương án nhiễu",
+  "MCQ-SYMBOLIC": "Quy tắc kiểm chứng ký hiệu",
+  "MCQ-SOLVER-DOMAIN": "Phạm vi bộ giải Giải tích 1",
+  "MCQ-TAXONOMY": "Quy tắc cây tri thức",
+  "MCQ-SEMANTIC": "Quy tắc trùng lặp ngữ nghĩa",
+  "MCQ-SAVE": "Chính sách lưu",
+};
+
+function getCategoryLabel(category) {
+  return categoryLabels[category] || category;
+}
+
+function getRuleTitle(rule) {
+  return ruleTitleLabels[rule.id] || rule.title;
+}
 
 export default function QARules({
   activePage = "qa",
@@ -397,10 +426,10 @@ export default function QARules({
     : [
         {
           id: "QA-CANDIDATE",
-          title: "Kiểm định candidate sinh biến thể",
+          title: "Kiểm định ứng viên sinh biến thể",
           desc: qualityResult?.can_save
-            ? "Candidate đạt điều kiện lưu vào corpus."
-            : "Candidate có vấn đề chặn lưu vào corpus.",
+            ? "Ứng viên đạt điều kiện lưu vào corpus."
+            : "Ứng viên có vấn đề chặn lưu vào corpus.",
           category: "Nội dung",
           status: qualityResult?.blocking_issues?.length
             ? "error"
@@ -426,10 +455,10 @@ export default function QARules({
         isTaxonomyQualityContext
           ? {
               id: "QA-TAXONOMY",
-              title: "Kiểm định AI Matching theo cây tri thức",
+              title: "Kiểm định đối sánh AI theo cây tri thức",
               desc: qualityResult.can_accept
-                ? "Câu hỏi đạt kiểm định taxonomy."
-                : "Câu hỏi có vấn đề trong kết quả AI Matching.",
+                ? "Câu hỏi đạt kiểm định cây tri thức."
+                : "Câu hỏi có vấn đề trong kết quả đối sánh AI.",
               category: "Metadata",
               status: blockingIssues.length
                 ? "error"
@@ -448,10 +477,10 @@ export default function QARules({
             }
           : {
               id: "QA-CANDIDATE",
-              title: "Kiểm định candidate sinh biến thể",
+              title: "Kiểm định ứng viên sinh biến thể",
               desc: selectedQualityContext.quality.can_save
-                ? "Candidate đạt điều kiện lưu vào corpus."
-                : "Candidate có vấn đề chặn lưu vào corpus.",
+                ? "Ứng viên đạt điều kiện lưu vào corpus."
+                : "Ứng viên có vấn đề chặn lưu vào corpus.",
               category: "Nội dung",
               status: selectedQualityContext.quality.blocking_issues?.length
                 ? "error"
@@ -515,7 +544,7 @@ export default function QARules({
           </div>
           <div>
             <p className="text-[13px] font-bold text-slate-800 leading-none">Calculus AI</p>
-            <p className="text-[10px] text-slate-400 mt-0.5 tracking-widest uppercase">System v2.1</p>
+            <p className="text-[10px] text-slate-400 mt-0.5 tracking-widest uppercase">Hệ thống v2.1</p>
           </div>
         </div>
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
@@ -557,7 +586,7 @@ export default function QARules({
               </button>
             )}
 
-            <h1 className="text-sm font-bold text-slate-800">QA Rules — Kiểm định chất lượng</h1>
+            <h1 className="text-sm font-bold text-slate-800">Quy tắc kiểm định chất lượng</h1>
             <p className="text-[11px] text-slate-400">
               Lần quét gần nhất: 07/05/2026 14:30 ·&nbsp;
               <span className="text-red-600 font-semibold">{counts.error} lỗi</span> ·&nbsp;
@@ -622,20 +651,20 @@ export default function QARules({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[10px] font-bold text-slate-400">{rule.id}</span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${catColor[rule.category]}`}>{rule.category}</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${catColor[rule.category]}`}>{getCategoryLabel(rule.category)}</span>
                         <span className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${sc.bg} ${sc.text} ${sc.border}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
                           {sc.label}
                         </span>
                       </div>
-                      <p className="text-[12px] font-bold text-slate-700 mb-0.5">{rule.title}</p>
+                      <p className="text-[12px] font-bold text-slate-700 mb-0.5">{getRuleTitle(rule)}</p>
                       <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-1">{rule.desc}</p>
                     </div>
                     <div className="text-right flex-shrink-0 ml-2">
                       <p className={`text-[14px] font-bold ${rule.status === "ok" ? "text-emerald-600" : rule.status === "warn" ? "text-amber-600" : "text-red-600"}`}>
                         {rule.passRate}%
                       </p>
-                      <p className="text-[10px] text-slate-400">pass rate</p>
+                      <p className="text-[10px] text-slate-400">tỷ lệ đạt</p>
                       {rule.issues > 0 && (
                         <p className="text-[10px] text-slate-500 mt-0.5 font-semibold">{rule.issues} vấn đề</p>
                       )}
@@ -669,7 +698,7 @@ export default function QARules({
                         <sc.icon size={16} className={sc.text} />
                         <span className={`text-[11px] font-bold ${sc.text}`}>{sc.label.toUpperCase()}</span>
                       </div>
-                      <p className="text-[13px] font-bold text-slate-800 mb-1">{selectedRule.title}</p>
+                      <p className="text-[13px] font-bold text-slate-800 mb-1">{getRuleTitle(selectedRule)}</p>
                       <p className="text-[11px] text-slate-600 leading-relaxed">{selectedRule.desc}</p>
                     </div>
 
@@ -716,7 +745,7 @@ export default function QARules({
                     {hasQualityContext && candidate && (
                       <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
                         <p className="text-[11px] font-bold text-blue-700 mb-2">
-                          Candidate đang kiểm định
+                          Ứng viên đang kiểm định
                         </p>
                         <code className="block text-[10px] font-mono text-blue-800 bg-white/70 border border-blue-100 rounded-lg px-2 py-1 mb-2 break-all">
                           {candidate.formulas?.[0]?.latex || candidate.answer || "Không có công thức"}
@@ -767,9 +796,9 @@ export default function QARules({
                     <div className="bg-slate-50 rounded-xl p-3 space-y-2">
                       <p className="text-[11px] font-bold text-slate-600 mb-2">Thông tin chi tiết</p>
                       {[
-                        { label: "Rule ID", val: selectedRule.id },
-                        { label: "Danh mục", val: selectedRule.category },
-                        { label: "Pass rate", val: `${selectedRule.passRate}%` },
+                        { label: "Mã quy tắc", val: selectedRule.id },
+                        { label: "Danh mục", val: getCategoryLabel(selectedRule.category) },
+                        { label: "Tỷ lệ đạt", val: `${selectedRule.passRate}%` },
                         { label: "Số vấn đề", val: selectedRule.issues === 0 ? "Không có" : selectedRule.issues },
                         { label: "Lần quét", val: selectedRule.lastRun },
                       ].map((row) => (
@@ -783,7 +812,7 @@ export default function QARules({
                     {selectedRule.checks?.length > 0 && (
                       <div className="bg-white border border-slate-100 rounded-xl p-3">
                         <p className="text-[11px] font-bold text-slate-600 mb-2">
-                          Checklist
+                          Danh sách kiểm tra
                         </p>
                         <div className="space-y-1.5">
                           {selectedRule.checks.map((check) => (
@@ -801,7 +830,7 @@ export default function QARules({
                     {selectedRule.codes?.length > 0 && (
                       <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
                         <p className="text-[11px] font-bold text-slate-600 mb-2">
-                          Backend quality codes
+                          Mã kiểm định hệ thống
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {selectedRule.codes.map((code) => (
@@ -819,7 +848,7 @@ export default function QARules({
                     {selectedRule.issueDetails?.length > 0 && (
                       <div className="rounded-xl border border-slate-100 bg-white p-3">
                         <p className="mb-2 text-[11px] font-bold text-slate-600">
-                          Kết quả của rule này
+                          Kết quả của quy tắc này
                         </p>
                         <div className="space-y-1.5">
                           {selectedRule.issueDetails.map((issue) => (
@@ -844,7 +873,7 @@ export default function QARules({
                         <div className="flex items-center gap-2 mb-1">
                           <Shield size={12} className="text-blue-600" />
                           <p className="text-[11px] font-bold text-blue-700">
-                            Save policy
+                            Chính sách lưu
                           </p>
                         </div>
                         <p className="text-[10px] text-blue-700 leading-relaxed">
@@ -904,7 +933,7 @@ export default function QARules({
                     {hasQualityContext && symbolicChecks.length > 0 && (
                       <div>
                         <p className="text-[11px] font-bold text-blue-700 mb-2">
-                          Symbolic checks
+                          Kiểm tra ký hiệu
                         </p>
                         <div className="space-y-1.5">
                           {symbolicChecks.map((check, index) => (
@@ -948,7 +977,7 @@ export default function QARules({
                     {hasQualityContext && semanticDuplicates.length > 0 && (
                       <div>
                         <p className="text-[11px] font-bold text-purple-700 mb-2">
-                          Bài tương đồng semantic
+                          Bài tương đồng ngữ nghĩa
                         </p>
                         <div className="space-y-1.5">
                           {semanticDuplicates.map((duplicate) => (
@@ -983,8 +1012,8 @@ export default function QARules({
                           </div>
                           <p className="text-[10px] text-emerald-700 leading-relaxed">
                             {isTaxonomyQualityContext
-                              ? "Kết quả AI Matching của câu hỏi đạt các rule taxonomy."
-                              : "Candidate có thể được lưu vào corpus."}
+                              ? "Kết quả đối sánh AI của câu hỏi đạt các quy tắc cây tri thức."
+                              : "Ứng viên có thể được lưu vào corpus."}
                           </p>
                         </div>
                       )}
